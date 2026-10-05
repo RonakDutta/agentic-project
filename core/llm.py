@@ -35,7 +35,7 @@ class LLMClient:
         """
         target_model = model or settings.primary_model
         temp = temperature if temperature is not None else settings.temperature
-        max_tok = max_tokens or settings.max_tokens_per_req
+        max_tok = min(max_tokens or settings.max_tokens_per_req, 800)
 
         response_format = {"type": "json_object"} if json_mode else None
 
@@ -76,28 +76,31 @@ class LLMClient:
             except RateLimitError as e:
                 err_msg = str(e).lower()
                 last_error = e
-                # If daily tokens (TPD) are exhausted or already on fast model, fail immediately to activate deterministic fallbacks
-                if "tokens per day" in err_msg or "tpd" in err_msg or current_model == settings.fast_model:
-                    logger.warning(f"[LLMClient] Daily token limit reached on Groq. Failing fast to activate deterministic fallback.")
+                if "otpm" in err_msg or "reduce max_tokens" in err_msg or "output tokens" in err_msg:
+                    max_tok = min(max_tok, 400)
+                # Fallback chain: primary_model -> fast_model -> code_model (Qwen)
+                if current_model != settings.code_model:
+                    next_model = settings.code_model if current_model == settings.fast_model else settings.fast_model
+                    logger.warning(f"[LLMClient] Rate limit on {current_model}. Falling back to {next_model}.")
+                    current_model = next_model
+                    time.sleep(0.3)
+                else:
+                    logger.warning(f"[LLMClient] All models exhausted on Groq. Activating deterministic fallback.")
                     raise
-                logger.warning(
-                    f"[LLMClient] Rate limit hit on {current_model}. Falling back to {settings.fast_model}."
-                )
-                current_model = settings.fast_model
-                time.sleep(0.5)
 
-            except APIError as e:
-                logger.warning(f"[LLMClient] Groq API error on attempt {attempts}: {e}")
+            except (APIError, ValueError) as e:
+                logger.warning(f"[LLMClient] Groq API or content issue on {current_model}: {e}")
                 last_error = e
-                # If Groq server-side JSON schema validation failed, fallback to text mode for retry
-                if "json_validate_failed" in str(e).lower() or "failed to validate json" in str(e).lower():
+                if current_model != settings.code_model:
+                    current_model = settings.code_model
+                elif response_format is not None:
                     response_format = None
-                time.sleep(1.0)
+                time.sleep(0.3)
 
             except Exception as e:
                 logger.error(f"[LLMClient] Unexpected error on attempt {attempts}: {e}")
                 last_error = e
-                time.sleep(1.0)
+                time.sleep(0.5)
 
         raise RuntimeError(
             f"Failed to generate response after {settings.retry_attempts} attempts. Last error: {last_error}"
@@ -108,6 +111,7 @@ class LLMClient:
         messages: List[Dict[str, str]],
         model: Optional[str] = None,
         temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
     ) -> Dict[str, Any]:
         """
         Generates and parses a structured JSON object.
@@ -118,6 +122,7 @@ class LLMClient:
                 model=model,
                 temperature=temperature,
                 json_mode=True,
+                max_tokens=max_tokens,
             )
         except Exception as err:
             logger.warning(
@@ -128,6 +133,7 @@ class LLMClient:
                 model=model,
                 temperature=temperature,
                 json_mode=False,
+                max_tokens=max_tokens,
             )
 
         try:

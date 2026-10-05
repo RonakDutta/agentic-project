@@ -24,10 +24,10 @@ class Settings:
     code_model: str = os.getenv("CODE_MODEL", "qwen/qwen3.8-27b")
 
     # Execution limits (tuned for Groq free-tier rate limit guardrails)
-    max_tokens_per_req: int = int(os.getenv("MAX_TOKENS_PER_REQ", "2500"))
+    max_tokens_per_req: int = int(os.getenv("MAX_TOKENS_PER_REQ", "750"))
     context_token_budget: int = int(os.getenv("CONTEXT_TOKEN_BUDGET", "2500"))
     temperature: float = float(os.getenv("TEMPERATURE", "0.2"))
-    request_timeout_seconds: int = int(os.getenv("REQUEST_TIMEOUT_SECONDS", "30"))
+    request_timeout_seconds: int = int(os.getenv("REQUEST_TIMEOUT_SECONDS", "20"))
     retry_attempts: int = int(os.getenv("RETRY_ATTEMPTS", "3"))
 
     # Project directories
