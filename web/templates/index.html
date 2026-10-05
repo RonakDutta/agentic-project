@@ -52,7 +52,7 @@
     }
     ::-webkit-scrollbar-thumb {
       background: #1b2438;
-      border-radius: 4px;
+      border-radius: 0;
     }
     ::-webkit-scrollbar-thumb:hover {
       background: #26334f;
@@ -93,13 +93,13 @@
       background: rgba(15, 23, 42, 0.9);
       border: 1px solid #1e293b;
       padding: 0.15rem 0.4rem;
-      border-radius: 0.375rem;
+      border-radius: 0.2rem;
       color: #93c5fd;
     }
     .prose-chat pre {
       background: #06080e;
       border: 1px solid #1e293b;
-      border-radius: 0.75rem;
+      border-radius: 0.25rem;
       padding: 0.85rem;
       overflow-x: auto;
       margin: 0.75rem 0;
@@ -115,7 +115,7 @@
       border-collapse: collapse;
       margin: 0.85rem 0;
       font-size: 0.8rem;
-      border-radius: 0.5rem;
+      border-radius: 0.2rem;
       overflow: hidden;
       border: 1px solid #1e293b;
     }
@@ -168,13 +168,13 @@
       background-size: 36px 36px;
     }
 
-    /* Decision Simulator sliders */
+    /* Decision Simulator sliders (console fader style) */
     input[type="range"].sim-range {
       -webkit-appearance: none;
       appearance: none;
       width: 100%;
-      height: 6px;
-      border-radius: 9999px;
+      height: 4px;
+      border-radius: 1px;
       background: #1b2438;
       outline: none;
       cursor: pointer;
@@ -182,23 +182,22 @@
     input[type="range"].sim-range::-webkit-slider-thumb {
       -webkit-appearance: none;
       appearance: none;
-      width: 16px;
+      width: 7px;
       height: 16px;
-      border-radius: 9999px;
+      border-radius: 1px;
       background: #3b82f6;
-      border: 2px solid #0b1120;
-      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
-      transition: transform 0.15s ease;
+      border: 1px solid #93c5fd;
+      transition: background 0.15s ease;
     }
     input[type="range"].sim-range::-webkit-slider-thumb:hover {
-      transform: scale(1.15);
+      background: #60a5fa;
     }
     input[type="range"].sim-range::-moz-range-thumb {
-      width: 14px;
-      height: 14px;
-      border-radius: 9999px;
+      width: 7px;
+      height: 16px;
+      border-radius: 1px;
       background: #3b82f6;
-      border: 2px solid #0b1120;
+      border: 1px solid #93c5fd;
       cursor: pointer;
     }
 
@@ -206,7 +205,7 @@
     .agent-avatar {
       width: 34px;
       height: 34px;
-      border-radius: 10px;
+      border-radius: 3px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -233,9 +232,9 @@
       
       <!-- Brand & Project Identity -->
       <div class="flex items-center space-x-3 min-w-0">
-        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 via-blue-600 to-cyan-500 flex items-center justify-center shadow-lg shadow-blue-950/50 shrink-0">
-          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+        <div class="w-9 h-9 rounded-md border border-blue-500/50 bg-blue-950/50 flex items-center justify-center shrink-0">
+          <svg class="w-4 h-4 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="square" stroke-linejoin="miter" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
           </svg>
         </div>
         <div class="min-w-0">
@@ -247,11 +246,11 @@
 
       <!-- Actions & Engine Indicator -->
       <div class="flex items-center space-x-2.5 text-xs font-mono shrink-0">
-        <span id="rateLimitChip" class="hidden sm:flex items-center space-x-1.5 text-zinc-400 border border-borderSubtle bg-surface px-3 py-1.5 rounded-xl">
-          <span id="rateLimitDot" class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-          <span id="rateLimitText">Groq LLM</span>
+        <span id="rateLimitChip" class="hidden sm:flex items-center gap-2 text-zinc-400 border border-borderSubtle bg-surface px-3 py-1.5 rounded-md">
+          <span id="rateLimitBar" class="w-0.5 h-3 bg-emerald-400"></span>
+          <span id="rateLimitText" class="uppercase tracking-wide">Groq LLM</span>
         </span>
-        <button id="btnExportTop" onclick="exportReport()" class="hidden text-white bg-blue-600 hover:bg-blue-500 px-3.5 py-1.5 rounded-xl transition font-medium shadow-sm">
+        <button id="btnExportTop" onclick="exportReport()" class="hidden text-white bg-blue-600 hover:bg-blue-500 px-3.5 py-1.5 rounded-md transition font-medium shadow-sm">
           Export Brief (.md)
         </button>
       </div>
@@ -263,16 +262,16 @@
   <main class="flex-1 max-w-6xl w-full mx-auto px-6 py-10 space-y-12">
 
     <!-- WORKBENCH INPUT PANEL -->
-    <section class="bg-surface/60 backdrop-blur-sm border border-borderSubtle rounded-3xl p-6 sm:p-8 space-y-6 shadow-xl">
+    <section class="bg-surface/60 backdrop-blur-sm border border-borderSubtle rounded-lg p-6 sm:p-8 space-y-6 shadow-xl">
       
       <!-- Mode Switcher -->
       <div class="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-borderSubtle/60">
         
-        <div class="flex items-center space-x-2 bg-canvas/90 p-1.5 rounded-2xl border border-borderSubtle">
-          <button id="btnModeIdea" onclick="selectPillar('idea')" class="px-5 py-2.5 rounded-xl text-xs font-semibold transition bg-blue-600 text-white shadow-sm">
+        <div class="flex items-center space-x-2 bg-canvas/90 p-1.5 rounded-lg border border-borderSubtle">
+          <button id="btnModeIdea" onclick="selectPillar('idea')" class="px-5 py-2.5 rounded-md text-xs font-semibold transition bg-blue-600 text-white shadow-sm">
             Validate an Idea
           </button>
-          <button id="btnModeCode" onclick="selectPillar('code')" class="px-5 py-2.5 rounded-xl text-xs font-semibold transition text-zinc-400 hover:text-white">
+          <button id="btnModeCode" onclick="selectPillar('code')" class="px-5 py-2.5 rounded-md text-xs font-semibold transition text-zinc-400 hover:text-white">
             Find Code Bugs
           </button>
         </div>
@@ -284,26 +283,26 @@
       </div>
 
       <!-- Codebase Analysis Target Row (Visible in Code Mode Only) -->
-      <div id="codeTargetSection" class="hidden space-y-3 bg-canvas/80 p-4 rounded-2xl border border-borderSubtle">
+      <div id="codeTargetSection" class="hidden space-y-3 bg-canvas/80 p-4 rounded-lg border border-borderSubtle">
         <div class="flex flex-wrap items-center justify-between gap-2">
           <div class="flex items-center space-x-2">
             <span class="text-xs font-mono text-zinc-400 uppercase font-semibold">Repository Target:</span>
             <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-blue-950/60 border border-blue-900 text-blue-300">Read-Only AST Mode</span>
           </div>
           <div class="flex items-center space-x-2 text-xs font-mono">
-            <button onclick="loadSampleRepo()" class="text-blue-400 hover:text-blue-300 border border-borderSubtle bg-surface px-3 py-1.5 rounded-xl transition">
+            <button onclick="loadSampleRepo()" class="text-blue-400 hover:text-blue-300 border border-borderSubtle bg-surface px-3 py-1.5 rounded-md transition">
               Load Demo Repo
             </button>
-            <button onclick="inspectRepo()" id="btnInspectAST" class="text-zinc-300 hover:text-white border border-borderSubtle bg-surface px-3 py-1.5 rounded-xl transition">
+            <button onclick="inspectRepo()" id="btnInspectAST" class="text-zinc-300 hover:text-white border border-borderSubtle bg-surface px-3 py-1.5 rounded-md transition">
               Scan Files
             </button>
-            <span id="repoStatsBadge" class="hidden text-zinc-400 text-xs px-2.5 py-1 bg-surface rounded-xl border border-borderSubtle">
+            <span id="repoStatsBadge" class="hidden text-zinc-400 text-xs px-2.5 py-1 bg-surface rounded-md border border-borderSubtle">
               0 files scanned
             </span>
           </div>
         </div>
 
-        <div class="flex items-center space-x-3 bg-surface p-2.5 rounded-xl border border-borderSubtle">
+        <div class="flex items-center space-x-3 bg-surface p-2.5 rounded-md border border-borderSubtle">
           <svg class="w-4 h-4 text-zinc-500 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
           </svg>
@@ -317,10 +316,10 @@
           <label id="inputLabel" class="font-semibold text-zinc-200">Describe your startup or project idea:</label>
           <span class="text-zinc-500 text-[11px]">Type freely or pick a sample below</span>
         </div>
-        <textarea id="mainPrompt" rows="4" placeholder="What problem are you solving? Who is it for? What is your solution..." class="w-full bg-canvas/90 border border-borderSubtle focus:border-blue-500 rounded-2xl p-4 text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none resize-none leading-relaxed transition shadow-inner"></textarea>
+        <textarea id="mainPrompt" rows="4" placeholder="What problem are you solving? Who is it for? What is your solution..." class="w-full bg-canvas/90 border border-borderSubtle focus:border-blue-500 rounded-lg p-4 text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none resize-none leading-relaxed transition shadow-inner"></textarea>
       </div>
 
-      <!-- Action Row: Starter Pills + Run Button -->
+      <!-- Action Row: Starter Presets + Run Button -->
       <div class="flex flex-wrap items-center justify-between gap-4 pt-1">
         
         <!-- Starter Chips -->
@@ -328,32 +327,32 @@
           <span class="text-xs text-zinc-500">Quick sample:</span>
           
           <div id="ideaChips" class="flex flex-wrap items-center gap-2">
-            <button onclick="setPrompt('iot')" class="text-xs text-zinc-400 hover:text-white border border-borderSubtle hover:border-zinc-600 bg-canvas/80 px-3 py-1.5 rounded-xl transition">
+            <button onclick="setPrompt('iot')" class="text-xs text-zinc-400 hover:text-white border border-borderSubtle hover:border-zinc-600 bg-canvas/80 px-3 py-1.5 rounded-md transition">
               IoT Energy Spike Monitor
             </button>
-            <button onclick="setPrompt('peer')" class="text-xs text-zinc-400 hover:text-white border border-borderSubtle hover:border-zinc-600 bg-canvas/80 px-3 py-1.5 rounded-xl transition">
+            <button onclick="setPrompt('peer')" class="text-xs text-zinc-400 hover:text-white border border-borderSubtle hover:border-zinc-600 bg-canvas/80 px-3 py-1.5 rounded-md transition">
               AI Student Code Reviewer
             </button>
-            <button onclick="setPrompt('water')" class="text-xs text-zinc-400 hover:text-white border border-borderSubtle hover:border-zinc-600 bg-canvas/80 px-3 py-1.5 rounded-xl transition">
+            <button onclick="setPrompt('water')" class="text-xs text-zinc-400 hover:text-white border border-borderSubtle hover:border-zinc-600 bg-canvas/80 px-3 py-1.5 rounded-md transition">
               Smart Water Meter
             </button>
           </div>
 
           <div id="codeChips" class="hidden flex flex-wrap items-center gap-2">
-            <button onclick="setPrompt('token_err')" class="text-xs text-zinc-400 hover:text-white border border-borderSubtle hover:border-zinc-600 bg-canvas/80 px-3 py-1.5 rounded-xl transition">
+            <button onclick="setPrompt('token_err')" class="text-xs text-zinc-400 hover:text-white border border-borderSubtle hover:border-zinc-600 bg-canvas/80 px-3 py-1.5 rounded-md transition">
               Token Expired Bug
             </button>
-            <button onclick="setPrompt('auth_flow')" class="text-xs text-zinc-400 hover:text-white border border-borderSubtle hover:border-zinc-600 bg-canvas/80 px-3 py-1.5 rounded-xl transition">
+            <button onclick="setPrompt('auth_flow')" class="text-xs text-zinc-400 hover:text-white border border-borderSubtle hover:border-zinc-600 bg-canvas/80 px-3 py-1.5 rounded-md transition">
               Order Auth Flow
             </button>
-            <button onclick="setPrompt('blast')" class="text-xs text-zinc-400 hover:text-white border border-borderSubtle hover:border-zinc-600 bg-canvas/80 px-3 py-1.5 rounded-xl transition">
+            <button onclick="setPrompt('blast')" class="text-xs text-zinc-400 hover:text-white border border-borderSubtle hover:border-zinc-600 bg-canvas/80 px-3 py-1.5 rounded-md transition">
               Blast Radius Check
             </button>
           </div>
         </div>
 
         <!-- Submit Button -->
-        <button id="btnRun" onclick="executeWorkflow()" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs px-6 py-3 rounded-2xl transition flex items-center space-x-2 shadow-lg shadow-blue-900/30">
+        <button id="btnRun" onclick="executeWorkflow()" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs px-6 py-3 rounded-lg transition flex items-center space-x-2 shadow-lg shadow-blue-900/30">
           <span id="btnRunText">Run Multi-Agent Pipeline (4 Agents)</span>
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
@@ -365,14 +364,14 @@
     </section>
 
     <!-- BEHIND THE SCENES: HOW THE AGENTS WORKED (Sequential Timeline with Shimmer Loader) -->
-    <section class="bg-surface/40 border border-borderSubtle/80 rounded-3xl p-6 sm:p-8 space-y-6">
+    <section class="bg-surface/40 border border-borderSubtle/80 rounded-lg p-6 sm:p-8 space-y-6">
       
       <div class="flex flex-wrap items-center justify-between gap-4 border-b border-borderSubtle/60 pb-4">
         <div>
           <h2 class="text-base sm:text-lg font-bold text-white tracking-tight">Behind the Scenes: How the Agents Worked</h2>
           <p class="text-xs text-zinc-400 mt-0.5">Watch each specialist agent analyze the input sequentially, pause to record discoveries, and pass context forward.</p>
         </div>
-        <div class="text-xs font-mono text-zinc-400 bg-canvas px-3 py-1.5 rounded-xl border border-borderSubtle">
+        <div class="text-xs font-mono text-zinc-400 bg-canvas px-3 py-1.5 rounded-md border border-borderSubtle">
           Status: <span id="pipelineStatusText" class="text-zinc-200 font-semibold">Ready</span>
           <span id="pipelineTimer" class="ml-2 text-zinc-500"></span>
         </div>
@@ -392,7 +391,7 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
           </svg>
         </button>
-        <div id="traceLogContainer" class="hidden mt-3 max-h-48 overflow-y-auto space-y-1.5 p-3 rounded-2xl bg-canvas border border-borderSubtle text-xs font-mono"></div>
+        <div id="traceLogContainer" class="hidden mt-3 max-h-48 overflow-y-auto space-y-1.5 p-3 rounded-lg bg-canvas border border-borderSubtle text-xs font-mono"></div>
       </div>
 
     </section>
@@ -402,22 +401,22 @@
 
       <!-- Metrics Strip -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div class="bg-surface/50 border border-borderSubtle p-5 rounded-2xl space-y-1 relative overflow-hidden">
+        <div class="bg-surface/50 border border-borderSubtle p-5 rounded-lg space-y-1 relative overflow-hidden">
           <div class="absolute left-0 top-0 bottom-0 w-0.5 bg-emerald-500/70"></div>
           <div class="text-[11px] font-mono text-zinc-500 uppercase">Fact Verification</div>
           <div id="kpiGrounding" class="text-base font-bold text-emerald-400">100% Grounded</div>
         </div>
-        <div class="bg-surface/50 border border-borderSubtle p-5 rounded-2xl space-y-1 relative overflow-hidden">
+        <div class="bg-surface/50 border border-borderSubtle p-5 rounded-lg space-y-1 relative overflow-hidden">
           <div class="absolute left-0 top-0 bottom-0 w-0.5 bg-blue-500/70"></div>
           <div class="text-[11px] font-mono text-zinc-500 uppercase">Response Time</div>
           <div id="kpiLatency" class="text-base font-bold text-white">0ms</div>
         </div>
-        <div class="bg-surface/50 border border-borderSubtle p-5 rounded-2xl space-y-1 relative overflow-hidden">
+        <div class="bg-surface/50 border border-borderSubtle p-5 rounded-lg space-y-1 relative overflow-hidden">
           <div class="absolute left-0 top-0 bottom-0 w-0.5 bg-cyan-500/70"></div>
           <div class="text-[11px] font-mono text-zinc-500 uppercase">Feasibility Rating</div>
           <div id="kpiTrack" class="text-base font-bold text-cyan-300">Idea Track</div>
         </div>
-        <div class="bg-surface/50 border border-borderSubtle p-5 rounded-2xl space-y-1 relative overflow-hidden">
+        <div class="bg-surface/50 border border-borderSubtle p-5 rounded-lg space-y-1 relative overflow-hidden">
           <div class="absolute left-0 top-0 bottom-0 w-0.5 bg-violet-500/70"></div>
           <div class="text-[11px] font-mono text-zinc-500 uppercase">Self-Correction</div>
           <div id="kpiRevisions" class="text-base font-bold text-white">0 Retries Needed</div>
@@ -428,13 +427,13 @@
       <div id="ideaView" class="space-y-12">
         
         <!-- Executive Briefing Header -->
-        <div class="bg-surface/60 border border-borderSubtle p-8 sm:p-10 rounded-3xl space-y-6 shadow-md">
+        <div class="bg-surface/60 border border-borderSubtle p-8 sm:p-10 rounded-lg space-y-6 shadow-md">
           <div class="flex flex-wrap items-start justify-between gap-4 border-b border-borderSubtle pb-6">
             <div class="space-y-1">
               <span class="text-xs font-mono text-blue-400 uppercase tracking-wider font-semibold">Validated Engineering Concept</span>
               <h2 id="ideaProjectTitle" class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight"></h2>
             </div>
-            <span class="text-xs font-mono text-zinc-400 border border-borderSubtle px-3 py-1.5 rounded-xl bg-canvas">
+            <span class="text-xs font-mono text-zinc-400 border border-borderSubtle px-3 py-1.5 rounded-md bg-canvas">
               13-Section Specification
             </span>
           </div>
@@ -451,7 +450,7 @@
         </div>
 
         <!-- 1. DETERMINISTIC FEASIBILITY SCORECARD (Task 9.5) -->
-        <div class="bg-surface/60 border border-borderSubtle p-8 sm:p-10 rounded-3xl space-y-6 shadow-md">
+        <div class="bg-surface/60 border border-borderSubtle p-8 sm:p-10 rounded-lg space-y-6 shadow-md">
           <div class="flex flex-wrap items-start justify-between gap-4 border-b border-borderSubtle pb-4">
             <div>
               <span class="text-xs font-mono text-blue-400 uppercase tracking-wider font-semibold">Deterministic Decision Engine</span>
@@ -459,14 +458,14 @@
             </div>
             <div class="flex items-center space-x-3">
               <div id="scScoreNum" class="text-2xl font-extrabold font-mono text-white">0/100</div>
-              <span id="scVerdictBadge" class="px-3 py-1 rounded-xl text-xs font-mono font-bold uppercase bg-emerald-950/60 border border-emerald-800 text-emerald-300">
+              <span id="scVerdictBadge" class="px-3 py-1 rounded-md text-xs font-mono font-bold uppercase bg-emerald-950/60 border border-emerald-800 text-emerald-300">
                 GO
               </span>
             </div>
           </div>
 
           <!-- Academic Disclaimer Banner -->
-          <div class="p-3.5 rounded-xl bg-blue-950/30 border border-blue-900/60 flex items-center space-x-3">
+          <div class="p-3.5 rounded-md bg-blue-950/30 border border-blue-900/60 flex items-center space-x-3">
             <svg class="w-4 h-4 text-blue-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
@@ -478,7 +477,7 @@
           <!-- 7-Category Breakdown Table -->
           <div class="space-y-2 pt-2">
             <span class="text-xs font-mono text-zinc-400 uppercase font-semibold">7-Category Project Decision Rubric:</span>
-            <div class="bg-surface/50 border border-borderSubtle rounded-2xl overflow-hidden divide-y divide-borderSubtle" id="scCategoriesContainer"></div>
+            <div class="bg-surface/50 border border-borderSubtle rounded-lg overflow-hidden divide-y divide-borderSubtle" id="scCategoriesContainer"></div>
           </div>
 
           <!-- Strengths & Key Risks Tags -->
@@ -495,8 +494,8 @@
         </div>
 
         <!-- NOVELTY #1: INTERACTIVE DECISION SIMULATOR (deterministic what-if re-scoring) -->
-        <div id="decisionSimulator" class="bg-surface/60 border border-borderSubtle p-8 sm:p-10 rounded-3xl space-y-6 shadow-md relative overflow-hidden">
-          <div class="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400/70 to-transparent"></div>
+        <div id="decisionSimulator" class="bg-surface/60 border border-borderSubtle p-8 sm:p-10 rounded-lg space-y-6 shadow-md relative overflow-hidden">
+          <div class="absolute inset-x-0 top-0 h-px bg-cyan-500/40"></div>
           <div class="flex flex-wrap items-start justify-between gap-3 border-b border-borderSubtle pb-4">
             <div>
               <div class="flex items-center space-x-2">
@@ -511,7 +510,7 @@
                 <div class="text-[10px] font-mono text-zinc-500 uppercase">Projected</div>
                 <div id="simScoreNum" class="text-2xl font-extrabold font-mono text-white">0<span class="text-sm text-zinc-500">/100</span></div>
               </div>
-              <span id="simVerdictBadge" class="px-3 py-1 rounded-xl text-xs font-mono font-bold uppercase bg-zinc-900 border border-zinc-700 text-zinc-300">
+              <span id="simVerdictBadge" class="px-3 py-1 rounded-md text-xs font-mono font-bold uppercase bg-zinc-900 border border-zinc-700 text-zinc-300">
                 ...
               </span>
             </div>
@@ -520,15 +519,15 @@
           <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div id="simSlidersContainer" class="lg:col-span-2 space-y-4"></div>
             <div class="space-y-4">
-              <div class="rounded-2xl border border-borderSubtle bg-canvas/80 p-5 space-y-3">
+              <div class="rounded-lg border border-borderSubtle bg-canvas/80 p-5 space-y-3">
                 <div class="text-[11px] font-mono text-zinc-500 uppercase font-semibold">Verdict Delta</div>
                 <div id="simDeltaBox" class="text-xs text-zinc-300 leading-relaxed">Move a slider to model a change.</div>
               </div>
               <div class="flex flex-col space-y-2">
-                <button onclick="simulateApplyGapFixes()" class="w-full text-xs font-semibold text-white bg-cyan-600/80 hover:bg-cyan-500 border border-cyan-500/40 px-4 py-2.5 rounded-xl transition shadow-sm">
+                <button onclick="simulateApplyGapFixes()" class="w-full text-xs font-semibold text-white bg-cyan-600/80 hover:bg-cyan-500 border border-cyan-500/40 px-4 py-2.5 rounded-md transition shadow-sm">
                   Auto-apply top gap fixes
                 </button>
-                <button onclick="resetSimulator()" class="w-full text-xs font-semibold text-zinc-300 hover:text-white border border-borderSubtle bg-surface px-4 py-2.5 rounded-xl transition">
+                <button onclick="resetSimulator()" class="w-full text-xs font-semibold text-zinc-300 hover:text-white border border-borderSubtle bg-surface px-4 py-2.5 rounded-md transition">
                   Reset to agent baseline
                 </button>
               </div>
@@ -538,19 +537,19 @@
         </div>
 
         <!-- 2. ADVERSARIAL KILL AGENT & EVIDENCE RECONCILER (Task 9.3) -->
-        <div class="bg-surface/60 border border-borderSubtle p-8 sm:p-10 rounded-3xl space-y-6 shadow-md">
+        <div class="bg-surface/60 border border-borderSubtle p-8 sm:p-10 rounded-lg space-y-6 shadow-md">
           <div class="border-b border-borderSubtle pb-4 flex flex-wrap items-center justify-between gap-2">
             <div>
               <span class="text-xs font-mono text-red-400 uppercase tracking-wider font-semibold">Adversarial Stress-Testing</span>
               <h3 class="text-xl font-bold text-white mt-1">Devil's Advocate (Kill Agent) & Reconciler</h3>
             </div>
-            <span id="recVerdictBadge" class="text-xs font-mono px-3 py-1 rounded-xl bg-canvas border border-borderSubtle text-zinc-300">
+            <span id="recVerdictBadge" class="text-xs font-mono px-3 py-1 rounded-md bg-canvas border border-borderSubtle text-zinc-300">
               Verdict Pending
             </span>
           </div>
 
           <!-- Bear Case Alert -->
-          <div class="p-6 rounded-2xl bg-red-950/20 border border-red-900/50 space-y-2">
+          <div class="p-6 rounded-lg bg-red-950/20 border border-red-900/50 space-y-2">
             <div class="flex items-center justify-between">
               <span class="text-xs font-mono font-bold text-red-400 uppercase tracking-wider">Critical Failure Stress-Test (Bear Case)</span>
               <span class="text-xs font-mono text-zinc-400">Why this idea might fail</span>
@@ -571,7 +570,7 @@
           </div>
 
           <!-- Dialectical Reconciliation Box -->
-          <div class="p-6 rounded-2xl bg-canvas/80 border border-blue-900/50 space-y-4">
+          <div class="p-6 rounded-lg bg-canvas/80 border border-blue-900/50 space-y-4">
             <div class="border-b border-borderSubtle/60 pb-3 flex items-center justify-between">
               <span class="text-xs font-mono font-bold text-blue-400 uppercase tracking-wider">Impartial Systems Arbiter Synthesis</span>
               <span class="text-xs text-zinc-500 font-mono">Thesis vs Antithesis</span>
@@ -592,24 +591,24 @@
         </div>
 
         <!-- 3. METAGPT-STYLE PRODUCT REQUIREMENTS DOCUMENT & MERMAID MODELS (Task 9.4) -->
-        <div class="bg-surface/60 border border-borderSubtle p-8 sm:p-10 rounded-3xl space-y-6 shadow-md">
+        <div class="bg-surface/60 border border-borderSubtle p-8 sm:p-10 rounded-lg space-y-6 shadow-md">
           <div class="border-b border-borderSubtle pb-4 flex flex-wrap items-center justify-between gap-2">
             <div>
               <span class="text-xs font-mono text-blue-400 uppercase tracking-wider font-semibold">MetaGPT Product Specification</span>
               <h3 class="text-xl font-bold text-white mt-1">Product Requirements Document (PRD) & Architecture</h3>
             </div>
-            <span class="text-xs font-mono text-zinc-400 border border-borderSubtle px-3 py-1 rounded-xl bg-canvas">
+            <span class="text-xs font-mono text-zinc-400 border border-borderSubtle px-3 py-1 rounded-md bg-canvas">
               User Stories & Mermaid
             </span>
           </div>
 
           <!-- Product Vision & Audience -->
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div class="bg-surface/50 border border-borderSubtle p-5 rounded-2xl space-y-1">
+            <div class="bg-surface/50 border border-borderSubtle p-5 rounded-lg space-y-1">
               <span class="text-[11px] font-mono text-zinc-400 uppercase font-semibold">Product Vision</span>
               <p id="prdVisionText" class="text-xs sm:text-sm text-zinc-200 leading-relaxed"></p>
             </div>
-            <div class="bg-surface/50 border border-borderSubtle p-5 rounded-2xl space-y-1">
+            <div class="bg-surface/50 border border-borderSubtle p-5 rounded-lg space-y-1">
               <span class="text-[11px] font-mono text-zinc-400 uppercase font-semibold">Target Audience Profile</span>
               <p id="prdAudienceText" class="text-xs sm:text-sm text-zinc-200 leading-relaxed"></p>
             </div>
@@ -627,7 +626,7 @@
           <!-- Functional Requirements Table -->
           <div class="space-y-3 pt-2">
             <span class="text-xs font-mono text-zinc-400 uppercase font-semibold">Functional Requirements Matrix:</span>
-            <div class="bg-surface/50 border border-borderSubtle rounded-2xl overflow-hidden divide-y divide-borderSubtle" id="functionalReqsContainer"></div>
+            <div class="bg-surface/50 border border-borderSubtle rounded-lg overflow-hidden divide-y divide-borderSubtle" id="functionalReqsContainer"></div>
           </div>
 
           <!-- Non-Functional Requirements Grid -->
@@ -640,7 +639,7 @@
           <div class="space-y-3 pt-4 border-t border-borderSubtle/60">
             <div class="flex flex-wrap items-center justify-between gap-3">
               <span class="text-xs font-mono text-zinc-300 uppercase font-semibold">Architectural Models (Mermaid.js):</span>
-              <div class="flex items-center space-x-2 bg-canvas p-1 rounded-xl border border-borderSubtle">
+              <div class="flex items-center space-x-2 bg-canvas p-1 rounded-md border border-borderSubtle">
                 <button id="tabMermaid_architecture" onclick="switchMermaidTab('architecture')" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white transition">
                   System Architecture
                 </button>
@@ -654,7 +653,7 @@
             </div>
 
             <!-- Mermaid Render Container -->
-            <div id="mermaidContainer" class="bg-canvas/90 border border-borderSubtle rounded-2xl p-4 min-h-[160px] flex items-center justify-center">
+            <div id="mermaidContainer" class="bg-canvas/90 border border-borderSubtle rounded-lg p-4 min-h-[160px] flex items-center justify-center">
               <span class="text-xs font-mono text-zinc-500">Diagram will render upon completion.</span>
             </div>
           </div>
@@ -675,7 +674,7 @@
             <h3 class="text-base sm:text-lg font-bold text-white">Competitors & Market Research</h3>
             <span class="text-xs text-zinc-500">Live search references & differentiators</span>
           </div>
-          <div class="bg-surface/50 border border-borderSubtle rounded-2xl overflow-hidden">
+          <div class="bg-surface/50 border border-borderSubtle rounded-lg overflow-hidden">
             <div id="competitorsContainer" class="divide-y divide-borderSubtle"></div>
           </div>
         </div>
@@ -686,7 +685,7 @@
             <h3 class="text-base sm:text-lg font-bold text-white">Recommended Tech Stack</h3>
             <span class="text-xs text-zinc-500">Production choices & engineering tradeoffs</span>
           </div>
-          <div class="bg-surface/50 border border-borderSubtle rounded-2xl overflow-hidden">
+          <div class="bg-surface/50 border border-borderSubtle rounded-lg overflow-hidden">
             <div id="techStackContainer" class="divide-y divide-borderSubtle"></div>
           </div>
         </div>
@@ -704,14 +703,14 @@
           <!-- Technical Risks Table -->
           <div class="space-y-2 pt-2">
             <span class="text-xs font-mono text-zinc-400 uppercase font-semibold">Identified Vulnerabilities & Mitigations</span>
-            <div class="bg-surface/50 border border-borderSubtle rounded-2xl overflow-hidden">
+            <div class="bg-surface/50 border border-borderSubtle rounded-lg overflow-hidden">
               <div id="risksContainer" class="divide-y divide-borderSubtle"></div>
             </div>
           </div>
         </div>
 
         <!-- 8. Strategic Implementation Takeaways -->
-        <div class="bg-surface/60 border border-borderSubtle p-8 rounded-3xl space-y-3">
+        <div class="bg-surface/60 border border-borderSubtle p-8 rounded-lg space-y-3">
           <div class="flex items-center justify-between border-b border-borderSubtle pb-3">
             <h3 class="text-sm font-bold text-white uppercase tracking-wider font-mono">Strategic Implementation Takeaways</h3>
             <span class="text-xs font-mono text-zinc-500">Key guidelines for deployment and technical evaluation</span>
@@ -723,17 +722,17 @@
 
       <!-- CODEBASE ANALYSIS VIEW (Task 9.2 Educational Comparison & Read-Only Guidance) -->
       <div id="codeView" class="space-y-8 hidden">
-        <div class="bg-surface/60 border border-borderSubtle p-8 rounded-3xl space-y-4">
+        <div class="bg-surface/60 border border-borderSubtle p-8 rounded-lg space-y-4">
           <div class="flex flex-wrap items-center justify-between gap-3 border-b border-borderSubtle pb-4">
             <div>
               <h3 class="text-xl font-bold text-white">Codebase Diagnosis Summary</h3>
               <p class="text-xs text-zinc-400 mt-0.5">AST-based fault localization and root-cause analysis.</p>
             </div>
             <div class="flex items-center space-x-2">
-              <span class="text-xs font-mono font-bold px-3 py-1 rounded-xl border border-blue-800 bg-blue-950/60 text-blue-300">
+              <span class="text-xs font-mono font-bold px-3 py-1 rounded-md border border-blue-800 bg-blue-950/60 text-blue-300">
                 Read-Only: Hypothesis & Fix Direction (No Automated Edits)
               </span>
-              <span id="codeCriticBadge" class="text-xs font-mono font-semibold px-3 py-1 rounded-xl border border-emerald-800 bg-emerald-950/40 text-emerald-300">
+              <span id="codeCriticBadge" class="text-xs font-mono font-semibold px-3 py-1 rounded-md border border-emerald-800 bg-emerald-950/40 text-emerald-300">
                 [VERIFIED IN AST]
               </span>
             </div>
@@ -749,7 +748,7 @@
           <div id="codeCandidatesContainer" class="space-y-6"></div>
         </div>
       </div>        <!-- CONVERSATIONAL FOLLOW-UP (Persistent Session Memory with Specialist Routing) -->
-        <div class="bg-surface/60 border border-borderSubtle p-8 sm:p-10 rounded-3xl space-y-6 shadow-lg">
+        <div class="bg-surface/60 border border-borderSubtle p-8 sm:p-10 rounded-lg space-y-6 shadow-lg">
           <div class="flex flex-wrap items-center justify-between gap-4 border-b border-borderSubtle pb-4">
             <div>
               <div class="flex items-center space-x-2">
@@ -758,7 +757,7 @@
               </div>
               <p class="text-xs text-zinc-400 mt-0.5">Address a specific specialist with <span class="font-mono text-blue-300">@agent</span>, or just ask naturally. Domain agents answer from persisted session evidence.</p>
             </div>
-            <span class="text-xs font-mono text-blue-400 border border-borderSubtle px-3 py-1.5 rounded-xl bg-canvas">
+            <span class="text-xs font-mono text-blue-400 border border-borderSubtle px-3 py-1.5 rounded-md bg-canvas">
               Session Memory Active
             </span>
           </div>
@@ -779,7 +778,7 @@
         </div>
 
         <!-- Unified Modern Chat Input Box with Bottom Action Bar -->
-        <div class="bg-canvas border border-borderSubtle focus-within:border-blue-500 rounded-2xl p-3.5 transition shadow-inner">
+        <div class="bg-canvas border border-borderSubtle focus-within:border-blue-500 rounded-lg p-3.5 transition shadow-inner">
           <textarea id="followupInput" rows="2" placeholder="Ask any question about architecture, risks, code, or milestones..." class="w-full bg-transparent text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none resize-none leading-relaxed"></textarea>
           <div class="flex items-center justify-between pt-2.5 border-t border-borderSubtle/50 mt-1">
             <span class="text-[11px] font-mono text-zinc-500 flex items-center space-x-1">
@@ -789,7 +788,7 @@
               <kbd class="px-1.5 py-0.5 rounded bg-surface border border-borderSubtle text-zinc-400 text-[10px]">Shift + Enter</kbd>
               <span>for new line</span>
             </span>
-            <button id="btnSendFollowup" onclick="sendFollowup()" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs px-5 py-2.5 rounded-xl transition flex items-center space-x-2 shadow-md">
+            <button id="btnSendFollowup" onclick="sendFollowup()" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs px-5 py-2.5 rounded-md transition flex items-center space-x-2 shadow-md">
               <span id="btnFollowupText">Send</span>
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
@@ -880,7 +879,7 @@
       agents.forEach((ag, idx) => {
         const card = document.createElement('div');
         card.id = ag.id;
-        card.className = 'border border-borderSubtle bg-canvas/70 p-4 rounded-2xl space-y-1.5 transition-all';
+        card.className = 'border border-borderSubtle bg-canvas/70 p-4 rounded-lg space-y-1.5 transition-all';
         card.innerHTML = `
           <div class="flex items-center justify-between text-[11px] font-mono text-zinc-500">
             <span>Agent 0${idx + 1}</span>
@@ -911,7 +910,7 @@
 
       chips.forEach(c => {
         const btn = document.createElement('button');
-        btn.className = 'text-xs text-zinc-400 hover:text-white border border-borderSubtle hover:border-zinc-600 bg-canvas px-3 py-1.5 rounded-xl transition';
+        btn.className = 'text-xs text-zinc-400 hover:text-white border border-borderSubtle hover:border-zinc-600 bg-canvas px-3 py-1.5 rounded-md transition';
         btn.innerText = c.label;
         btn.onclick = () => setFollowupPrompt(c.prompt);
         container.appendChild(btn);
@@ -944,8 +943,8 @@
       const btnRunText = document.getElementById('btnRunText');
 
       if (mode === 'idea') {
-        btnIdea.className = 'px-5 py-2.5 rounded-xl text-xs font-semibold transition bg-blue-600 text-white shadow-sm';
-        btnCode.className = 'px-5 py-2.5 rounded-xl text-xs font-semibold transition text-zinc-400 hover:text-white';
+        btnIdea.className = 'px-5 py-2.5 rounded-md text-xs font-semibold transition bg-blue-600 text-white shadow-sm';
+        btnCode.className = 'px-5 py-2.5 rounded-md text-xs font-semibold transition text-zinc-400 hover:text-white';
         codeTargetSection.classList.add('hidden');
         modeDescription.innerText = "Startup idea feasibility, market research & architecture";
         ideaChips.classList.remove('hidden');
@@ -954,8 +953,8 @@
         mainPrompt.placeholder = "What problem are you solving? Who is it for? What is your solution...";
         btnRunText.innerText = "Run Multi-Agent Pipeline (4 Agents)";
       } else {
-        btnCode.className = 'px-5 py-2.5 rounded-xl text-xs font-semibold transition bg-blue-600 text-white shadow-sm';
-        btnIdea.className = 'px-5 py-2.5 rounded-xl text-xs font-semibold transition text-zinc-400 hover:text-white';
+        btnCode.className = 'px-5 py-2.5 rounded-md text-xs font-semibold transition bg-blue-600 text-white shadow-sm';
+        btnIdea.className = 'px-5 py-2.5 rounded-md text-xs font-semibold transition text-zinc-400 hover:text-white';
         codeTargetSection.classList.remove('hidden');
         modeDescription.innerText = "AST code parser, fault localization & root-cause diagnosis";
         ideaChips.classList.add('hidden');
@@ -1047,7 +1046,7 @@
 
       btn.disabled = true;
       btn.innerText = "Scanning...";
-      badge.className = "text-blue-400 text-xs px-2.5 py-1 bg-surface rounded-xl border border-blue-900/60 font-mono";
+      badge.className = "text-blue-400 text-xs px-2.5 py-1 bg-surface rounded-md border border-blue-900/60 font-mono";
       badge.innerText = repoPath.startsWith('http') ? "Cloning GitHub repo & indexing AST..." : "Scanning AST...";
       badge.classList.remove('hidden');
 
@@ -1062,14 +1061,14 @@
           const filesCount = data.summary ? data.summary.total_files : 0;
           const chunksCount = data.summary ? data.summary.total_chunks : 0;
           const label = data.is_remote ? `GitHub: ${data.repo_name || 'Cloned'}` : 'Local';
-          badge.className = "text-emerald-400 text-xs px-2.5 py-1 bg-surface rounded-xl border border-emerald-900/60 font-mono";
+          badge.className = "text-emerald-400 text-xs px-2.5 py-1 bg-surface rounded-md border border-emerald-900/60 font-mono";
           badge.innerText = `${filesCount} files, ${chunksCount} functions scanned (${label})`;
         } else {
-          badge.className = "text-rose-400 text-xs px-2.5 py-1 bg-surface rounded-xl border border-rose-900/60 font-mono";
+          badge.className = "text-rose-400 text-xs px-2.5 py-1 bg-surface rounded-md border border-rose-900/60 font-mono";
           badge.innerText = data.message || "Failed to scan repository.";
         }
       } catch (e) {
-        badge.className = "text-rose-400 text-xs px-2.5 py-1 bg-surface rounded-xl border border-rose-900/60 font-mono";
+        badge.className = "text-rose-400 text-xs px-2.5 py-1 bg-surface rounded-md border border-rose-900/60 font-mono";
         badge.innerText = "Connection error while scanning repo.";
       } finally {
         btn.disabled = false;
@@ -1084,16 +1083,16 @@
       if (statusSpan) statusSpan.innerText = statusText;
 
       if (isError) {
-        node.className = "border border-rose-500 bg-rose-950/40 p-3.5 rounded-2xl space-y-1 transition-all shadow-md shadow-rose-950/40";
+        node.className = "border border-rose-500 bg-rose-950/40 p-3.5 rounded-lg space-y-1 transition-all shadow-md shadow-rose-950/40";
         if (statusSpan) statusSpan.className = "status-badge text-rose-400 uppercase font-bold text-[11px]";
       } else if (isActive) {
-        node.className = "border border-blue-500 bg-blue-950/40 p-3.5 rounded-2xl space-y-1 transition-all shadow-md shadow-blue-950/40";
+        node.className = "border border-blue-500 bg-blue-950/40 p-3.5 rounded-lg space-y-1 transition-all shadow-md shadow-blue-950/40";
         if (statusSpan) statusSpan.className = "status-badge text-blue-400 uppercase font-bold text-[11px]";
       } else if (isDone) {
-        node.className = "border border-emerald-900 bg-emerald-950/20 p-3.5 rounded-2xl space-y-1 transition-all";
+        node.className = "border border-emerald-900 bg-emerald-950/20 p-3.5 rounded-lg space-y-1 transition-all";
         if (statusSpan) statusSpan.className = "status-badge text-emerald-400 uppercase font-bold text-[11px]";
       } else {
-        node.className = "border border-borderSubtle bg-canvas/70 p-3.5 rounded-2xl space-y-1 transition-all";
+        node.className = "border border-borderSubtle bg-canvas/70 p-3.5 rounded-lg space-y-1 transition-all";
         if (statusSpan) statusSpan.className = "status-badge text-zinc-600 uppercase font-semibold text-[11px]";
       }
     }
@@ -1104,7 +1103,7 @@
       const findingsList = Array.isArray(d.findings) ? d.findings : [];
 
       const card = document.createElement('div');
-      card.className = 'border border-borderSubtle bg-canvas/80 p-5 sm:p-6 rounded-2xl space-y-3 transition-all animate-step-reveal';
+      card.className = 'border border-borderSubtle bg-canvas/80 p-5 sm:p-6 rounded-lg space-y-3 transition-all animate-step-reveal';
 
       card.innerHTML = `
         <div class="flex flex-wrap items-center justify-between gap-2 border-b border-borderSubtle/70 pb-3">
@@ -1120,7 +1119,7 @@
 
         <div class="space-y-1">
           <span class="text-[11px] font-mono uppercase text-zinc-500 font-semibold">Goal & Thinking:</span>
-          <p class="text-xs sm:text-sm text-zinc-300 leading-relaxed italic bg-surface/60 p-3.5 rounded-xl border border-borderSubtle/50">
+          <p class="text-xs sm:text-sm text-zinc-300 leading-relaxed italic bg-surface/60 p-3.5 rounded-md border border-borderSubtle/50">
             "${escapeHtml(d.thinking || step.action)}"
           </p>
         </div>
@@ -1254,9 +1253,9 @@
 
             const loaderCard = document.createElement('div');
             loaderCard.id = 'activeAgentStepLoader';
-            loaderCard.className = 'border border-blue-500/50 bg-blue-950/20 p-5 rounded-2xl flex items-center space-x-3.5 animate-pulse';
+            loaderCard.className = 'border border-blue-500/50 bg-blue-950/20 p-5 rounded-lg flex items-center space-x-3.5 animate-pulse';
             loaderCard.innerHTML = `
-              <div class="w-8 h-8 rounded-xl bg-blue-600/30 border border-blue-500 flex items-center justify-center shrink-0">
+              <div class="w-8 h-8 rounded-md bg-blue-600/30 border border-blue-500 flex items-center justify-center shrink-0">
                 <svg class="w-4 h-4 text-blue-400 animate-spin" fill="none" viewBox="0 0 24 24">
                   <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                   <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
@@ -1354,10 +1353,10 @@
           // Render clear in-page visual error container
           const detailContainer = document.getElementById('agentStepsDetail');
           const errorCard = document.createElement('div');
-          errorCard.className = 'border border-rose-500/50 bg-rose-950/20 p-6 rounded-2xl space-y-3 animate-step-reveal';
+          errorCard.className = 'border border-rose-500/50 bg-rose-950/20 p-6 rounded-lg space-y-3 animate-step-reveal';
           errorCard.innerHTML = `
             <div class="flex items-center space-x-3">
-              <div class="w-9 h-9 rounded-xl bg-rose-600/30 border border-rose-500 flex items-center justify-center shrink-0">
+              <div class="w-9 h-9 rounded-md bg-rose-600/30 border border-rose-500 flex items-center justify-center shrink-0">
                 <svg class="w-5 h-5 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                 </svg>
@@ -1367,12 +1366,12 @@
                 <p class="text-xs text-zinc-400">An issue occurred during pipeline execution. The timer has been safely stopped.</p>
               </div>
             </div>
-            <div class="p-3.5 bg-canvas/90 rounded-xl border border-rose-900/50 font-mono text-xs text-rose-300 break-words leading-relaxed">
+            <div class="p-3.5 bg-canvas/90 rounded-md border border-rose-900/50 font-mono text-xs text-rose-300 break-words leading-relaxed">
               ${escapeHtml(err.message || String(err))}
             </div>
             <div class="flex flex-wrap items-center justify-between gap-2 pt-1 text-xs text-zinc-400">
               <span>Please wait a moment if rate-limited on free tier, then retry.</span>
-              <button onclick="executeWorkflow()" class="px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-rose-600/40 hover:bg-rose-600 text-white border border-rose-500/60 transition shadow-sm">
+              <button onclick="executeWorkflow()" class="px-3.5 py-1.5 rounded-md text-xs font-semibold bg-rose-600/40 hover:bg-rose-600 text-white border border-rose-500/60 transition shadow-sm">
                 Retry Query
               </button>
             </div>
@@ -1485,7 +1484,7 @@
           const uniqueId = 'mermaid_diag_' + Math.random().toString(36).substring(2, 9);
           const { svg } = await mermaid.render(uniqueId, cleanChart);
           container.innerHTML = `
-            <div class="overflow-x-auto p-4 flex justify-center bg-black/40 rounded-2xl border border-borderSubtle w-full">
+            <div class="overflow-x-auto p-4 flex justify-center bg-black/40 rounded-lg border border-borderSubtle w-full">
               ${svg}
             </div>
           `;
@@ -1497,7 +1496,7 @@
 
       // Fallback display
       container.innerHTML = `
-        <div class="p-4 bg-black/50 rounded-2xl border border-borderSubtle w-full">
+        <div class="p-4 bg-black/50 rounded-lg border border-borderSubtle w-full">
           <div class="text-[11px] font-mono text-zinc-500 mb-2">Mermaid Definition:</div>
           <pre class="text-xs font-mono text-blue-300 overflow-x-auto leading-relaxed whitespace-pre">${escapeHtml(chartDefinition.trim())}</pre>
         </div>
@@ -1520,11 +1519,11 @@
       const verdictEl = document.getElementById('scVerdictBadge');
       verdictEl.innerText = verdictVal;
       if (verdictVal === 'GO') {
-        verdictEl.className = 'px-3 py-1 rounded-xl text-xs font-mono font-bold uppercase bg-emerald-950/60 border border-emerald-800 text-emerald-300';
+        verdictEl.className = 'px-3 py-1 rounded-md text-xs font-mono font-bold uppercase bg-emerald-950/60 border border-emerald-800 text-emerald-300';
       } else if (verdictVal === 'PIVOT') {
-        verdictEl.className = 'px-3 py-1 rounded-xl text-xs font-mono font-bold uppercase bg-amber-950/60 border border-amber-800 text-amber-300';
+        verdictEl.className = 'px-3 py-1 rounded-md text-xs font-mono font-bold uppercase bg-amber-950/60 border border-amber-800 text-amber-300';
       } else {
-        verdictEl.className = 'px-3 py-1 rounded-xl text-xs font-mono font-bold uppercase bg-rose-950/60 border border-rose-800 text-rose-300';
+        verdictEl.className = 'px-3 py-1 rounded-md text-xs font-mono font-bold uppercase bg-rose-950/60 border border-rose-800 text-rose-300';
       }
       document.getElementById('scDisclaimerText').innerText = disclaimerVal;
       document.getElementById('scVerdictSummary').innerText = sc.verdict_summary || 'Evaluated against the 7-category project rubric.';
@@ -1545,8 +1544,8 @@
               <span class="text-xs font-bold text-white font-mono">${escapeHtml(cat.category_name)}</span>
               <span class="text-[11px] font-mono text-zinc-400">(${cat.score} / ${cat.max_score} pts)</span>
             </div>
-            <div class="w-32 bg-canvas rounded-full h-2 border border-borderSubtle overflow-hidden">
-              <div class="bg-blue-500 h-2 rounded-full" style="width: ${pct}%"></div>
+            <div class="w-32 bg-canvas h-1.5 border border-borderSubtle overflow-hidden">
+              <div class="bg-blue-500 h-1.5" style="width: ${pct}%"></div>
             </div>
           </div>
           <p class="text-xs text-zinc-300 leading-relaxed">${escapeHtml(cat.rationale || '')}</p>
@@ -1559,7 +1558,7 @@
       strengthsContainer.innerHTML = '';
       (sc.key_strengths || []).forEach(s => {
         const tag = document.createElement('span');
-        tag.className = 'text-xs font-mono px-3 py-1 rounded-xl bg-emerald-950/40 border border-emerald-800/80 text-emerald-300';
+        tag.className = 'text-xs font-mono px-3 py-1 rounded-md bg-emerald-950/40 border border-emerald-800/80 text-emerald-300';
         tag.innerText = s;
         strengthsContainer.appendChild(tag);
       });
@@ -1568,7 +1567,7 @@
       scRisksContainer.innerHTML = '';
       (sc.key_risks || []).forEach(r => {
         const tag = document.createElement('span');
-        tag.className = 'text-xs font-mono px-3 py-1 rounded-xl bg-amber-950/40 border border-amber-800/80 text-amber-300';
+        tag.className = 'text-xs font-mono px-3 py-1 rounded-md bg-amber-950/40 border border-amber-800/80 text-amber-300';
         tag.innerText = r;
         scRisksContainer.appendChild(tag);
       });
@@ -1583,7 +1582,7 @@
       fatalFlawsContainer.innerHTML = '';
       (kill.fatal_flaws || []).forEach(flaw => {
         const card = document.createElement('div');
-        card.className = 'p-4 sm:p-5 rounded-2xl bg-canvas/80 border border-red-900/40 space-y-2';
+        card.className = 'p-4 sm:p-5 rounded-lg bg-canvas/80 border border-red-900/40 space-y-2';
         const sevClass = flaw.severity === 'CRITICAL'
           ? 'bg-rose-950 text-rose-300 border-rose-800'
           : flaw.severity === 'HIGH'
@@ -1644,7 +1643,7 @@
       userStoriesContainer.innerHTML = '';
       (prd.user_stories || []).forEach(story => {
         const card = document.createElement('div');
-        card.className = 'bg-surface/50 border border-borderSubtle p-5 rounded-2xl space-y-3';
+        card.className = 'bg-surface/50 border border-borderSubtle p-5 rounded-lg space-y-3';
         const criteriaList = (story.acceptance_criteria || []).map(c => `
           <li class="flex items-start space-x-2 text-xs text-zinc-300">
             <span class="text-blue-400 mt-0.5">✓</span>
@@ -1698,7 +1697,7 @@
       const nfrs = prd.non_functional_requirements || {};
       for (const [key, val] of Object.entries(nfrs)) {
         const card = document.createElement('div');
-        card.className = 'bg-surface/50 border border-borderSubtle p-4 rounded-xl space-y-1';
+        card.className = 'bg-surface/50 border border-borderSubtle p-4 rounded-md space-y-1';
         card.innerHTML = `
           <span class="text-[10px] font-mono uppercase text-zinc-400 font-semibold">${escapeHtml(key)}</span>
           <p class="text-xs text-zinc-200 leading-relaxed">${escapeHtml(val)}</p>
@@ -1713,7 +1712,7 @@
       personasContainer.innerHTML = '';
       (out.target_personas || []).forEach(p => {
         const div = document.createElement('div');
-        div.className = 'bg-surface/50 border border-borderSubtle p-6 rounded-2xl space-y-3';
+        div.className = 'bg-surface/50 border border-borderSubtle p-6 rounded-lg space-y-3';
         div.innerHTML = `
           <div class="text-xs font-mono font-bold text-blue-400 uppercase tracking-wider">${escapeHtml(p.persona)}</div>
           <div class="space-y-1">
@@ -1781,14 +1780,14 @@
       roadmapContainer.innerHTML = '';
       (out.phases || []).forEach(ph => {
         const div = document.createElement('div');
-        div.className = 'bg-surface/50 border border-borderSubtle p-6 rounded-2xl space-y-3';
+        div.className = 'bg-surface/50 border border-borderSubtle p-6 rounded-lg space-y-3';
         div.innerHTML = `
           <div class="flex flex-wrap items-center justify-between gap-3 border-b border-borderSubtle/60 pb-3">
             <div>
               <span class="text-xs font-mono text-blue-400 uppercase font-semibold tracking-wider">Milestone Step 0${ph.phase_number}</span>
               <h4 class="font-bold text-base text-white mt-0.5">${escapeHtml(ph.phase_name)}</h4>
             </div>
-            <span class="text-xs font-mono text-zinc-300 border border-borderSubtle px-3 py-1 rounded-xl bg-canvas">
+            <span class="text-xs font-mono text-zinc-300 border border-borderSubtle px-3 py-1 rounded-md bg-canvas">
               ${escapeHtml(ph.duration_weeks)}
             </span>
           </div>
@@ -1846,10 +1845,10 @@
       const critic = out.critic || {};
       const badge = document.getElementById('codeCriticBadge');
       if (critic.is_valid) {
-        badge.className = 'text-xs font-mono font-semibold px-3 py-1 rounded-xl border border-emerald-800 bg-emerald-950/40 text-emerald-300';
+        badge.className = 'text-xs font-mono font-semibold px-3 py-1 rounded-md border border-emerald-800 bg-emerald-950/40 text-emerald-300';
         badge.innerText = '[VERIFIED IN AST]';
       } else {
-        badge.className = 'text-xs font-mono font-semibold px-3 py-1 rounded-xl border border-amber-800 bg-amber-950/40 text-amber-300';
+        badge.className = 'text-xs font-mono font-semibold px-3 py-1 rounded-md border border-amber-800 bg-amber-950/40 text-amber-300';
         badge.innerText = '[NEEDS REVISION]';
       }
 
@@ -1858,7 +1857,7 @@
 
       (out.candidates || []).forEach(c => {
         const card = document.createElement('div');
-        card.className = 'border border-borderSubtle bg-surface/50 p-6 sm:p-8 rounded-3xl space-y-5 shadow-sm';
+        card.className = 'border border-borderSubtle bg-surface/50 p-6 sm:p-8 rounded-lg space-y-5 shadow-sm';
         
         const citationsList = Array.isArray(c.citations) && c.citations.length > 0
           ? c.citations
@@ -1867,15 +1866,15 @@
         card.innerHTML = `
           <div class="flex flex-wrap items-center justify-between gap-3 border-b border-borderSubtle pb-4">
             <div class="flex items-center space-x-3">
-              <span class="bg-blue-950 border border-blue-800 text-blue-300 px-2.5 py-1 rounded-xl text-xs font-mono font-bold">#${c.rank}</span>
+              <span class="bg-blue-950 border border-blue-800 text-blue-300 px-2.5 py-1 rounded-md text-xs font-mono font-bold">#${c.rank}</span>
               <h4 class="font-mono font-bold text-base text-white">${escapeHtml(c.symbol_name)}</h4>
               <span class="text-zinc-400 text-xs font-mono">${escapeHtml(c.file_path)}:${c.line_start}-${c.line_end}</span>
             </div>
             <div class="flex items-center space-x-2">
-              <span class="font-mono text-xs text-zinc-300 border border-borderSubtle bg-canvas px-3 py-1 rounded-xl">
+              <span class="font-mono text-xs text-zinc-300 border border-borderSubtle bg-canvas px-3 py-1 rounded-md">
                 Confidence: ${c.confidence ? c.confidence.toUpperCase() : 'MEDIUM'}
               </span>
-              <span class="font-mono text-xs text-blue-400 border border-blue-900 bg-blue-950/50 px-2.5 py-1 rounded-xl">
+              <span class="font-mono text-xs text-blue-400 border border-blue-900 bg-blue-950/50 px-2.5 py-1 rounded-md">
                 Read-Only Analysis
               </span>
             </div>
@@ -1896,12 +1895,12 @@
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
               
               <!-- Current / Risky Implementation -->
-              <div class="rounded-2xl border border-red-900/50 bg-red-950/15 p-4 space-y-2.5">
+              <div class="rounded-lg border border-red-900/50 bg-red-950/15 p-4 space-y-2.5">
                 <div class="flex items-center justify-between border-b border-red-900/40 pb-2">
                   <span class="text-xs font-mono font-bold text-red-400 uppercase tracking-wider">Current / Risky Implementation</span>
                   <span class="text-[11px] font-mono text-red-300/80">Lines ${c.line_start}-${c.line_end}</span>
                 </div>
-                <pre class="text-xs font-mono text-red-200 overflow-x-auto leading-relaxed p-3.5 rounded-xl bg-black/50 border border-red-900/30 whitespace-pre">${escapeHtml(c.wrong_code || '# Current implementation in retrieved file')}</pre>
+                <pre class="text-xs font-mono text-red-200 overflow-x-auto leading-relaxed p-3.5 rounded-md bg-black/50 border border-red-900/30 whitespace-pre">${escapeHtml(c.wrong_code || '# Current implementation in retrieved file')}</pre>
                 <div class="pt-1 text-xs text-red-300/90 leading-relaxed">
                   <strong class="font-mono uppercase text-[10px] text-red-400 block mb-0.5">Why It Is Problematic:</strong>
                   ${escapeHtml(c.why_problematic || c.root_cause_hypothesis)}
@@ -1909,12 +1908,12 @@
               </div>
 
               <!-- Correct / Recommended Pattern -->
-              <div class="rounded-2xl border border-emerald-900/50 bg-emerald-950/15 p-4 space-y-2.5">
+              <div class="rounded-lg border border-emerald-900/50 bg-emerald-950/15 p-4 space-y-2.5">
                 <div class="flex items-center justify-between border-b border-emerald-900/40 pb-2">
                   <span class="text-xs font-mono font-bold text-emerald-400 uppercase tracking-wider">Correct / Recommended Pattern</span>
                   <span class="text-[11px] font-mono text-emerald-300/80">Educational Guidance</span>
                 </div>
-                <pre class="text-xs font-mono text-emerald-200 overflow-x-auto leading-relaxed p-3.5 rounded-xl bg-black/50 border border-emerald-900/30 whitespace-pre">${escapeHtml(c.recommended_pattern || c.correct_code || '# Recommended fix direction')}</pre>
+                <pre class="text-xs font-mono text-emerald-200 overflow-x-auto leading-relaxed p-3.5 rounded-md bg-black/50 border border-emerald-900/30 whitespace-pre">${escapeHtml(c.recommended_pattern || c.correct_code || '# Recommended fix direction')}</pre>
                 <div class="pt-1 text-xs text-emerald-300/90 leading-relaxed">
                   <strong class="font-mono uppercase text-[10px] text-emerald-400 block mb-0.5">Explanation of the Change:</strong>
                   ${escapeHtml(c.explanation_of_change || c.suggested_fix)}
@@ -1988,7 +1987,7 @@
         const wrapper = codeEl.closest('pre');
         if (!wrapper || !definition.trim()) continue;
         const holder = document.createElement('div');
-        holder.className = 'my-3 p-3 bg-black/40 rounded-xl border border-borderSubtle overflow-x-auto';
+        holder.className = 'my-3 p-3 bg-black/40 rounded-md border border-borderSubtle overflow-x-auto';
         try {
           const uniqueId = 'mermaid_reply_' + Math.random().toString(36).substring(2, 10);
           const { svg } = await mermaid.render(uniqueId, definition.trim());
@@ -2017,7 +2016,7 @@
       const agentMention = isDirect ? `@${sendFollowup._directAgent} ` : '';
 
       const userCard = document.createElement('div');
-      userCard.className = 'bg-blue-950/30 border border-blue-900/50 p-4 rounded-2xl space-y-1 ml-auto max-w-2xl animate-step-reveal';
+      userCard.className = 'bg-blue-950/30 border border-blue-900/50 p-4 rounded-lg space-y-1 ml-auto max-w-2xl animate-step-reveal';
       userCard.innerHTML = `
         <div class="flex items-center justify-between gap-3">
           <span class="text-[11px] font-mono uppercase text-blue-400 font-semibold">You${isDirect ? ` → @${escapeHtml(sendFollowup._directAgent)}` : ''}</span>
@@ -2037,7 +2036,7 @@
 
       const thinkingCard = document.createElement('div');
       thinkingCard.id = 'followupThinkingCard';
-      thinkingCard.className = 'bg-surface/50 border border-blue-900/40 p-5 rounded-2xl space-y-2.5 animate-pulse max-w-2xl';
+      thinkingCard.className = 'bg-surface/50 border border-blue-900/40 p-5 rounded-lg space-y-2.5 animate-pulse max-w-2xl';
       thinkingCard.innerHTML = `
         <div class="flex items-center space-x-2 text-xs font-mono text-blue-400">
           <svg class="w-4 h-4 animate-spin text-blue-400" fill="none" viewBox="0 0 24 24">
@@ -2114,7 +2113,7 @@
         const parsedMarkdown = marked.parse(data.answer || '');
 
         const agentCard = document.createElement('div');
-        agentCard.className = 'border border-borderSubtle bg-surface/70 p-6 sm:p-7 rounded-2xl space-y-4 animate-step-reveal';
+        agentCard.className = 'border border-borderSubtle bg-surface/70 p-6 sm:p-7 rounded-lg space-y-4 animate-step-reveal';
         
         agentCard.innerHTML = `
           <div class="flex flex-wrap items-center justify-between gap-2 border-b border-borderSubtle pb-3">
@@ -2130,7 +2129,7 @@
             <span class="text-[11px] font-mono text-zinc-500">${data.direct_agent ? 'Direct Interrogation' : 'Domain Specialist'}</span>
           </div>
 
-          <details class="bg-canvas/70 border border-borderSubtle rounded-xl p-3 text-xs text-zinc-400 group">
+          <details class="bg-canvas/70 border border-borderSubtle rounded-md p-3 text-xs text-zinc-400 group">
             <summary class="cursor-pointer font-mono font-medium flex items-center justify-between select-none hover:text-zinc-200">
               <span class="flex items-center space-x-2">
                 <svg class="w-3.5 h-3.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2178,7 +2177,7 @@
         const msg = err && err.message ? err.message : String(err);
         const isRateLimit = /rate.?limit|429|cooldown|exhausted/i.test(msg);
         const errorCard = document.createElement('div');
-        errorCard.className = 'border border-rose-900/60 bg-rose-950/20 p-5 rounded-2xl space-y-2 max-w-2xl animate-step-reveal';
+        errorCard.className = 'border border-rose-900/60 bg-rose-950/20 p-5 rounded-lg space-y-2 max-w-2xl animate-step-reveal';
         errorCard.innerHTML = `
           <div class="flex items-center space-x-2 text-xs font-mono text-rose-300 font-bold uppercase tracking-wide">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2228,7 +2227,7 @@
         const btn = document.createElement('button');
         btn.dataset.agentKey = a.key;
         btn.title = a.blurb;
-        btn.className = 'group text-[11px] font-mono text-zinc-400 hover:text-white border border-borderSubtle hover:border-blue-600 bg-canvas px-2.5 py-1.5 rounded-xl transition flex items-center space-x-1.5';
+        btn.className = 'group text-[11px] font-mono text-zinc-400 hover:text-white border border-borderSubtle hover:border-blue-600 bg-canvas px-2.5 py-1.5 rounded-md transition flex items-center space-x-1.5';
         btn.innerHTML = `<span class="text-blue-400 font-bold">@</span><span>${escapeHtml(a.name)}</span>`;
         btn.onclick = () => {
           sendFollowup._directAgent = sendFollowup._directAgent === a.key ? null : a.key;
@@ -2248,8 +2247,8 @@
       container.querySelectorAll('button[data-agent-key]').forEach(btn => {
         const active = btn.dataset.agentKey === selected;
         btn.className = active
-          ? 'text-white bg-blue-600 border border-blue-500 text-[11px] font-mono px-2.5 py-1.5 rounded-xl transition flex items-center space-x-1.5 shadow-md shadow-blue-950/40'
-          : 'group text-[11px] font-mono text-zinc-400 hover:text-white border border-borderSubtle hover:border-blue-600 bg-canvas px-2.5 py-1.5 rounded-xl transition flex items-center space-x-1.5';
+          ? 'text-white bg-blue-600 border border-blue-500 text-[11px] font-mono px-2.5 py-1.5 rounded-md transition flex items-center space-x-1.5 shadow-md shadow-blue-950/40'
+          : 'group text-[11px] font-mono text-zinc-400 hover:text-white border border-borderSubtle hover:border-blue-600 bg-canvas px-2.5 py-1.5 rounded-md transition flex items-center space-x-1.5';
       });
       const placeholderEl = document.getElementById('followupInput');
       if (placeholderEl) {
@@ -2269,9 +2268,9 @@
     }
 
     function verdictBadgeClass(verdict) {
-      if (verdict === 'GO') return 'px-3 py-1 rounded-xl text-xs font-mono font-bold uppercase bg-emerald-950/60 border border-emerald-800 text-emerald-300';
-      if (verdict === 'PIVOT') return 'px-3 py-1 rounded-xl text-xs font-mono font-bold uppercase bg-amber-950/60 border border-amber-800 text-amber-300';
-      return 'px-3 py-1 rounded-xl text-xs font-mono font-bold uppercase bg-rose-950/60 border border-rose-800 text-rose-300';
+      if (verdict === 'GO') return 'px-3 py-1 rounded-md text-xs font-mono font-bold uppercase bg-emerald-950/60 border border-emerald-800 text-emerald-300';
+      if (verdict === 'PIVOT') return 'px-3 py-1 rounded-md text-xs font-mono font-bold uppercase bg-amber-950/60 border border-amber-800 text-amber-300';
+      return 'px-3 py-1 rounded-md text-xs font-mono font-bold uppercase bg-rose-950/60 border border-rose-800 text-rose-300';
     }
 
     function renderDecisionSimulator(sc) {
@@ -2289,7 +2288,7 @@
 
       categories.forEach((cat, idx) => {
         const row = document.createElement('div');
-        row.className = 'bg-canvas/70 border border-borderSubtle rounded-2xl p-4 space-y-2';
+        row.className = 'bg-canvas/70 border border-borderSubtle rounded-lg p-4 space-y-2';
         row.innerHTML = `
           <div class="flex flex-wrap items-center justify-between gap-2">
             <div class="flex items-center space-x-2">
@@ -2400,19 +2399,19 @@
         if (!res.ok) return;
         const data = await res.json();
         const chip = document.getElementById('rateLimitChip');
-        const dot = document.getElementById('rateLimitDot');
+        const bar = document.getElementById('rateLimitBar');
         const text = document.getElementById('rateLimitText');
-        if (!chip || !dot || !text) return;
+        if (!chip || !bar || !text) return;
         chip.classList.remove('hidden');
         const rl = data.rate_limits || {};
         if (rl.all_rate_limited) {
-          dot.className = 'w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse';
-          text.innerText = 'Groq: rate-limited, using fallbacks';
+          bar.className = 'w-0.5 h-3 bg-rose-400 animate-pulse';
+          text.innerText = 'Groq: Rate Limited';
         } else if (Object.keys(rl.cooldowns || {}).length > 0) {
-          dot.className = 'w-1.5 h-1.5 rounded-full bg-amber-400';
-          text.innerText = `Groq: ${Object.keys(rl.cooldowns).length} model(s) cooling down`;
+          bar.className = 'w-0.5 h-3 bg-amber-400';
+          text.innerText = `Groq: ${Object.keys(rl.cooldowns).length} Model(s) Cooling`;
         } else {
-          dot.className = 'w-1.5 h-1.5 rounded-full bg-emerald-400';
+          bar.className = 'w-0.5 h-3 bg-emerald-400';
           text.innerText = 'Groq LLM Online';
         }
       } catch (e) {
