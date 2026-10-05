@@ -952,13 +952,16 @@
       }
     }
 
-    function setAgentNodeState(nodeId, statusText, isActive, isDone) {
+    function setAgentNodeState(nodeId, statusText, isActive, isDone, isError) {
       const node = document.getElementById(nodeId);
       if (!node) return;
       const statusSpan = node.querySelector('.status-badge');
       if (statusSpan) statusSpan.innerText = statusText;
 
-      if (isActive) {
+      if (isError) {
+        node.className = "border border-rose-500 bg-rose-950/40 p-3.5 rounded-2xl space-y-1 transition-all shadow-md shadow-rose-950/40";
+        if (statusSpan) statusSpan.className = "status-badge text-rose-400 uppercase font-bold text-[11px]";
+      } else if (isActive) {
         node.className = "border border-blue-500 bg-blue-950/40 p-3.5 rounded-2xl space-y-1 transition-all shadow-md shadow-blue-950/40";
         if (statusSpan) statusSpan.className = "status-badge text-blue-400 uppercase font-bold text-[11px]";
       } else if (isDone) {
@@ -1043,6 +1046,9 @@
       pillarStates[thisPillar].hasOutput = false;
       pillarStates[thisPillar].storyboardHtml = '';
       pillarStates[thisPillar].chatHtml = ''; // Fresh run resets follow-up chat for this pillar
+      pillarStates[thisPillar].statusText = "Running Agents...";
+      pillarStates[thisPillar].statusClass = "text-blue-400 font-semibold";
+
       if (activePillar === thisPillar) {
         document.getElementById('followupThread').innerHTML = '';
         document.getElementById('pipelineStatusText').innerText = "Running Agents...";
@@ -1050,7 +1056,7 @@
         document.getElementById('agentStepsDetail').innerHTML = '';
         document.getElementById('outputArea').classList.add('hidden');
         renderProgressStrip(thisPillar);
-        setAgentNodeState('node_0', 'Working...', true, false);
+        setAgentNodeState('node_0', 'Working...', true, false, false);
       }
 
       let startTime = Date.now();
@@ -1064,11 +1070,17 @@
         }
       }, 100);
 
+      const abortController = new AbortController();
+      const timeoutId = setTimeout(() => {
+        abortController.abort(new Error("Request timed out after 60 seconds"));
+      }, 60000);
+
       try {
         const intent = thisPillar === 'idea' ? 'idea_validation' : 'codebase_analysis';
         const res = await fetch('/api/query', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
+          signal: abortController.signal,
           body: JSON.stringify({
             query: query,
             repo_path: repoPath,
@@ -1076,9 +1088,21 @@
           })
         });
 
+        clearTimeout(timeoutId);
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || `Server responded with status ${res.status} (${res.statusText})`);
+        }
+
         const state = await res.json();
+        if (state.status === 'failed' || state.error) {
+          throw new Error(state.error || 'Pipeline execution failed on server.');
+        }
+
         pillarStates[thisPillar].sessionState = state;
         clearInterval(timerInterval);
+        timerInterval = null;
 
         // Progressive sequential reveal of agent steps
         const traces = state.execution_trace || [];
@@ -1092,7 +1116,7 @@
 
           // Only touch DOM if user is currently viewing this pillar!
           if (activePillar === thisPillar) {
-            setAgentNodeState(currentNodeId, 'Working...', true, false);
+            setAgentNodeState(currentNodeId, 'Working...', true, false, false);
             document.getElementById('pipelineStatusText').innerText = `Agent 0${i + 1} (${step.agent_name}) is working...`;
 
             const loaderCard = document.createElement('div');
@@ -1121,7 +1145,7 @@
             const existingLoader = document.getElementById('activeAgentStepLoader');
             if (existingLoader) existingLoader.remove();
             renderSingleAgentCard(step, i);
-            setAgentNodeState(currentNodeId, 'Done', false, true);
+            setAgentNodeState(currentNodeId, 'Done', false, true, false);
           }
 
           await new Promise(r => setTimeout(r, 600));
@@ -1161,14 +1185,63 @@
         }
 
       } catch (err) {
+        clearTimeout(timeoutId);
         clearInterval(timerInterval);
+        timerInterval = null;
+
+        let elapsedSec = ((Date.now() - startTime) / 1000).toFixed(1);
+        const stoppedTimerStr = `(${elapsedSec}s - Stopped)`;
+        pillarStates[thisPillar].timerText = stoppedTimerStr;
         pillarStates[thisPillar].isRunning = false;
-        pillarStates[thisPillar].statusText = "Error";
-        pillarStates[thisPillar].statusClass = "text-red-400 font-semibold";
+        pillarStates[thisPillar].statusText = "Execution Error";
+        pillarStates[thisPillar].statusClass = "text-rose-400 font-bold";
+
         if (activePillar === thisPillar) {
-          document.getElementById('pipelineStatusText').innerText = "Error";
-          document.getElementById('pipelineStatusText').className = "text-red-400 font-semibold";
-          alert("Workflow execution error: " + err);
+          document.getElementById('pipelineTimer').innerText = stoppedTimerStr;
+          document.getElementById('pipelineStatusText').innerText = "Execution Stopped: Error";
+          document.getElementById('pipelineStatusText').className = "text-rose-400 font-bold";
+
+          // Remove any active loader
+          const existingLoader = document.getElementById('activeAgentStepLoader');
+          if (existingLoader) existingLoader.remove();
+
+          // Mark active agent nodes as Error
+          const currentAgents = thisPillar === 'idea' ? IDEA_AGENTS : CODE_AGENTS;
+          currentAgents.forEach((ag) => {
+            const nodeEl = document.getElementById(ag.id);
+            if (nodeEl && nodeEl.className.includes('border-blue-500')) {
+              setAgentNodeState(ag.id, 'Error', false, false, true);
+            }
+          });
+
+          // Render clear in-page visual error container
+          const detailContainer = document.getElementById('agentStepsDetail');
+          const errorCard = document.createElement('div');
+          errorCard.className = 'border border-rose-500/50 bg-rose-950/20 p-6 rounded-2xl space-y-3 animate-step-reveal';
+          errorCard.innerHTML = `
+            <div class="flex items-center space-x-3">
+              <div class="w-9 h-9 rounded-xl bg-rose-600/30 border border-rose-500 flex items-center justify-center shrink-0">
+                <svg class="w-5 h-5 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                </svg>
+              </div>
+              <div>
+                <h4 class="text-sm sm:text-base font-bold text-rose-300">Pipeline Execution Stopped</h4>
+                <p class="text-xs text-zinc-400">An issue occurred during pipeline execution. The timer has been safely stopped.</p>
+              </div>
+            </div>
+            <div class="p-3.5 bg-canvas/90 rounded-xl border border-rose-900/50 font-mono text-xs text-rose-300 break-words leading-relaxed">
+              ${escapeHtml(err.message || String(err))}
+            </div>
+            <div class="flex flex-wrap items-center justify-between gap-2 pt-1 text-xs text-zinc-400">
+              <span>Please wait a moment if rate-limited on free tier, then retry.</span>
+              <button onclick="executeWorkflow()" class="px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-rose-600/40 hover:bg-rose-600 text-white border border-rose-500/60 transition shadow-sm">
+                Retry Query
+              </button>
+            </div>
+          `;
+          detailContainer.appendChild(errorCard);
+          pillarStates[thisPillar].storyboardHtml = detailContainer.innerHTML;
         }
       }
     }
