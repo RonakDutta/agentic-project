@@ -4,6 +4,7 @@ Classifies user intent, generates dynamic execution plans, delegates tasks to sp
 manages deterministic verification loops, and records complete execution traces for visual observability.
 """
 
+import os
 import uuid
 from typing import Any, Dict, List, Optional
 from core.llm import llm_client
@@ -184,31 +185,59 @@ class OrchestratorAgent:
         self, state: AgentWorkflowState, query: str, repo_path: Optional[str]
     ) -> None:
         """Executes Code Navigation -> Diagnosis -> Critic verification loop."""
-        if not repo_path:
+        target_path = (repo_path or "").strip()
+        from indexer.github_ingest import github_ingest_service
+
+        if target_path and github_ingest_service.is_valid_github_url(target_path):
             state.add_trace(
                 "Task Planner",
-                "Error: Codebase analysis requested but no repository path provided.",
+                f"Cloning remote GitHub repository '{target_path}' into secure read-only sandbox...",
+                status="running",
+            )
+            ingest_res = github_ingest_service.ingest(target_path)
+            if ingest_res.status != "ok":
+                state.add_trace(
+                    "Task Planner",
+                    f"GitHub clone failed: {ingest_res.error_message}",
+                    status="warning",
+                )
+                state.final_output = {
+                    "error": f"Failed to clone GitHub repository: {ingest_res.error_message}",
+                    "type": "error",
+                }
+                return
+            state.add_trace(
+                "Task Planner",
+                f"Successfully cloned '{ingest_res.repo_name}' ({ingest_res.total_files} files, {ingest_res.total_symbols} symbols).",
+                status="completed",
+            )
+            target_path = ingest_res.local_path
+
+        if not target_path or not os.path.exists(target_path):
+            state.add_trace(
+                "Task Planner",
+                "Error: Codebase analysis requested but target repository path does not exist.",
                 status="warning",
                 details={
                     "thinking": "Attempted to locate repository on disk.",
                     "tool": "File System Inspector",
-                    "findings": ["No folder path was provided by the user."],
+                    "findings": ["No valid folder path or GitHub repository was provided."],
                     "handoff": "Stopped pipeline gracefully.",
                 },
             )
             state.final_output = {
-                "error": "Please provide a valid repository path to analyze.",
+                "error": "Please provide a valid repository path or public GitHub URL to analyze.",
                 "type": "error",
             }
             return
 
         # Step 1: AST Parsing & Indexing
-        indexer = ASTCodeIndexer(repo_path=repo_path)
+        indexer = ASTCodeIndexer(repo_path=target_path)
         codebase_index = indexer.index()
 
         state.add_trace(
             "Code Structure Indexer",
-            f"Parsed Python repository at '{repo_path}'",
+            f"Parsed Python repository at '{target_path}'",
             status="completed",
             details={
                 "thinking": "Parsing all Python files into an Abstract Syntax Tree to map functions, classes, and import connections.",

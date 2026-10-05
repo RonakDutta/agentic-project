@@ -185,6 +185,12 @@ class RoadmapRiskAgent:
                         "risk": "Incumbent platforms replicating core capabilities.",
                         "severity": "High",
                         "mitigation": f"Focus on unique differentiators: {', '.join(market.key_differentiators[:2]) or 'Targeted problem niche'}."
+                    },
+                    {
+                        "category": "Operational",
+                        "risk": "Integration and deployment friction during user onboarding.",
+                        "severity": "Medium",
+                        "mitigation": "Provide containerized setups and automated environment validation scripts."
                     }
                 ],
                 "feasibility_score": 85,
@@ -196,6 +202,34 @@ class RoadmapRiskAgent:
                 ]
             }
 
+        default_phases = [
+            RoadmapPhase(
+                phase_number=1,
+                phase_name="Phase 1: Proof of Concept & MVP",
+                duration_weeks="3-4 weeks",
+                goals=["Establish foundational data flow and verify end-to-end integration."],
+                deliverables=[f"Implement primary feature: {idea.mvp_features[0] if idea.mvp_features else 'Core Engine'}", "Construct validation harness and unit tests"],
+                exit_criteria="Core flow functional without uncaught exceptions.",
+            ),
+            RoadmapPhase(
+                phase_number=2,
+                phase_name="Phase 2: Platform Maturation & Persistence",
+                duration_weeks="4-6 weeks",
+                goals=["Build out authentication, data storage, and analytics."],
+                deliverables=[f"Implement secondary feature: {idea.mvp_features[1] if len(idea.mvp_features) > 1 else 'Interactive Dashboard'}", "Database indexing and asynchronous workers"],
+                exit_criteria="Persistent storage verified with sub-second response times.",
+            ),
+            RoadmapPhase(
+                phase_number=3,
+                phase_name="Phase 3: Production Hardening & Scale",
+                duration_weeks="4-6 weeks",
+                goals=["Perform security auditing, rate limiting, and CI/CD automation."],
+                deliverables=["Production CI/CD deployment pipeline", "Security audit and observability metrics"],
+                exit_criteria="Production readiness checklist verified.",
+            ),
+        ]
+
+        raw_phases = json_output.get("phases", [])
         phases = [
             RoadmapPhase(
                 phase_number=p.get("phase_number", i + 1),
@@ -205,9 +239,34 @@ class RoadmapRiskAgent:
                 deliverables=p.get("deliverables", []),
                 exit_criteria=p.get("exit_criteria", ""),
             )
-            for i, p in enumerate(json_output.get("phases", []))
+            for i, p in enumerate(raw_phases)
+        ]
+        if len(phases) < 3:
+            for dp in default_phases[len(phases):3]:
+                phases.append(dp)
+
+        default_risks = [
+            RiskItem(
+                category="Technical",
+                risk="Scalability bottlenecks under concurrent request spikes.",
+                severity="Medium",
+                mitigation="Introduce asynchronous background queueing and caching layer.",
+            ),
+            RiskItem(
+                category="Market",
+                risk="Incumbent platforms replicating core capabilities.",
+                severity="High",
+                mitigation=f"Focus on unique differentiators: {', '.join(market.key_differentiators[:2]) if market.key_differentiators else 'Targeted problem niche'}.",
+            ),
+            RiskItem(
+                category="Operational",
+                risk="Integration and deployment friction during user onboarding.",
+                severity="Medium",
+                mitigation="Provide containerized setups and automated environment validation scripts.",
+            ),
         ]
 
+        raw_risks = json_output.get("risks", []) or json_output.get("risk_matrix", []) or json_output.get("risks_and_mitigations", [])
         risks = [
             RiskItem(
                 category=r.get("category", "Technical"),
@@ -215,8 +274,15 @@ class RoadmapRiskAgent:
                 severity=r.get("severity", "Medium"),
                 mitigation=r.get("mitigation", ""),
             )
-            for r in json_output.get("risks", [])
+            for r in raw_risks
+            if isinstance(r, dict) and r.get("risk")
         ]
+        if len(risks) < 2:
+            for dr in default_risks:
+                if dr.risk not in [r.risk for r in risks]:
+                    risks.append(dr)
+                if len(risks) >= 3:
+                    break
 
         trace.append(f"Roadmap generated with {len(phases)} phases and {len(risks)} risk mitigations.")
 
@@ -229,11 +295,18 @@ class RoadmapRiskAgent:
             )
         )
 
+        eval_tips = json_output.get("evaluation_tips", []) or json_output.get("tips", [])
+        if not eval_tips:
+            eval_tips = [
+                "Demo the live working prototype first during evaluation.",
+                "Highlight deterministic validation layers alongside AI reasoning."
+            ]
+
         return RoadmapAndRiskReport(
             project_title=idea.project_title,
             phases=phases,
             risks=risks,
-            evaluation_tips=json_output.get("evaluation_tips", []),
+            evaluation_tips=eval_tips,
             trace=trace,
             feasibility_score=feasibility_score,
             feasibility_verdict=feasibility_verdict,

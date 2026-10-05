@@ -91,16 +91,48 @@ async def execute_followup(req: FollowupRequest):
 
 @app.post("/api/inspect-repo")
 async def inspect_repository(req: InspectRepoRequest):
-    """Parses a local Python codebase and returns AST structural statistics."""
-    if not os.path.exists(req.repo_path):
+    """Parses a local Python codebase or safely shallow-clones and indexes a remote GitHub repository."""
+    target = req.repo_path.strip()
+    from indexer.github_ingest import github_ingest_service
+
+    if github_ingest_service.is_valid_github_url(target):
+        ingest_res = github_ingest_service.ingest(target)
+        if ingest_res.status != "ok":
+            return JSONResponse(
+                status_code=400,
+                content={"status": "error", "message": ingest_res.error_message or "Failed to clone GitHub repository."},
+            )
+        summary = (
+            ingest_res.codebase_index.get_summary()
+            if ingest_res.codebase_index
+            else {"total_files": ingest_res.total_files, "total_chunks": ingest_res.total_symbols}
+        )
+        return JSONResponse(
+            content={
+                "status": "ok",
+                "summary": summary,
+                "local_path": ingest_res.local_path,
+                "repo_name": ingest_res.repo_name,
+                "is_remote": True,
+            }
+        )
+
+    if not os.path.exists(target):
         return JSONResponse(
             status_code=400,
-            content={"status": "error", "message": f"Path '{req.repo_path}' does not exist on disk."},
+            content={"status": "error", "message": f"Path '{target}' does not exist on disk."},
         )
     try:
-        indexer = ASTCodeIndexer(repo_path=req.repo_path)
+        indexer = ASTCodeIndexer(repo_path=target)
         index = indexer.index()
-        return JSONResponse(content={"status": "ok", "summary": index.get_summary()})
+        return JSONResponse(
+            content={
+                "status": "ok",
+                "summary": index.get_summary(),
+                "local_path": target,
+                "is_remote": False,
+            }
+        )
     except Exception as err:
         return JSONResponse(
             status_code=500,

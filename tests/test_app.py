@@ -65,7 +65,22 @@ def test_followup_endpoint():
     print(f"Follow-up answered by: {data['agent_name']}")
 
 
+def test_inspect_repo_github():
+    print("Testing POST /api/inspect-repo with GitHub repository URL...")
+    res = client.post(
+        "/api/inspect-repo",
+        json={"repo_path": "https://github.com/RonakDutta/agentic-project"},
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == "ok"
+    assert data["is_remote"] is True
+    assert data["summary"]["total_files"] >= 1
+    assert "local_path" in data
+
+
 if __name__ == "__main__":
     test_app_endpoints()
     test_followup_endpoint()
+    test_inspect_repo_github()
 

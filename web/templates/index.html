@@ -685,6 +685,33 @@
     let timerInterval = null;
     let currentMermaidTab = 'architecture';
 
+    const pillarStates = {
+      idea: {
+        sessionState: null,
+        isRunning: false,
+        runId: 0,
+        prompt: '',
+        chatHtml: '',
+        storyboardHtml: '',
+        statusText: 'Pipeline Ready',
+        statusClass: 'text-zinc-500 font-mono text-xs',
+        timerText: '(0.0s)',
+        hasOutput: false
+      },
+      code: {
+        sessionState: null,
+        isRunning: false,
+        runId: 0,
+        prompt: '',
+        chatHtml: '',
+        storyboardHtml: '',
+        statusText: 'Pipeline Ready',
+        statusClass: 'text-zinc-500 font-mono text-xs',
+        timerText: '(0.0s)',
+        hasOutput: false
+      }
+    };
+
     const IDEA_AGENTS = [
       { id: 'node_0', name: 'Idea Decomposer', role: 'Task Planner & Scope', desc: 'Decomposes problem & MVP scope' },
       { id: 'node_1', name: 'Market Intelligence', role: 'Competitor Intelligence', desc: 'Live market analysis & tech stack' },
@@ -768,6 +795,19 @@
     }
 
     function selectPillar(mode) {
+      if (mode === activePillar) return;
+
+      // 1. Snapshot current active pillar state before switching
+      const current = pillarStates[activePillar];
+      current.prompt = document.getElementById('mainPrompt').value;
+      current.chatHtml = document.getElementById('followupThread').innerHTML;
+      current.storyboardHtml = document.getElementById('agentStepsDetail').innerHTML;
+      current.statusText = document.getElementById('pipelineStatusText').innerText;
+      current.statusClass = document.getElementById('pipelineStatusText').className;
+      current.timerText = document.getElementById('pipelineTimer').innerText;
+      current.hasOutput = !document.getElementById('outputArea').classList.contains('hidden');
+
+      // 2. Switch active pillar
       activePillar = mode;
       const btnIdea = document.getElementById('btnModeIdea');
       const btnCode = document.getElementById('btnModeCode');
@@ -801,7 +841,46 @@
         btnRunText.innerText = "Diagnose Codebase with AST (4 Agents)";
       }
 
+      // 3. Restore target pillar state
+      const target = pillarStates[mode];
+      currentSessionState = target.sessionState;
+      mainPrompt.value = target.prompt;
+      document.getElementById('followupThread').innerHTML = target.chatHtml;
+      document.getElementById('agentStepsDetail').innerHTML = target.storyboardHtml;
+      document.getElementById('pipelineStatusText').innerText = target.statusText;
+      document.getElementById('pipelineStatusText').className = target.statusClass;
+      document.getElementById('pipelineTimer').innerText = target.timerText;
+
+      // 4. Render progress strip for target mode
       renderProgressStrip(mode);
+
+      // If target mode already has completed output, mark its cards as done and reveal output
+      if (target.hasOutput && target.sessionState) {
+        const agents = mode === 'idea' ? IDEA_AGENTS : CODE_AGENTS;
+        agents.forEach(ag => setAgentNodeState(ag.id, 'Done', false, true));
+        document.getElementById('outputArea').classList.remove('hidden');
+        document.getElementById('btnExportTop').classList.remove('hidden');
+        renderMetrics(target.sessionState);
+        renderTraceLog(target.sessionState);
+        if (mode === 'idea') {
+          document.getElementById('ideaView').classList.remove('hidden');
+          document.getElementById('codeView').classList.add('hidden');
+          renderIdeaResults(target.sessionState);
+        } else {
+          document.getElementById('ideaView').classList.add('hidden');
+          document.getElementById('codeView').classList.remove('hidden');
+          renderCodeResults(target.sessionState);
+        }
+      } else if (target.isRunning) {
+        // Target mode is actively running in background: keep storyboard visible
+        document.getElementById('outputArea').classList.add('hidden');
+        document.getElementById('btnExportTop').classList.add('hidden');
+      } else {
+        // Target mode is fresh / idle
+        document.getElementById('outputArea').classList.add('hidden');
+        document.getElementById('btnExportTop').classList.add('hidden');
+      }
+
       updateFollowupPromptChips(mode);
     }
 
@@ -834,8 +913,18 @@
     }
 
     async function inspectRepo() {
-      const repoPath = document.getElementById('repoPathInput').value.trim();
+      const repoInput = document.getElementById('repoPathInput');
+      const repoPath = repoInput.value.trim();
       if (!repoPath) return;
+
+      const btn = document.getElementById('btnInspectAST');
+      const badge = document.getElementById('repoStatsBadge');
+
+      btn.disabled = true;
+      btn.innerText = "Scanning...";
+      badge.className = "text-blue-400 text-xs px-2.5 py-1 bg-surface rounded-xl border border-blue-900/60 font-mono";
+      badge.innerText = repoPath.startsWith('http') ? "Cloning GitHub repo & indexing AST..." : "Scanning AST...";
+      badge.classList.remove('hidden');
 
       try {
         const res = await fetch('/api/inspect-repo', {
@@ -845,12 +934,21 @@
         });
         const data = await res.json();
         if (data.status === 'ok') {
-          const badge = document.getElementById('repoStatsBadge');
-          badge.innerText = `${data.summary.total_files} files, ${data.summary.total_chunks} functions scanned`;
-          badge.classList.remove('hidden');
+          const filesCount = data.summary ? data.summary.total_files : 0;
+          const chunksCount = data.summary ? data.summary.total_chunks : 0;
+          const label = data.is_remote ? `GitHub: ${data.repo_name || 'Cloned'}` : 'Local';
+          badge.className = "text-emerald-400 text-xs px-2.5 py-1 bg-surface rounded-xl border border-emerald-900/60 font-mono";
+          badge.innerText = `${filesCount} files, ${chunksCount} functions scanned (${label})`;
+        } else {
+          badge.className = "text-rose-400 text-xs px-2.5 py-1 bg-surface rounded-xl border border-rose-900/60 font-mono";
+          badge.innerText = data.message || "Failed to scan repository.";
         }
       } catch (e) {
-        console.error(e);
+        badge.className = "text-rose-400 text-xs px-2.5 py-1 bg-surface rounded-xl border border-rose-900/60 font-mono";
+        badge.innerText = "Connection error while scanning repo.";
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "Scan Files";
       }
     }
 
@@ -931,6 +1029,7 @@
     }
 
     async function executeWorkflow() {
+      const thisPillar = activePillar;
       const query = document.getElementById('mainPrompt').value.trim();
       const repoPath = document.getElementById('repoPathInput').value.trim();
 
@@ -939,26 +1038,34 @@
         return;
       }
 
-      document.getElementById('pipelineStatusText').innerText = "Running Agents...";
-      document.getElementById('pipelineStatusText').className = "text-blue-400 font-semibold";
-      
+      const runId = ++pillarStates[thisPillar].runId;
+      pillarStates[thisPillar].isRunning = true;
+      pillarStates[thisPillar].hasOutput = false;
+      pillarStates[thisPillar].storyboardHtml = '';
+      pillarStates[thisPillar].chatHtml = ''; // Fresh run resets follow-up chat for this pillar
+      if (activePillar === thisPillar) {
+        document.getElementById('followupThread').innerHTML = '';
+        document.getElementById('pipelineStatusText').innerText = "Running Agents...";
+        document.getElementById('pipelineStatusText').className = "text-blue-400 font-semibold";
+        document.getElementById('agentStepsDetail').innerHTML = '';
+        document.getElementById('outputArea').classList.add('hidden');
+        renderProgressStrip(thisPillar);
+        setAgentNodeState('node_0', 'Working...', true, false);
+      }
+
       let startTime = Date.now();
       clearInterval(timerInterval);
       timerInterval = setInterval(() => {
         let sec = ((Date.now() - startTime) / 1000).toFixed(1);
-        document.getElementById('pipelineTimer').innerText = `(${sec}s)`;
+        const timerStr = `(${sec}s)`;
+        pillarStates[thisPillar].timerText = timerStr;
+        if (activePillar === thisPillar) {
+          document.getElementById('pipelineTimer').innerText = timerStr;
+        }
       }, 100);
 
-      // Clear previous steps and hide output
-      const stepsContainer = document.getElementById('agentStepsDetail');
-      stepsContainer.innerHTML = '';
-      document.getElementById('outputArea').classList.add('hidden');
-
-      renderProgressStrip(activePillar);
-      setAgentNodeState('node_0', 'Working...', true, false);
-
       try {
-        const intent = activePillar === 'idea' ? 'idea_validation' : 'codebase_analysis';
+        const intent = thisPillar === 'idea' ? 'idea_validation' : 'codebase_analysis';
         const res = await fetch('/api/query', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
@@ -970,79 +1077,99 @@
         });
 
         const state = await res.json();
-        currentSessionState = state;
+        pillarStates[thisPillar].sessionState = state;
         clearInterval(timerInterval);
 
-        // Progressive sequential reveal of agent steps with active shimmer loader and deliberate pauses
+        // Progressive sequential reveal of agent steps
         const traces = state.execution_trace || [];
         const agentSteps = traces.filter(t => t.details && (t.details.thinking || t.details.findings));
-        const currentAgents = activePillar === 'idea' ? IDEA_AGENTS : CODE_AGENTS;
+        const currentAgents = thisPillar === 'idea' ? IDEA_AGENTS : CODE_AGENTS;
 
         for (let i = 0; i < agentSteps.length; i++) {
+          if (pillarStates[thisPillar].runId !== runId) return; // Stale run cancelled
           const step = agentSteps[i];
           const currentNodeId = currentAgents[i] ? currentAgents[i].id : `node_${i}`;
 
-          // 1. Mark top node as working
-          setAgentNodeState(currentNodeId, 'Working...', true, false);
-          document.getElementById('pipelineStatusText').innerText = `Agent 0${i + 1} (${step.agent_name}) is working...`;
+          // Only touch DOM if user is currently viewing this pillar!
+          if (activePillar === thisPillar) {
+            setAgentNodeState(currentNodeId, 'Working...', true, false);
+            document.getElementById('pipelineStatusText').innerText = `Agent 0${i + 1} (${step.agent_name}) is working...`;
 
-          // 2. Append active loader card into storyboard
-          const loaderCard = document.createElement('div');
-          loaderCard.id = 'activeAgentStepLoader';
-          loaderCard.className = 'border border-blue-500/50 bg-blue-950/20 p-5 rounded-2xl flex items-center space-x-3.5 animate-pulse';
-          loaderCard.innerHTML = `
-            <div class="w-8 h-8 rounded-xl bg-blue-600/30 border border-blue-500 flex items-center justify-center shrink-0">
-              <svg class="w-4 h-4 text-blue-400 animate-spin" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
-              </svg>
-            </div>
-            <div class="space-y-0.5">
-              <div class="text-xs font-mono font-bold text-blue-400 uppercase tracking-wide">Agent 0${i + 1} (${step.agent_name}) in progress</div>
-              <div class="text-xs text-zinc-300">${getAgentActionDescription(step.agent_name, i)}</div>
-            </div>
-          `;
-          stepsContainer.appendChild(loaderCard);
-          loaderCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            const loaderCard = document.createElement('div');
+            loaderCard.id = 'activeAgentStepLoader';
+            loaderCard.className = 'border border-blue-500/50 bg-blue-950/20 p-5 rounded-2xl flex items-center space-x-3.5 animate-pulse';
+            loaderCard.innerHTML = `
+              <div class="w-8 h-8 rounded-xl bg-blue-600/30 border border-blue-500 flex items-center justify-center shrink-0">
+                <svg class="w-4 h-4 text-blue-400 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                </svg>
+              </div>
+              <div class="space-y-0.5">
+                <div class="text-xs font-mono font-bold text-blue-400 uppercase tracking-wide">Agent 0${i + 1} (${step.agent_name}) in progress</div>
+                <div class="text-xs text-zinc-300">${getAgentActionDescription(step.agent_name, i)}</div>
+              </div>
+            `;
+            document.getElementById('agentStepsDetail').appendChild(loaderCard);
+            loaderCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }
 
-          // 3. Pause for 850ms while loading
-          await new Promise(r => setTimeout(r, 850));
+          await new Promise(r => setTimeout(r, 650));
+          if (pillarStates[thisPillar].runId !== runId) return;
 
-          // 4. Remove loader and display completed rich agent card
-          loaderCard.remove();
-          renderSingleAgentCard(step, i);
-          setAgentNodeState(currentNodeId, 'Done', false, true);
+          if (activePillar === thisPillar) {
+            const existingLoader = document.getElementById('activeAgentStepLoader');
+            if (existingLoader) existingLoader.remove();
+            renderSingleAgentCard(step, i);
+            setAgentNodeState(currentNodeId, 'Done', false, true);
+          }
 
-          // 5. Pause for 750ms so user can digest findings
-          await new Promise(r => setTimeout(r, 750));
+          await new Promise(r => setTimeout(r, 600));
         }
 
-        document.getElementById('pipelineStatusText').innerText = "All Agents Complete";
-        document.getElementById('pipelineStatusText').className = "text-emerald-400 font-semibold";
-        document.getElementById('btnExportTop').classList.remove('hidden');
-
-        // Smoothly reveal full output
-        document.getElementById('outputArea').classList.remove('hidden');
-        renderMetrics(state);
-        renderTraceLog(state);
-
-        if (intent === 'idea_validation') {
-          document.getElementById('ideaView').classList.remove('hidden');
-          document.getElementById('codeView').classList.add('hidden');
-          renderIdeaResults(state);
-        } else {
-          document.getElementById('ideaView').classList.add('hidden');
-          document.getElementById('codeView').classList.remove('hidden');
-          renderCodeResults(state);
+        // Cache completed storyboard html
+        if (activePillar === thisPillar) {
+          pillarStates[thisPillar].storyboardHtml = document.getElementById('agentStepsDetail').innerHTML;
         }
 
-        document.getElementById('outputArea').scrollIntoView({ behavior: 'smooth' });
+        pillarStates[thisPillar].isRunning = false;
+        pillarStates[thisPillar].hasOutput = true;
+        pillarStates[thisPillar].statusText = "All Agents Complete";
+        pillarStates[thisPillar].statusClass = "text-emerald-400 font-semibold";
+
+        if (activePillar === thisPillar) {
+          currentSessionState = state;
+          document.getElementById('pipelineStatusText').innerText = "All Agents Complete";
+          document.getElementById('pipelineStatusText').className = "text-emerald-400 font-semibold";
+          document.getElementById('btnExportTop').classList.remove('hidden');
+
+          document.getElementById('outputArea').classList.remove('hidden');
+          renderMetrics(state);
+          renderTraceLog(state);
+
+          if (thisPillar === 'idea') {
+            document.getElementById('ideaView').classList.remove('hidden');
+            document.getElementById('codeView').classList.add('hidden');
+            renderIdeaResults(state);
+          } else {
+            document.getElementById('ideaView').classList.add('hidden');
+            document.getElementById('codeView').classList.remove('hidden');
+            renderCodeResults(state);
+          }
+
+          document.getElementById('outputArea').scrollIntoView({ behavior: 'smooth' });
+        }
 
       } catch (err) {
         clearInterval(timerInterval);
-        document.getElementById('pipelineStatusText').innerText = "Error";
-        document.getElementById('pipelineStatusText').className = "text-red-400 font-semibold";
-        alert("Workflow execution error: " + err);
+        pillarStates[thisPillar].isRunning = false;
+        pillarStates[thisPillar].statusText = "Error";
+        pillarStates[thisPillar].statusClass = "text-red-400 font-semibold";
+        if (activePillar === thisPillar) {
+          document.getElementById('pipelineStatusText').innerText = "Error";
+          document.getElementById('pipelineStatusText').className = "text-red-400 font-semibold";
+          alert("Workflow execution error: " + err);
+        }
       }
     }
 
@@ -1636,6 +1763,7 @@
         <p class="text-sm text-zinc-100 font-medium">${escapeHtml(query)}</p>
       `;
       thread.appendChild(userCard);
+      pillarStates[activePillar].chatHtml = thread.innerHTML;
       input.value = '';
 
       btn.disabled = true;
@@ -1758,6 +1886,7 @@
           ` : ''}
         `;
         thread.appendChild(agentCard);
+        pillarStates[activePillar].chatHtml = thread.innerHTML;
         agentCard.scrollIntoView({ behavior: 'smooth' });
 
       } catch (err) {

@@ -53,6 +53,7 @@ class GitHubIngestionService:
     def __init__(self, workspace_root: Optional[str] = None, max_files: int = 400):
         self.workspace_root = workspace_root or tempfile.gettempdir()
         self.max_files = max_files
+        self._cache: Dict[str, IngestionResult] = {}
 
     def is_valid_github_url(self, url: str) -> bool:
         """Validates that the input is a well-formed GitHub HTTPS repository URL."""
@@ -82,6 +83,12 @@ class GitHubIngestionService:
                 total_symbols=0,
                 error_message="Invalid GitHub URL format. Must be https://github.com/owner/repository",
             )
+
+        cache_key = f"{clean_url}@{branch or 'default'}"
+        if cache_key in self._cache:
+            cached = self._cache[cache_key]
+            if os.path.exists(cached.local_path):
+                return cached
 
         repo_ident = self.extract_repo_name(clean_url).replace("/", "_")
         dest_dir = tempfile.mkdtemp(prefix=f"agentic_gh_{repo_ident}_", dir=self.workspace_root)
@@ -116,7 +123,7 @@ class GitHubIngestionService:
             indexer = ASTCodeIndexer(repo_path=dest_dir, max_files=self.max_files)
             codebase_index = indexer.index()
 
-            return IngestionResult(
+            result = IngestionResult(
                 status="ok",
                 repo_name=self.extract_repo_name(clean_url),
                 repo_url=clean_url,
@@ -126,6 +133,8 @@ class GitHubIngestionService:
                 branch=branch or "default",
                 codebase_index=codebase_index,
             )
+            self._cache[cache_key] = result
+            return result
 
         except subprocess.TimeoutExpired:
             shutil.rmtree(dest_dir, ignore_errors=True)
