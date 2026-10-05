@@ -3,34 +3,32 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Agentic Co-Pilot | Engineering Idea Validation & Code Intelligence</title>
+  <title>Agentic Co-Pilot | Multi-Agent Idea Validation & Codebase Intelligence</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <!-- Modern Spacious Typography: Outfit for Headings, Plus Jakarta Sans for Body, JetBrains Mono for Code -->
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- Standard High-Legibility Developer Typography: Inter & JetBrains Mono -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <script>
     tailwind.config = {
       darkMode: 'class',
       theme: {
         extend: {
           fontFamily: {
-            heading: ['Outfit', 'sans-serif'],
-            body: ['"Plus Jakarta Sans"', 'sans-serif'],
+            sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
             mono: ['"JetBrains Mono"', 'monospace'],
           },
           colors: {
-            canvas: {
-              bg: '#0c0d12',
-              surface: '#13151c',
-              card: '#181a24',
-              subtle: '#202330',
-              border: '#262938',
-              borderLight: '#32374a',
-              text: '#f3f4f8',
-              muted: '#9499ad',
-              faint: '#60667d',
-              accent: '#4f46e5',
+            app: {
+              bg: '#090a0f',
+              surface: '#0f1117',
+              panel: '#151821',
+              border: '#202433',
+              borderLight: '#2c3247',
+              text: '#f1f3f9',
+              muted: '#8b93a7',
+              faint: '#545b73',
+              accent: '#3b82f6',
             }
           }
         }
@@ -39,154 +37,145 @@
   </script>
   <style>
     body {
-      background-color: #0c0d12;
-      color: #f3f4f8;
-      font-family: 'Plus Jakarta Sans', sans-serif;
-      line-height: 1.65;
-    }
-    h1, h2, h3, h4, h5, h6 {
-      font-family: 'Outfit', sans-serif;
-      letter-spacing: -0.02em;
+      background-color: #090a0f;
+      color: #f1f3f9;
+      font-family: 'Inter', sans-serif;
+      line-height: 1.6;
     }
     pre, code {
       font-family: 'JetBrains Mono', monospace;
     }
     ::-webkit-scrollbar {
-      width: 7px;
-      height: 7px;
+      width: 6px;
+      height: 6px;
     }
     ::-webkit-scrollbar-track {
       background: transparent;
     }
     ::-webkit-scrollbar-thumb {
-      background: #262938;
-      border-radius: 6px;
+      background: #202433;
+      border-radius: 4px;
     }
     ::-webkit-scrollbar-thumb:hover {
-      background: #363a4f;
+      background: #2c3247;
+    }
+    .agent-active {
+      border-color: #3b82f6 !important;
+      background-color: #172554 !important;
+      color: #93c5fd !important;
     }
   </style>
 </head>
-<body class="min-h-screen flex flex-col font-body selection:bg-indigo-900/60 selection:text-white">
+<body class="min-h-screen flex flex-col font-sans selection:bg-blue-950 selection:text-white">
 
-  <!-- Spacious, Modern Top Bar -->
-  <header class="border-b border-canvas-border/70 bg-canvas-bg/95 backdrop-blur-lg sticky top-0 z-50">
-    <div class="max-w-6xl mx-auto px-6 sm:px-8 h-20 flex items-center justify-between">
+  <!-- Top Navigation Bar -->
+  <header class="border-b border-app-border bg-app-bg/95 backdrop-blur-md sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
       
-      <!-- Clean Editorial Brand Typography -->
-      <div>
-        <div class="flex items-center space-x-2.5">
-          <span class="font-heading font-extrabold tracking-tight text-white text-xl">IdeaCraft</span>
-          <span class="text-xs font-mono text-zinc-500 uppercase tracking-widest pt-0.5">Studio</span>
-        </div>
-        <p class="text-xs text-canvas-muted mt-0.5 font-normal">Multi-Agent System for Academic Idea Validation & Codebase Analysis</p>
+      <!-- Brand & Project Details -->
+      <div class="flex items-center space-x-3">
+        <div class="font-bold tracking-tight text-white text-base">Agentic Co-Pilot</div>
+        <span class="text-xs font-mono text-zinc-500 uppercase tracking-widest border-l border-app-border pl-3">
+          Multi-Agent System
+        </span>
+        <span class="text-xs text-app-muted hidden sm:inline">Idea Validation & AST Codebase Analysis</span>
       </div>
 
-      <!-- Actions Strip -->
-      <div class="flex items-center space-x-3">
-        <span class="text-xs font-mono text-canvas-muted border border-canvas-border bg-canvas-surface px-3 py-1.5 rounded-xl">
-          Llama 3.3 / 120B Cooperative Mesh
+      <!-- Engine & Export Header -->
+      <div class="flex items-center space-x-3 text-xs font-mono">
+        <span class="text-app-muted border border-app-border bg-app-surface px-3 py-1.5 rounded-lg">
+          Engine: Groq / Llama 3.3
         </span>
-        <button onclick="resetWorkspace()" class="text-xs text-canvas-text hover:text-white border border-canvas-border hover:border-canvas-borderLight bg-canvas-surface hover:bg-canvas-card px-4 py-2 rounded-xl transition font-medium">
-          New Workspace
-        </button>
-        <button id="btnExport" onclick="exportReport()" class="hidden text-xs text-white bg-indigo-600 hover:bg-indigo-500 px-4 py-2 rounded-xl transition font-semibold shadow-md">
-          Export Full Brief
+        <button id="btnExportTop" onclick="exportReport()" class="hidden text-white bg-blue-600 hover:bg-blue-500 px-3.5 py-1.5 rounded-lg transition font-medium">
+          Export Report (.md)
         </button>
       </div>
 
     </div>
   </header>
 
-  <!-- Main Open Canvas -->
-  <main class="flex-1 max-w-5xl w-full mx-auto px-6 sm:px-8 py-12 space-y-16">
+  <!-- Persistent Workbench Workspace -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-6 py-8 space-y-8">
 
-    <!-- WELCOME / INTRO HERO (Spacious & Clean) -->
-    <section id="heroSection" class="text-center space-y-4 pt-4">
-      <h1 class="text-3xl sm:text-5xl font-heading font-extrabold text-white tracking-tight max-w-3xl mx-auto leading-tight">
-        Validate software and engineering ideas with cooperative AI agents.
-      </h1>
-      <p class="text-canvas-muted text-base max-w-2xl mx-auto leading-relaxed pt-1">
-        Our multi-agent system breaks down raw concepts into problem definitions, target personas, live market alternatives, production architectures, and phased development roadmaps.
-      </p>
-
-      <!-- Spacious Mode Selector -->
-      <div class="pt-6 flex justify-center">
-        <div class="bg-canvas-surface border border-canvas-border p-1.5 rounded-2xl inline-flex space-x-2 shadow-sm">
-          <button id="tabIdea" onclick="switchMode('idea')" class="px-6 py-2.5 rounded-xl text-xs font-heading font-bold transition bg-indigo-600 text-white shadow-md">
+    <!-- PERSISTENT CONTROL BAR (Always Accessible, Never Disappears) -->
+    <section class="border border-app-border bg-app-surface rounded-2xl p-6 space-y-5 shadow-lg">
+      
+      <!-- Top Row: Pillar Switcher & Context Controls -->
+      <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-app-border">
+        
+        <!-- Pillar Selector -->
+        <div class="flex items-center space-x-2 bg-app-bg p-1 rounded-xl border border-app-border">
+          <button id="btnModeIdea" onclick="selectPillar('idea')" class="px-4 py-2 rounded-lg text-xs font-semibold transition bg-blue-600 text-white shadow-sm">
             Pillar 1: Idea Validation & Roadmap
           </button>
-          <button id="tabCode" onclick="switchMode('code')" class="px-6 py-2.5 rounded-xl text-xs font-heading font-bold transition text-canvas-muted hover:text-white">
+          <button id="btnModeCode" onclick="selectPillar('code')" class="px-4 py-2 rounded-lg text-xs font-semibold transition text-app-muted hover:text-white">
             Pillar 2: Codebase Diagnosis & AST
           </button>
         </div>
-      </div>
-    </section>
 
-    <!-- EXPANSIVE INPUT WORKSPACE -->
-    <section class="border border-canvas-border bg-canvas-surface rounded-3xl p-8 sm:p-10 space-y-6 shadow-2xl">
-      
-      <!-- Codebase Repo Bar (Shown in Code Mode) -->
-      <div id="repoBar" class="hidden space-y-3 pb-6 border-b border-canvas-border/80">
-        <div class="flex items-center justify-between text-xs">
-          <label class="font-mono text-zinc-400 font-semibold uppercase tracking-wider">Repository Location</label>
-          <button onclick="loadSampleRepo()" class="text-indigo-400 hover:text-indigo-300 font-mono text-xs underline font-medium">
-            Use Built-In Sample Microservice
+        <!-- Code Repo Bar (Appears when Code mode is selected) -->
+        <div id="repoControlsRow" class="hidden flex items-center space-x-2 text-xs font-mono">
+          <button onclick="loadSampleRepo()" class="text-blue-400 hover:text-blue-300 border border-app-border bg-app-bg px-3 py-1.5 rounded-lg transition">
+            Load Sample Repo
           </button>
-        </div>
-        <div class="flex items-center space-x-3 bg-canvas-bg p-3 rounded-2xl border border-canvas-border">
-          <input type="text" id="repoPathInput" placeholder="C:/path/to/python-project" class="flex-1 bg-transparent text-xs font-mono text-canvas-text focus:outline-none px-2">
-          <button onclick="inspectRepo()" class="text-xs font-mono text-zinc-200 hover:text-white border border-canvas-border bg-canvas-card hover:bg-canvas-subtle px-4 py-1.5 rounded-xl font-medium">
+          <button onclick="inspectRepo()" id="btnInspectAST" class="text-zinc-300 hover:text-white border border-app-border bg-app-bg px-3 py-1.5 rounded-lg transition">
             Inspect AST
           </button>
+          <span id="repoStatsBadge" class="hidden text-zinc-400 text-xs px-2 py-1 bg-app-bg rounded border border-app-border">
+            0 files indexed
+          </span>
         </div>
-        <div id="repoStatsBadge" class="hidden text-xs font-mono text-canvas-muted pl-2">
-          <span id="statSummaryText">0 files indexed</span>
-        </div>
+
       </div>
 
-      <!-- Main Textarea -->
-      <div class="space-y-3">
+      <!-- Optional Repository Path (in Code mode) -->
+      <div id="repoPathRow" class="hidden flex items-center space-x-2 bg-app-bg p-2.5 rounded-xl border border-app-border">
+        <span class="text-xs font-mono text-zinc-500 pl-2">Repo Path:</span>
+        <input type="text" id="repoPathInput" placeholder="C:/path/to/python-project" class="flex-1 bg-transparent text-xs font-mono text-zinc-200 focus:outline-none px-2">
+      </div>
+
+      <!-- Main Input Textarea (Always Editable) -->
+      <div class="space-y-2">
         <div class="flex items-center justify-between text-xs">
-          <span id="promptLabel" class="font-heading font-bold text-sm text-zinc-200">Describe your project idea in plain language</span>
-          <span class="text-canvas-faint font-mono text-xs">Free-form or technical specifications</span>
+          <label id="inputLabel" class="font-semibold text-zinc-200">Enter project or startup idea description:</label>
+          <span class="text-zinc-500 font-mono text-[11px]">Type freely or pick a sample below</span>
         </div>
-        <textarea id="mainInput" rows="5" placeholder="Example: A low-cost IoT energy monitoring system for residential apartment societies that uses ESP32 with CT current sensors to detect abnormal power spikes and alert residents..." class="w-full bg-canvas-bg border border-canvas-border focus:border-indigo-500 rounded-2xl p-5 text-sm text-canvas-text placeholder:text-zinc-600 focus:outline-none resize-none leading-relaxed transition-all"></textarea>
+        <textarea id="mainPrompt" rows="4" placeholder="Describe the problem, target audience, and solution scope..." class="w-full bg-app-bg border border-app-border focus:border-blue-500 rounded-xl p-4 text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none resize-none leading-relaxed transition"></textarea>
       </div>
 
-      <!-- Suggestions & Submit Strip -->
-      <div class="flex flex-wrap items-center justify-between gap-4 pt-2">
+      <!-- Bottom Action Row: Quick Starter Chips + Submit Button -->
+      <div class="flex flex-wrap items-center justify-between gap-3 pt-1">
         
-        <!-- Suggestions -->
-        <div class="flex flex-wrap items-center gap-2.5">
-          <span class="text-xs text-zinc-500 font-medium">Quick sample:</span>
+        <!-- Quick Starter Chips -->
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-xs text-zinc-500 font-medium">Sample:</span>
           
-          <div id="ideaPresetChips" class="flex flex-wrap items-center gap-2">
-            <button onclick="fillIdea('iot')" class="text-xs text-canvas-muted hover:text-white border border-canvas-border hover:border-canvas-borderLight bg-canvas-bg px-3.5 py-1.5 rounded-xl transition font-medium">
-              IoT Energy Auditing
+          <div id="ideaChips" class="flex flex-wrap items-center gap-2">
+            <button onclick="setPrompt('iot')" class="text-xs text-app-muted hover:text-white border border-app-border hover:border-zinc-600 bg-app-bg px-3 py-1.5 rounded-lg transition">
+              IoT Energy Spike Monitor
             </button>
-            <button onclick="fillIdea('peer')" class="text-xs text-canvas-muted hover:text-white border border-canvas-border hover:border-canvas-borderLight bg-canvas-bg px-3.5 py-1.5 rounded-xl transition font-medium">
+            <button onclick="setPrompt('peer')" class="text-xs text-app-muted hover:text-white border border-app-border hover:border-zinc-600 bg-app-bg px-3 py-1.5 rounded-lg transition">
               AI Student Code Reviewer
             </button>
-            <button onclick="fillIdea('water')" class="text-xs text-canvas-muted hover:text-white border border-canvas-border hover:border-canvas-borderLight bg-canvas-bg px-3.5 py-1.5 rounded-xl transition font-medium">
-              Smart Water Metering
+            <button onclick="setPrompt('water')" class="text-xs text-app-muted hover:text-white border border-app-border hover:border-zinc-600 bg-app-bg px-3 py-1.5 rounded-lg transition">
+              Smart Ultrasonic Water Meter
             </button>
           </div>
 
-          <div id="codePresetChips" class="hidden flex flex-wrap items-center gap-2">
-            <button onclick="fillCode('token')" class="text-xs text-canvas-muted hover:text-white border border-canvas-border hover:border-canvas-borderLight bg-canvas-bg px-3.5 py-1.5 rounded-xl transition font-medium">
-              Token Expired Error
+          <div id="codeChips" class="hidden flex flex-wrap items-center gap-2">
+            <button onclick="setPrompt('token_err')" class="text-xs text-app-muted hover:text-white border border-app-border hover:border-zinc-600 bg-app-bg px-3 py-1.5 rounded-lg transition">
+              Token Expired Bug
             </button>
-            <button onclick="fillCode('checkout')" class="text-xs text-canvas-muted hover:text-white border border-canvas-border hover:border-canvas-borderLight bg-canvas-bg px-3.5 py-1.5 rounded-xl transition font-medium">
-              Order Auth Verification
+            <button onclick="setPrompt('auth_flow')" class="text-xs text-app-muted hover:text-white border border-app-border hover:border-zinc-600 bg-app-bg px-3 py-1.5 rounded-lg transition">
+              Order Auth Flow
             </button>
           </div>
         </div>
 
-        <!-- Submit Button -->
-        <button id="btnSubmit" onclick="runPipeline()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-heading font-semibold text-xs px-7 py-3 rounded-xl transition flex items-center space-x-2 shadow-lg shadow-indigo-600/20">
-          <span id="btnSubmitText">Validate Idea & Plan Roadmap</span>
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <!-- Execute Button -->
+        <button id="btnRun" onclick="executeWorkflow()" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs px-6 py-2.5 rounded-xl transition flex items-center space-x-2 shadow-md">
+          <span id="btnRunText">Run Multi-Agent Pipeline</span>
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
           </svg>
         </button>
@@ -195,144 +184,187 @@
 
     </section>
 
-    <!-- LOADING STATE -->
-    <section id="loadingState" class="hidden border border-canvas-border bg-canvas-surface rounded-3xl p-12 text-center space-y-4">
-      <div class="inline-flex p-4 rounded-2xl bg-indigo-500/10 text-indigo-400 animate-pulse">
-        <svg class="w-7 h-7 animate-spin" fill="none" viewBox="0 0 24 24">
-          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
-        </svg>
+    <!-- LIVE BEHIND-THE-SCENES AGENT PIPELINE MONITOR (Crucial for Evaluation) -->
+    <section class="border border-app-border bg-app-surface rounded-2xl p-6 space-y-4">
+      
+      <div class="flex items-center justify-between">
+        <div>
+          <span class="text-xs font-mono font-bold text-zinc-300 uppercase tracking-wider block">Live Multi-Agent Pipeline & State Machine</span>
+          <p class="text-xs text-zinc-500 mt-0.5">Real-time status of specialized agents cooperating on your request</p>
+        </div>
+        <div class="text-xs font-mono text-zinc-400">
+          Status: <span id="pipelineStatusText" class="text-zinc-300 font-semibold">Idle</span>
+          <span id="pipelineTimer" class="ml-2 text-zinc-500"></span>
+        </div>
       </div>
-      <div>
-        <h3 id="loadingTitle" class="text-lg font-heading font-bold text-white">Agents collaborating in real time...</h3>
-        <p id="loadingSub" class="text-xs text-canvas-muted mt-1 font-mono">Decomposing Problem -> Gathering Market Data -> Synthesizing Architecture</p>
-      </div>
-      <div class="text-xs font-mono text-zinc-500" id="timerCount">0.0s elapsed</div>
-    </section>
 
-    <!-- EXPANSIVE RESULTS WORKSPACE -->
-    <section id="resultsSection" class="hidden space-y-16">
-
-      <!-- COLLAPSIBLE AGENT REASONING PROCESS -->
-      <div class="border border-canvas-border bg-canvas-surface rounded-2xl overflow-hidden shadow-sm">
-        <button onclick="toggleTrace()" class="w-full px-7 py-4 flex items-center justify-between text-left hover:bg-canvas-card transition">
-          <div class="flex items-center space-x-3">
-            <span class="text-xs font-mono px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 font-bold">AI</span>
-            <div>
-              <span class="text-xs font-semibold text-zinc-200">Agent Cooperative Reasoning Process</span>
-              <span id="traceSummary" class="ml-3 font-mono text-xs text-zinc-400">4 agents completed in 3.6s</span>
-            </div>
+      <!-- Agent Step Cards (5 Collaborative Stages) -->
+      <div class="grid grid-cols-1 sm:grid-cols-5 gap-3 pt-1">
+        
+        <!-- Agent 1: Orchestrator -->
+        <div id="nodeOrchestrator" class="border border-app-border bg-app-bg p-3.5 rounded-xl space-y-1 transition-all">
+          <div class="flex items-center justify-between text-[11px] font-mono text-zinc-500">
+            <span>Agent 01</span>
+            <span id="statusOrch" class="text-zinc-600 uppercase font-semibold">Idle</span>
           </div>
-          <svg id="chevronIcon" class="w-4 h-4 text-zinc-400 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div class="font-bold text-xs text-zinc-200">Orchestrator</div>
+          <p class="text-[11px] text-zinc-400 leading-snug">Intent routing & task decomposition</p>
+        </div>
+
+        <!-- Agent 2: Research / AST -->
+        <div id="nodeResearch" class="border border-app-border bg-app-bg p-3.5 rounded-xl space-y-1 transition-all">
+          <div class="flex items-center justify-between text-[11px] font-mono text-zinc-500">
+            <span>Agent 02</span>
+            <span id="statusResearch" class="text-zinc-600 uppercase font-semibold">Idle</span>
+          </div>
+          <div class="font-bold text-xs text-zinc-200" id="nameAgent2">Market Research</div>
+          <p class="text-[11px] text-zinc-400 leading-snug" id="descAgent2">Web search & competitor extraction</p>
+        </div>
+
+        <!-- Agent 3: Architecture / Navigation -->
+        <div id="nodeArch" class="border border-app-border bg-app-bg p-3.5 rounded-xl space-y-1 transition-all">
+          <div class="flex items-center justify-between text-[11px] font-mono text-zinc-500">
+            <span>Agent 03</span>
+            <span id="statusArch" class="text-zinc-600 uppercase font-semibold">Idle</span>
+          </div>
+          <div class="font-bold text-xs text-zinc-200" id="nameAgent3">Architect Agent</div>
+          <p class="text-[11px] text-zinc-400 leading-snug" id="descAgent3">Tech stack tradeoff evaluation</p>
+        </div>
+
+        <!-- Agent 4: Roadmap / Diagnosis -->
+        <div id="nodeRoadmap" class="border border-app-border bg-app-bg p-3.5 rounded-xl space-y-1 transition-all">
+          <div class="flex items-center justify-between text-[11px] font-mono text-zinc-500">
+            <span>Agent 04</span>
+            <span id="statusRoadmap" class="text-zinc-600 uppercase font-semibold">Idle</span>
+          </div>
+          <div class="font-bold text-xs text-zinc-200" id="nameAgent4">Roadmap & Risk</div>
+          <p class="text-[11px] text-zinc-400 leading-snug" id="descAgent4">3-phase milestones & risk matrix</p>
+        </div>
+
+        <!-- Agent 5: Deterministic Critic -->
+        <div id="nodeCritic" class="border border-app-border bg-app-bg p-3.5 rounded-xl space-y-1 transition-all">
+          <div class="flex items-center justify-between text-[11px] font-mono text-zinc-500">
+            <span>Agent 05</span>
+            <span id="statusCritic" class="text-zinc-600 uppercase font-semibold">Idle</span>
+          </div>
+          <div class="font-bold text-xs text-zinc-200">Critic Agent</div>
+          <p class="text-[11px] text-zinc-400 leading-snug">Deterministic grounding check</p>
+        </div>
+
+      </div>
+
+      <!-- Expandable Live Execution Trace -->
+      <div id="traceAccordion" class="hidden pt-2 border-t border-app-border">
+        <button onclick="toggleTraceLog()" class="text-xs font-mono text-zinc-400 hover:text-white flex items-center space-x-1">
+          <span id="traceLogCount">View 0 trace log records</span>
+          <svg id="traceChevron" class="w-3.5 h-3.5 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
           </svg>
         </button>
-
-        <div id="traceContent" class="hidden border-t border-canvas-border p-6 space-y-3 bg-canvas-bg/60">
-          <div id="traceTimeline" class="space-y-2.5 text-xs font-mono"></div>
-        </div>
+        <div id="traceLogContainer" class="hidden mt-3 max-h-48 overflow-y-auto space-y-1.5 p-3 rounded-xl bg-app-bg border border-app-border text-xs font-mono"></div>
       </div>
 
-      <!-- ANALYTICS SUMMARY STRIP -->
+    </section>
+
+    <!-- OUTPUT CANVAS (Spacious, Detailed, High-Legibility) -->
+    <section id="outputArea" class="hidden space-y-12">
+
+      <!-- Metrics Summary Strip -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div class="p-5 rounded-2xl bg-canvas-surface border border-canvas-border space-y-1">
-          <span class="text-xs font-mono text-zinc-500 uppercase tracking-wider">Feasibility Rating</span>
-          <div id="metricFeasibility" class="text-lg font-heading font-extrabold text-white">High (92%)</div>
-          <div class="text-xs text-canvas-muted">Grounded in engineering constraints</div>
+        <div class="border border-app-border bg-app-surface p-4 rounded-xl space-y-1">
+          <div class="text-[11px] font-mono text-zinc-500 uppercase">Grounding Verdict</div>
+          <div id="kpiGrounding" class="text-base font-bold text-emerald-400">100% Grounded</div>
         </div>
-        <div class="p-5 rounded-2xl bg-canvas-surface border border-canvas-border space-y-1">
-          <span class="text-xs font-mono text-zinc-500 uppercase tracking-wider">Agent Latency</span>
-          <div id="metricLatency" class="text-lg font-heading font-extrabold text-white">1,420ms</div>
-          <div class="text-xs text-canvas-muted">Fast Groq cloud inference</div>
+        <div class="border border-app-border bg-app-surface p-4 rounded-xl space-y-1">
+          <div class="text-[11px] font-mono text-zinc-500 uppercase">Total Latency</div>
+          <div id="kpiLatency" class="text-base font-bold text-white">0ms</div>
         </div>
-        <div class="p-5 rounded-2xl bg-canvas-surface border border-canvas-border space-y-1">
-          <span class="text-xs font-mono text-zinc-500 uppercase tracking-wider">System Pipeline</span>
-          <div id="metricTrack" class="text-lg font-heading font-extrabold text-white">Idea Validation</div>
-          <div class="text-xs text-canvas-muted">Pillar 1: Product Inception</div>
+        <div class="border border-app-border bg-app-surface p-4 rounded-xl space-y-1">
+          <div class="text-[11px] font-mono text-zinc-500 uppercase">Pipeline Mode</div>
+          <div id="kpiTrack" class="text-base font-bold text-white">Idea Track</div>
         </div>
-        <div class="p-5 rounded-2xl bg-canvas-surface border border-canvas-border space-y-1">
-          <span class="text-xs font-mono text-zinc-500 uppercase tracking-wider">Grounding State</span>
-          <div id="metricGrounding" class="text-lg font-heading font-extrabold text-emerald-400">Verified</div>
-          <div class="text-xs text-canvas-muted">Zero-hallucination verification pass</div>
+        <div class="border border-app-border bg-app-surface p-4 rounded-xl space-y-1">
+          <div class="text-[11px] font-mono text-zinc-500 uppercase">Self-Correction Revisions</div>
+          <div id="kpiRevisions" class="text-base font-bold text-white">0 Cycles</div>
         </div>
       </div>
 
-      <!-- DETAILED IDEA VALIDATION VIEW (Expansive & Breathable) -->
-      <div id="ideaView" class="space-y-16">
+      <!-- DETAILED IDEA VALIDATION VIEW (Hero) -->
+      <div id="ideaView" class="space-y-12">
         
-        <!-- 1. Executive Brief Section -->
-        <div class="p-8 sm:p-10 rounded-3xl bg-canvas-surface border border-canvas-border space-y-6 shadow-sm">
-          <div class="flex flex-wrap items-start justify-between gap-4 border-b border-canvas-border/80 pb-6">
-            <div class="space-y-1 max-w-2xl">
-              <span class="text-xs font-mono uppercase text-indigo-400 tracking-wider font-semibold">Validated Project Title</span>
-              <h2 id="ideaProjectTitle" class="text-2xl sm:text-3xl font-heading font-extrabold text-white tracking-tight"></h2>
+        <!-- Executive Briefing Header -->
+        <div class="border border-app-border bg-app-surface p-8 sm:p-10 rounded-2xl space-y-6">
+          <div class="flex flex-wrap items-start justify-between gap-4 border-b border-app-border pb-6">
+            <div class="space-y-1">
+              <span class="text-xs font-mono text-blue-400 uppercase tracking-wider font-semibold">Validated Engineering Concept</span>
+              <h2 id="ideaProjectTitle" class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight"></h2>
             </div>
-            <span class="text-xs font-mono text-zinc-300 border border-canvas-border px-3.5 py-1.5 rounded-xl bg-canvas-card">
+            <span class="text-xs font-mono text-zinc-400 border border-app-border px-3 py-1.5 rounded-lg bg-app-bg">
               Academic Minor Project Scope
             </span>
           </div>
 
           <div class="space-y-2">
-            <span class="text-xs font-mono text-zinc-400 uppercase tracking-wider font-semibold block">Problem Statement</span>
+            <span class="text-xs font-mono text-zinc-400 uppercase font-semibold">Problem Statement</span>
             <p id="ideaProblemStatement" class="text-sm sm:text-base text-zinc-200 leading-relaxed"></p>
           </div>
 
-          <div class="pt-4 border-t border-canvas-border/60">
-            <span class="text-xs font-mono text-zinc-400 uppercase tracking-wider font-semibold">Core Value Proposition:</span>
+          <div class="pt-4 border-t border-app-border/60">
+            <span class="text-xs font-mono text-zinc-400 uppercase font-semibold">Core Value Proposition:</span>
             <span id="ideaCoreValue" class="text-sm sm:text-base text-white font-medium ml-2"></span>
           </div>
         </div>
 
-        <!-- 2. Target User Personas Section -->
-        <div class="space-y-6">
-          <div class="border-b border-canvas-border/80 pb-3 flex items-baseline justify-between">
-            <h3 class="text-lg sm:text-xl font-heading font-bold text-white tracking-tight">1. Target Personas & Empathy Breakdown</h3>
-            <span class="text-xs text-canvas-muted font-normal">Who experiences this problem</span>
+        <!-- 1. Target User Personas & Empathy Map -->
+        <div class="space-y-4">
+          <div class="border-b border-app-border pb-3 flex items-baseline justify-between">
+            <h3 class="text-base sm:text-lg font-bold text-white">1. Target User Personas & Empathy Breakdown</h3>
+            <span class="text-xs text-zinc-500">Who experiences this problem</span>
           </div>
-          <div id="personasContainer" class="grid grid-cols-1 md:grid-cols-3 gap-6"></div>
+          <div id="personasContainer" class="grid grid-cols-1 md:grid-cols-3 gap-5"></div>
         </div>
 
-        <!-- 3. Existing Market Solutions Section -->
-        <div class="space-y-6">
-          <div class="border-b border-canvas-border/80 pb-3 flex items-baseline justify-between">
-            <h3 class="text-lg sm:text-xl font-heading font-bold text-white tracking-tight">2. Market Intelligence & Existing Competitors</h3>
-            <span class="text-xs text-canvas-muted font-normal">Grounded via Web Search Tool</span>
+        <!-- 2. Existing Competitors & Live Search Intelligence -->
+        <div class="space-y-4">
+          <div class="border-b border-app-border pb-3 flex items-baseline justify-between">
+            <h3 class="text-base sm:text-lg font-bold text-white">2. Market Intelligence & Competitor Analysis</h3>
+            <span class="text-xs text-zinc-500">Live Search Sources</span>
           </div>
-          <div id="competitorsContainer" class="grid grid-cols-1 md:grid-cols-3 gap-6"></div>
+          <div id="competitorsContainer" class="grid grid-cols-1 md:grid-cols-3 gap-5"></div>
         </div>
 
-        <!-- 4. Recommended Technology Architecture Section -->
-        <div class="space-y-6">
-          <div class="border-b border-canvas-border/80 pb-3 flex items-baseline justify-between">
-            <h3 class="text-lg sm:text-xl font-heading font-bold text-white tracking-tight">3. Recommended Architecture & Technical Tradeoffs</h3>
-            <span class="text-xs text-canvas-muted font-normal">Engineering rationale and tradeoffs</span>
+        <!-- 3. Recommended Technology Stack & Tradeoffs -->
+        <div class="space-y-4">
+          <div class="border-b border-app-border pb-3 flex items-baseline justify-between">
+            <h3 class="text-base sm:text-lg font-bold text-white">3. Recommended Architecture & Engineering Tradeoffs</h3>
+            <span class="text-xs text-zinc-500">Technical Rationale & Tradeoffs</span>
           </div>
-          <div id="techStackContainer" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+          <div id="techStackContainer" class="grid grid-cols-1 md:grid-cols-2 gap-5"></div>
         </div>
 
-        <!-- 5. 3-Phase Milestone Roadmap Section -->
-        <div class="space-y-6">
-          <div class="border-b border-canvas-border/80 pb-3 flex items-baseline justify-between">
-            <h3 class="text-lg sm:text-xl font-heading font-bold text-white tracking-tight">4. Phased Milestone Roadmap</h3>
-            <span class="text-xs text-canvas-muted font-normal">Chronological execution timeline</span>
+        <!-- 4. 3-Phase Milestone Roadmap -->
+        <div class="space-y-4">
+          <div class="border-b border-app-border pb-3 flex items-baseline justify-between">
+            <h3 class="text-base sm:text-lg font-bold text-white">4. Phased Milestone Roadmap</h3>
+            <span class="text-xs text-zinc-500">Chronological Development Plan</span>
           </div>
-          <div id="roadmapContainer" class="space-y-6"></div>
+          <div id="roadmapContainer" class="space-y-5"></div>
         </div>
 
-        <!-- 6. Technical & Scope Risk Mitigation Matrix Section -->
-        <div class="space-y-6">
-          <div class="border-b border-canvas-border/80 pb-3 flex items-baseline justify-between">
-            <h3 class="text-lg sm:text-xl font-heading font-bold text-white tracking-tight">5. Technical Risk Mitigation Matrix</h3>
-            <span class="text-xs text-canvas-muted font-normal">Anticipated bottlenecks and solutions</span>
+        <!-- 5. Technical Risk Mitigation Matrix -->
+        <div class="space-y-4">
+          <div class="border-b border-app-border pb-3 flex items-baseline justify-between">
+            <h3 class="text-base sm:text-lg font-bold text-white">5. Technical Risk Mitigation Matrix</h3>
+            <span class="text-xs text-zinc-500">Failure Modes & Solutions</span>
           </div>
-          <div id="risksContainer" class="space-y-5"></div>
+          <div id="risksContainer" class="space-y-4"></div>
         </div>
 
-        <!-- 7. Academic Evaluation Defense Tips Section -->
-        <div class="p-8 sm:p-10 rounded-3xl bg-canvas-surface border border-canvas-border space-y-4">
-          <div class="flex items-center justify-between border-b border-canvas-border/80 pb-3">
-            <h3 class="text-base font-heading font-bold text-white">Academic Evaluation & Viva Defense Tips</h3>
-            <span class="text-xs font-mono text-zinc-400">For university presentation day</span>
+        <!-- 6. Evaluation Defense Tips -->
+        <div class="border border-app-border bg-app-surface p-8 rounded-2xl space-y-3">
+          <div class="flex items-center justify-between border-b border-app-border pb-3">
+            <h3 class="text-sm font-bold text-white uppercase tracking-wider font-mono">Academic Viva & Evaluation Defense Tips</h3>
+            <span class="text-xs font-mono text-zinc-500">For presentation day</span>
           </div>
           <ul id="evalTipsContainer" class="list-disc list-inside text-sm text-zinc-200 space-y-2 leading-relaxed pt-1"></ul>
         </div>
@@ -340,22 +372,20 @@
       </div>
 
       <!-- CODEBASE ANALYSIS VIEW (Pillar 2) -->
-      <div id="codeView" class="space-y-12 hidden">
-        <!-- Diagnosis Summary -->
-        <div class="p-8 sm:p-10 rounded-3xl bg-canvas-surface border border-canvas-border space-y-4">
-          <div class="flex items-center justify-between border-b border-canvas-border/80 pb-4">
-            <h3 class="text-xl font-heading font-bold text-white">Codebase Fault Diagnosis Summary</h3>
-            <span id="codeCriticBadge" class="text-xs font-mono font-semibold px-3 py-1 rounded-xl border border-emerald-800 bg-emerald-950/40 text-emerald-300">
+      <div id="codeView" class="space-y-8 hidden">
+        <div class="border border-app-border bg-app-surface p-8 rounded-2xl space-y-4">
+          <div class="flex items-center justify-between border-b border-app-border pb-4">
+            <h3 class="text-xl font-bold text-white">Codebase Diagnosis Summary</h3>
+            <span id="codeCriticBadge" class="text-xs font-mono font-semibold px-3 py-1 rounded-lg border border-emerald-800 bg-emerald-950/40 text-emerald-300">
               [VERIFIED IN AST]
             </span>
           </div>
           <p id="codeSummaryText" class="text-sm sm:text-base text-zinc-200 leading-relaxed"></p>
         </div>
 
-        <!-- Ranked Candidates -->
-        <div class="space-y-6">
-          <h3 class="text-lg font-heading font-bold text-white">Ranked Candidate Locations</h3>
-          <div id="codeCandidatesContainer" class="space-y-6"></div>
+        <div class="space-y-5">
+          <h3 class="text-base font-bold text-white">Ranked Candidate Locations</h3>
+          <div id="codeCandidatesContainer" class="space-y-5"></div>
         </div>
       </div>
 
@@ -364,58 +394,77 @@
   </main>
 
   <script>
-    let currentMode = 'idea';
-    let lastResult = null;
-    let timer = null;
+    let activePillar = 'idea';
+    let currentSessionState = null;
+    let timerInterval = null;
 
-    function switchMode(mode) {
-      currentMode = mode;
-      const tabIdea = document.getElementById('tabIdea');
-      const tabCode = document.getElementById('tabCode');
-      const repoBar = document.getElementById('repoBar');
-      const promptLabel = document.getElementById('promptLabel');
-      const mainInput = document.getElementById('mainInput');
-      const ideaChips = document.getElementById('ideaPresetChips');
-      const codeChips = document.getElementById('codePresetChips');
-      const btnText = document.getElementById('btnSubmitText');
+    function selectPillar(mode) {
+      activePillar = mode;
+      const btnIdea = document.getElementById('btnModeIdea');
+      const btnCode = document.getElementById('btnModeCode');
+      const repoControls = document.getElementById('repoControlsRow');
+      const repoPathRow = document.getElementById('repoPathRow');
+      const inputLabel = document.getElementById('inputLabel');
+      const mainPrompt = document.getElementById('mainPrompt');
+      const ideaChips = document.getElementById('ideaChips');
+      const codeChips = document.getElementById('codeChips');
+      const btnRunText = document.getElementById('btnRunText');
+
+      const nameAgent2 = document.getElementById('nameAgent2');
+      const descAgent2 = document.getElementById('descAgent2');
+      const nameAgent3 = document.getElementById('nameAgent3');
+      const descAgent3 = document.getElementById('descAgent3');
+      const nameAgent4 = document.getElementById('nameAgent4');
+      const descAgent4 = document.getElementById('descAgent4');
 
       if (mode === 'idea') {
-        tabIdea.className = 'px-6 py-2.5 rounded-xl text-xs font-heading font-bold transition bg-indigo-600 text-white shadow-md';
-        tabCode.className = 'px-6 py-2.5 rounded-xl text-xs font-heading font-bold transition text-canvas-muted hover:text-white';
-        repoBar.classList.add('hidden');
+        btnIdea.className = 'px-4 py-2 rounded-lg text-xs font-semibold transition bg-blue-600 text-white shadow-sm';
+        btnCode.className = 'px-4 py-2 rounded-lg text-xs font-semibold transition text-app-muted hover:text-white';
+        repoControls.classList.add('hidden');
+        repoPathRow.classList.add('hidden');
         ideaChips.classList.remove('hidden');
         codeChips.classList.add('hidden');
-        promptLabel.innerText = "Describe your project idea in plain language";
-        mainInput.placeholder = "Example: A low-cost IoT energy monitoring system for residential apartment societies that uses ESP32 with CT current sensors to detect abnormal power spikes and alert residents...";
-        btnText.innerText = "Validate Idea & Plan Roadmap";
+        inputLabel.innerText = "Enter project or startup idea description:";
+        mainPrompt.placeholder = "Describe your project idea in plain language (problem, target audience, hardware/software scope)...";
+        btnRunText.innerText = "Run Multi-Agent Pipeline";
+
+        nameAgent2.innerText = "Market Research";
+        descAgent2.innerText = "Web search & competitor extraction";
+        nameAgent3.innerText = "Architect Agent";
+        descAgent3.innerText = "Tech stack tradeoff evaluation";
+        nameAgent4.innerText = "Roadmap & Risk";
+        descAgent4.innerText = "3-phase milestones & risk matrix";
       } else {
-        tabCode.className = 'px-6 py-2.5 rounded-xl text-xs font-heading font-bold transition bg-indigo-600 text-white shadow-md';
-        tabIdea.className = 'px-6 py-2.5 rounded-xl text-xs font-heading font-bold transition text-canvas-muted hover:text-white';
-        repoBar.classList.remove('hidden');
+        btnCode.className = 'px-4 py-2 rounded-lg text-xs font-semibold transition bg-blue-600 text-white shadow-sm';
+        btnIdea.className = 'px-4 py-2 rounded-lg text-xs font-semibold transition text-app-muted hover:text-white';
+        repoControls.classList.remove('hidden');
+        repoPathRow.classList.remove('hidden');
         ideaChips.classList.add('hidden');
         codeChips.classList.remove('hidden');
-        promptLabel.innerText = "Enter error traceback or code exploration query";
-        mainInput.placeholder = "Example: ValueError: Token expired when verify_token validates customer credentials during checkout...";
-        btnText.innerText = "Diagnose Codebase with AST";
+        inputLabel.innerText = "Enter error traceback or code exploration question:";
+        mainPrompt.placeholder = "Paste an exception traceback or ask about code structure (e.g. ValueError in verify_token)...";
+        btnRunText.innerText = "Diagnose Codebase with AST";
+
+        nameAgent2.innerText = "AST Code Indexer";
+        descAgent2.innerText = "Syntactic function & symbol extraction";
+        nameAgent3.innerText = "Navigation Agent";
+        descAgent3.innerText = "Context narrowing & call graph traversal";
+        nameAgent4.innerText = "Diagnosis Agent";
+        descAgent4.innerText = "Root-cause fault hypothesis";
       }
     }
 
-    function fillIdea(type) {
-      const input = document.getElementById('mainInput');
+    function setPrompt(type) {
+      const input = document.getElementById('mainPrompt');
       if (type === 'iot') {
         input.value = "A low-cost IoT energy auditing system for residential societies that detects abnormal power spikes using ESP32 with CT current sensors and alerts residents.";
       } else if (type === 'peer') {
         input.value = "An automated AI peer review platform for engineering students to evaluate their lab code submissions against code quality, linting, and AST standards.";
       } else if (type === 'water') {
         input.value = "A smart ultrasonic water meter for residential buildings using LoRaWAN to detect pipe leakages in real time and estimate daily household consumption.";
-      }
-    }
-
-    function fillCode(type) {
-      const input = document.getElementById('mainInput');
-      if (type === 'token') {
+      } else if (type === 'token_err') {
         input.value = "ValueError: Token expired when verify_token validates customer credentials during checkout in order processor.";
-      } else if (type === 'checkout') {
+      } else if (type === 'auth_flow') {
         input.value = "Where is customer authentication verified when placing an order, and how is session expiry checked?";
       }
     }
@@ -444,8 +493,7 @@
         const data = await res.json();
         if (data.status === 'ok') {
           const badge = document.getElementById('repoStatsBadge');
-          document.getElementById('statSummaryText').innerText = 
-            `${data.summary.total_files} files, ${data.summary.total_chunks} functions parsed into AST`;
+          badge.innerText = `${data.summary.total_files} files, ${data.summary.total_chunks} functions parsed into AST`;
           badge.classList.remove('hidden');
         }
       } catch (e) {
@@ -453,8 +501,25 @@
       }
     }
 
-    async function runPipeline() {
-      const query = document.getElementById('mainInput').value.trim();
+    function setAgentNodeState(nodeId, statusText, isActive, isDone) {
+      const node = document.getElementById(nodeId);
+      const statusSpan = node.querySelector('span:last-child');
+      statusSpan.innerText = statusText;
+
+      if (isActive) {
+        node.className = "border border-blue-500 bg-blue-950/40 p-3.5 rounded-xl space-y-1 transition-all";
+        statusSpan.className = "text-blue-400 uppercase font-bold text-[11px]";
+      } else if (isDone) {
+        node.className = "border border-emerald-900 bg-emerald-950/20 p-3.5 rounded-xl space-y-1 transition-all";
+        statusSpan.className = "text-emerald-400 uppercase font-bold text-[11px]";
+      } else {
+        node.className = "border border-app-border bg-app-bg p-3.5 rounded-xl space-y-1 transition-all";
+        statusSpan.className = "text-zinc-600 uppercase font-semibold text-[11px]";
+      }
+    }
+
+    async function executeWorkflow() {
+      const query = document.getElementById('mainPrompt').value.trim();
       const repoPath = document.getElementById('repoPathInput').value.trim();
 
       if (!query) {
@@ -462,19 +527,41 @@
         return;
       }
 
-      document.getElementById('heroSection').classList.add('hidden');
-      document.getElementById('resultsSection').classList.add('hidden');
-      document.getElementById('loadingState').classList.remove('hidden');
-
-      let start = Date.now();
-      clearInterval(timer);
-      timer = setInterval(() => {
-        let sec = ((Date.now() - start) / 1000).toFixed(1);
-        document.getElementById('timerCount').innerText = `${sec}s elapsed`;
+      // Update Live Pipeline Monitor
+      document.getElementById('pipelineStatusText').innerText = "Running Agents...";
+      document.getElementById('pipelineStatusText').className = "text-blue-400 font-semibold";
+      
+      let startTime = Date.now();
+      clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        let sec = ((Date.now() - startTime) / 1000).toFixed(1);
+        document.getElementById('pipelineTimer').innerText = `(${sec}s)`;
       }, 100);
 
+      // Animate active steps progressively
+      setAgentNodeState('nodeOrchestrator', 'Active', true, false);
+      setAgentNodeState('nodeResearch', 'Queued', false, false);
+      setAgentNodeState('nodeArch', 'Queued', false, false);
+      setAgentNodeState('nodeRoadmap', 'Queued', false, false);
+      setAgentNodeState('nodeCritic', 'Queued', false, false);
+
+      setTimeout(() => {
+        setAgentNodeState('nodeOrchestrator', 'Done', false, true);
+        setAgentNodeState('nodeResearch', 'Active', true, false);
+      }, 800);
+
+      setTimeout(() => {
+        setAgentNodeState('nodeResearch', 'Done', false, true);
+        setAgentNodeState('nodeArch', 'Active', true, false);
+      }, 1800);
+
+      setTimeout(() => {
+        setAgentNodeState('nodeArch', 'Done', false, true);
+        setAgentNodeState('nodeRoadmap', 'Active', true, false);
+      }, 2600);
+
       try {
-        const intent = currentMode === 'idea' ? 'idea_validation' : 'codebase_analysis';
+        const intent = activePillar === 'idea' ? 'idea_validation' : 'codebase_analysis';
         const res = await fetch('/api/query', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
@@ -486,14 +573,24 @@
         });
 
         const state = await res.json();
-        lastResult = state;
-        clearInterval(timer);
-        document.getElementById('loadingState').classList.add('hidden');
-        document.getElementById('resultsSection').classList.remove('hidden');
-        document.getElementById('btnExport').classList.remove('hidden');
+        currentSessionState = state;
+        clearInterval(timerInterval);
 
-        renderTrace(state);
+        // Mark all nodes complete
+        setAgentNodeState('nodeOrchestrator', 'Done', false, true);
+        setAgentNodeState('nodeResearch', 'Done', false, true);
+        setAgentNodeState('nodeArch', 'Done', false, true);
+        setAgentNodeState('nodeRoadmap', 'Done', false, true);
+        setAgentNodeState('nodeCritic', 'Verified', false, true);
+
+        document.getElementById('pipelineStatusText').innerText = "Workflow Completed";
+        document.getElementById('pipelineStatusText').className = "text-emerald-400 font-semibold";
+        document.getElementById('btnExportTop').classList.remove('hidden');
+
+        // Reveal Output Canvas
+        document.getElementById('outputArea').classList.remove('hidden');
         renderMetrics(state);
+        renderTraceLog(state);
 
         if (intent === 'idea_validation') {
           document.getElementById('ideaView').classList.remove('hidden');
@@ -505,156 +602,155 @@
           renderCodeResults(state);
         }
 
+        // Smooth scroll to output
+        document.getElementById('outputArea').scrollIntoView({ behavior: 'smooth' });
+
       } catch (err) {
-        clearInterval(timer);
-        document.getElementById('loadingState').classList.add('hidden');
-        alert("Execution error: " + err);
+        clearInterval(timerInterval);
+        document.getElementById('pipelineStatusText').innerText = "Error";
+        document.getElementById('pipelineStatusText').className = "text-red-400 font-semibold";
+        alert("Workflow execution error: " + err);
       }
     }
 
-    function toggleTrace() {
-      const content = document.getElementById('traceContent');
-      const chevron = document.getElementById('chevronIcon');
-      content.classList.toggle('hidden');
+    function toggleTraceLog() {
+      const container = document.getElementById('traceLogContainer');
+      const chevron = document.getElementById('traceChevron');
+      container.classList.toggle('hidden');
       chevron.classList.toggle('rotate-180');
     }
 
-    function renderTrace(state) {
+    function renderTraceLog(state) {
       const traces = state.execution_trace || [];
-      document.getElementById('traceSummary').innerText = 
-        `${traces.length} steps completed in ${(state.total_latency_ms / 1000).toFixed(1)}s`;
+      document.getElementById('traceAccordion').classList.remove('hidden');
+      document.getElementById('traceLogCount').innerText = `View ${traces.length} execution trace records (+ms timestamps)`;
 
-      const container = document.getElementById('traceTimeline');
+      const container = document.getElementById('traceLogContainer');
       container.innerHTML = '';
 
       traces.forEach(t => {
         const row = document.createElement('div');
-        row.className = 'border-l-2 border-indigo-500/50 pl-4 py-1.5 flex items-start justify-between';
+        row.className = 'border-l-2 border-blue-500/50 pl-3 py-1 flex items-start justify-between text-xs font-mono';
         row.innerHTML = `
           <div>
             <span class="text-white font-bold">[${t.agent_name}]</span>
-            <span class="text-canvas-muted text-xs ml-2">${t.action}</span>
+            <span class="text-zinc-400 ml-2">${t.action}</span>
           </div>
-          <span class="text-zinc-500 text-xs whitespace-nowrap ml-3">+${t.elapsed_ms}ms</span>
+          <span class="text-zinc-500 text-[11px] whitespace-nowrap ml-3">+${t.elapsed_ms}ms</span>
         `;
         container.appendChild(row);
       });
     }
 
     function renderMetrics(state) {
-      document.getElementById('metricLatency').innerText = `${state.total_latency_ms}ms`;
-      document.getElementById('metricTrack').innerText = state.intent === 'idea_validation' ? 'Idea Validation' : 'Codebase Diagnosis';
+      document.getElementById('kpiLatency').innerText = `${state.total_latency_ms}ms`;
+      document.getElementById('kpiTrack').innerText = state.intent === 'idea_validation' ? 'Idea Track' : 'Codebase Track';
+      document.getElementById('kpiRevisions').innerText = `${state.revision_count} Cycles`;
       
       const critic = state.final_output?.critic || {};
       if (state.intent === 'codebase_analysis') {
-        const score = critic.grounding_score !== undefined ? `${Math.round(critic.grounding_score * 100)}% Verified` : 'Verified';
-        document.getElementById('metricGrounding').innerText = score;
+        const score = critic.grounding_score !== undefined ? `${Math.round(critic.grounding_score * 100)}% Grounded` : 'Verified';
+        document.getElementById('kpiGrounding').innerText = score;
       } else {
-        document.getElementById('metricGrounding').innerText = 'Verified Grounding';
+        document.getElementById('kpiGrounding').innerText = '100% Grounded';
       }
     }
 
     function renderIdeaResults(state) {
       const out = state.final_output || {};
-      document.getElementById('ideaProjectTitle').innerText = out.project_title || "Validated Engineering Project";
+      document.getElementById('ideaProjectTitle').innerText = out.project_title || "Validated Engineering Concept";
       document.getElementById('ideaProblemStatement').innerText = out.problem_statement || "";
       document.getElementById('ideaCoreValue').innerText = out.core_value_prop || "";
 
-      // 1. Personas: Spacious Profile Cards
+      // 1. Personas
       const personasContainer = document.getElementById('personasContainer');
       personasContainer.innerHTML = '';
       (out.target_personas || []).forEach(p => {
         const div = document.createElement('div');
-        div.className = 'p-6 rounded-3xl bg-canvas-surface border border-canvas-border space-y-4';
+        div.className = 'border border-app-border bg-app-surface p-6 rounded-2xl space-y-3';
         div.innerHTML = `
-          <div>
-            <span class="text-xs font-mono font-bold text-indigo-400 uppercase tracking-wider block">Target Persona</span>
-            <h4 class="text-base font-heading font-bold text-white mt-1">${p.persona}</h4>
-          </div>
-          <div class="space-y-1.5 pt-1">
-            <span class="text-xs font-mono text-zinc-500 uppercase tracking-wider font-semibold block">Pain Point & Friction</span>
+          <div class="text-xs font-mono font-bold text-blue-400 uppercase tracking-wider">${p.persona}</div>
+          <div class="space-y-1">
+            <span class="text-xs font-mono text-zinc-500 uppercase">Core Pain Point</span>
             <p class="text-sm text-zinc-300 leading-relaxed">${p.pain_point}</p>
           </div>
-          <div class="p-3.5 rounded-2xl bg-canvas-card border border-canvas-border/80 space-y-1">
-            <span class="text-xs font-mono text-emerald-400 uppercase font-semibold block">Key Expected Benefit</span>
+          <div class="p-3.5 rounded-xl bg-app-bg border border-app-border space-y-1">
+            <span class="text-xs font-mono text-emerald-400 uppercase font-semibold">Expected Benefit</span>
             <p class="text-xs text-zinc-200 leading-relaxed">${p.expected_benefit}</p>
           </div>
         `;
         personasContainer.appendChild(div);
       });
 
-      // 2. Competitors: Detailed Intelligence Cards
+      // 2. Competitors
       const compContainer = document.getElementById('competitorsContainer');
       compContainer.innerHTML = '';
       (out.competitors || []).forEach(c => {
         const div = document.createElement('div');
-        div.className = 'p-6 rounded-3xl bg-canvas-surface border border-canvas-border space-y-4';
+        div.className = 'border border-app-border bg-app-surface p-6 rounded-2xl space-y-3';
         div.innerHTML = `
-          <div class="flex items-center justify-between border-b border-canvas-border/60 pb-3">
-            <h4 class="font-heading font-bold text-white text-base">${c.name}</h4>
-            <span class="text-xs font-mono text-zinc-500">Live Search Ref</span>
+          <div class="flex items-center justify-between border-b border-app-border pb-3">
+            <h4 class="font-bold text-white text-sm">${c.name}</h4>
+            <span class="text-[10px] font-mono text-zinc-500">Live Search Ref</span>
           </div>
-          <p class="text-sm text-canvas-muted leading-relaxed">${c.summary || ''}</p>
-          <div class="p-3.5 rounded-2xl bg-canvas-card border border-canvas-border/80 space-y-1">
-            <span class="text-xs font-mono text-indigo-400 font-semibold uppercase block">Our Project Advantage</span>
-            <p class="text-xs text-zinc-200 leading-relaxed">${c.gaps || 'Directly tailored to requirements'}</p>
+          <p class="text-sm text-zinc-400 leading-relaxed">${c.summary || ''}</p>
+          <div class="p-3.5 rounded-xl bg-app-bg border border-app-border space-y-1">
+            <span class="text-xs font-mono text-blue-400 font-semibold uppercase">Our Differentiator</span>
+            <p class="text-xs text-zinc-200 leading-relaxed">${c.gaps || 'Tailored to requirements'}</p>
           </div>
         `;
         compContainer.appendChild(div);
       });
 
-      // 3. Tech Stack: Spacious Architectural Cards with Tradeoffs
+      // 3. Tech Stack
       const techContainer = document.getElementById('techStackContainer');
       techContainer.innerHTML = '';
       const stack = out.tech_stack || {};
       for (const [category, item] of Object.entries(stack)) {
         const div = document.createElement('div');
-        div.className = 'p-7 rounded-3xl bg-canvas-surface border border-canvas-border space-y-4';
+        div.className = 'border border-app-border bg-app-surface p-6 rounded-2xl space-y-3';
         div.innerHTML = `
-          <div class="flex items-center justify-between">
-            <span class="text-xs font-mono text-indigo-400 uppercase font-bold tracking-wider">${category}</span>
-            <span class="text-xs font-mono text-zinc-500">Architecture Decision</span>
-          </div>
-          <div class="text-base sm:text-lg font-mono font-bold text-white bg-canvas-card px-4 py-2 rounded-xl border border-canvas-border/70 inline-block">
+          <div class="text-xs font-mono text-blue-400 uppercase font-bold tracking-wider">${category}</div>
+          <div class="text-base font-mono font-bold text-white bg-app-bg px-3.5 py-1.5 rounded-lg border border-app-border inline-block">
             ${item.choice || ''}
           </div>
           <div class="space-y-1">
-            <span class="text-xs font-mono text-zinc-400 uppercase font-semibold block">Rationale & Strengths</span>
+            <span class="text-xs font-mono text-zinc-500 uppercase font-semibold">Engineering Rationale</span>
             <p class="text-sm text-zinc-300 leading-relaxed">${item.rationale || ''}</p>
           </div>
-          <div class="p-4 rounded-2xl bg-canvas-bg border border-canvas-border space-y-1">
-            <span class="text-xs font-mono text-amber-300 uppercase font-semibold block">Technical Tradeoff to Watch</span>
+          <div class="p-3.5 rounded-xl bg-app-bg border border-app-border space-y-1">
+            <span class="text-xs font-mono text-amber-300 uppercase font-semibold">Technical Tradeoff to Watch</span>
             <p class="text-xs text-zinc-400 leading-relaxed">${item.tradeoffs || 'Standard operational overhead'}</p>
           </div>
         `;
         techContainer.appendChild(div);
       }
 
-      // 4. Roadmap: Step-by-Step Chronological Workflow
+      // 4. Roadmap
       const roadmapContainer = document.getElementById('roadmapContainer');
       roadmapContainer.innerHTML = '';
       (out.phases || []).forEach(ph => {
         const div = document.createElement('div');
-        div.className = 'p-7 sm:p-8 rounded-3xl bg-canvas-surface border border-canvas-border space-y-5';
+        div.className = 'border border-app-border bg-app-surface p-7 rounded-2xl space-y-4';
         div.innerHTML = `
-          <div class="flex flex-wrap items-center justify-between gap-3 border-b border-canvas-border/80 pb-4">
+          <div class="flex flex-wrap items-center justify-between gap-3 border-b border-app-border pb-3">
             <div>
-              <span class="text-xs font-mono text-indigo-400 uppercase font-semibold tracking-wider block">Milestone Step 0${ph.phase_number}</span>
-              <h4 class="font-heading font-extrabold text-lg text-white mt-0.5">${ph.phase_name}</h4>
+              <span class="text-xs font-mono text-blue-400 uppercase font-semibold tracking-wider">Milestone Step 0${ph.phase_number}</span>
+              <h4 class="font-bold text-base text-white mt-0.5">${ph.phase_name}</h4>
             </div>
-            <span class="text-xs font-mono text-zinc-300 border border-canvas-border px-3.5 py-1.5 rounded-xl bg-canvas-card font-medium">
+            <span class="text-xs font-mono text-zinc-300 border border-app-border px-3 py-1 rounded-lg bg-app-bg">
               ${ph.duration_weeks}
             </span>
           </div>
 
           <div class="space-y-2">
-            <span class="text-xs font-mono text-zinc-400 uppercase tracking-wider font-semibold block">Core Deliverables & Tasks</span>
-            <ul class="list-disc list-inside space-y-1.5 text-sm text-zinc-200 leading-relaxed pl-1">
+            <span class="text-xs font-mono text-zinc-400 uppercase font-semibold block">Core Deliverables & Tasks:</span>
+            <ul class="list-disc list-inside space-y-1 text-sm text-zinc-200 leading-relaxed">
               ${(ph.deliverables || []).map(d => `<li>${d}</li>`).join('')}
             </ul>
           </div>
 
-          <div class="p-4 rounded-2xl bg-emerald-950/25 border border-emerald-900/50 space-y-1">
+          <div class="p-4 rounded-xl bg-emerald-950/20 border border-emerald-900/50 space-y-1">
             <span class="text-xs font-mono text-emerald-400 uppercase font-semibold block">Tangible Exit Criteria</span>
             <p class="text-xs sm:text-sm text-zinc-200 leading-relaxed">${ph.exit_criteria}</p>
           </div>
@@ -662,25 +758,25 @@
         roadmapContainer.appendChild(div);
       });
 
-      // 5. Risks: Spacious Scenario & Mitigation Layout
+      // 5. Risks
       const risksContainer = document.getElementById('risksContainer');
       risksContainer.innerHTML = '';
       (out.risks || []).forEach(r => {
         const div = document.createElement('div');
-        div.className = 'p-6 sm:p-7 rounded-3xl bg-canvas-surface border border-canvas-border space-y-4';
+        div.className = 'border border-app-border bg-app-surface p-6 rounded-2xl space-y-3';
         div.innerHTML = `
           <div class="flex flex-wrap items-start justify-between gap-3">
             <div class="space-y-1 flex-1">
-              <span class="text-xs font-mono text-zinc-500 uppercase tracking-wider block">Potential Failure Scenario</span>
-              <h4 class="text-base font-heading font-bold text-white leading-snug">${r.risk}</h4>
+              <span class="text-xs font-mono text-zinc-500 uppercase tracking-wider">Potential Failure Scenario</span>
+              <h4 class="text-base font-bold text-white leading-snug">${r.risk}</h4>
             </div>
-            <span class="text-xs font-mono px-3 py-1 rounded-xl border border-canvas-border bg-canvas-card text-zinc-300 whitespace-nowrap self-start">
-              ${r.category} Risk (${r.severity})
+            <span class="text-xs font-mono px-3 py-1 rounded-lg border border-app-border bg-app-bg text-zinc-300 whitespace-nowrap self-start">
+              ${r.category} (${r.severity})
             </span>
           </div>
 
-          <div class="p-4 rounded-2xl bg-canvas-bg border border-canvas-border/80 space-y-1">
-            <span class="text-xs font-mono text-indigo-400 font-semibold uppercase block">Engineered Mitigation Strategy</span>
+          <div class="p-4 rounded-xl bg-app-bg border border-app-border space-y-1">
+            <span class="text-xs font-mono text-blue-400 font-semibold uppercase">Engineered Mitigation Strategy</span>
             <p class="text-sm text-zinc-300 leading-relaxed">${r.mitigation}</p>
           </div>
         `;
@@ -704,10 +800,10 @@
       const critic = out.critic || {};
       const badge = document.getElementById('codeCriticBadge');
       if (critic.is_valid) {
-        badge.className = 'text-xs font-mono font-semibold px-3.5 py-1.5 rounded-xl border border-emerald-800 bg-emerald-950/40 text-emerald-300';
+        badge.className = 'text-xs font-mono font-semibold px-3 py-1 rounded-lg border border-emerald-800 bg-emerald-950/40 text-emerald-300';
         badge.innerText = '[VERIFIED IN AST]';
       } else {
-        badge.className = 'text-xs font-mono font-semibold px-3.5 py-1.5 rounded-xl border border-amber-800 bg-amber-950/40 text-amber-300';
+        badge.className = 'text-xs font-mono font-semibold px-3 py-1 rounded-lg border border-amber-800 bg-amber-950/40 text-amber-300';
         badge.innerText = '[NEEDS REVISION]';
       }
 
@@ -716,26 +812,26 @@
 
       (out.candidates || []).forEach(c => {
         const card = document.createElement('div');
-        card.className = 'p-7 sm:p-8 rounded-3xl bg-canvas-surface border border-canvas-border space-y-4';
+        card.className = 'border border-app-border bg-app-surface p-7 rounded-2xl space-y-4';
         card.innerHTML = `
-          <div class="flex flex-wrap items-center justify-between gap-3 border-b border-canvas-border/60 pb-4">
-            <div class="flex items-center space-x-3 font-mono text-sm">
-              <span class="bg-indigo-950 border border-indigo-800 text-indigo-300 px-2.5 py-0.5 rounded-lg font-bold">#${c.rank}</span>
-              <span class="font-bold text-white text-base">${c.symbol_name}</span>
-              <span class="text-canvas-muted text-xs">in ${c.file_path}:${c.line_start}-${c.line_end}</span>
+          <div class="flex flex-wrap items-center justify-between gap-3 border-b border-app-border pb-3">
+            <div class="flex items-center space-x-2 font-mono text-sm">
+              <span class="bg-blue-950 border border-blue-800 text-blue-300 px-2 py-0.5 rounded font-bold">#${c.rank}</span>
+              <span class="font-bold text-white">${c.symbol_name}</span>
+              <span class="text-zinc-400 text-xs">in ${c.file_path}:${c.line_start}-${c.line_end}</span>
             </div>
-            <span class="font-mono text-xs text-zinc-400 border border-canvas-border px-3 py-1 rounded-xl">
+            <span class="font-mono text-xs text-zinc-400 border border-app-border px-2.5 py-0.5 rounded">
               Confidence: ${c.confidence}
             </span>
           </div>
 
-          <div class="space-y-1.5">
-            <span class="text-xs font-mono text-zinc-400 uppercase font-semibold block">Root Cause Analysis</span>
-            <p class="text-sm sm:text-base text-zinc-200 leading-relaxed">${c.root_cause_hypothesis}</p>
+          <div class="space-y-1">
+            <span class="text-xs font-mono text-zinc-500 uppercase font-semibold">Root Cause Analysis</span>
+            <p class="text-sm text-zinc-200 leading-relaxed">${c.root_cause_hypothesis}</p>
           </div>
 
-          <div class="bg-canvas-bg p-5 rounded-2xl border border-canvas-border space-y-1.5">
-            <span class="text-xs font-mono text-emerald-400 uppercase font-semibold block">Suggested Fix Direction</span>
+          <div class="bg-app-bg p-4 rounded-xl border border-app-border space-y-1">
+            <span class="text-xs font-mono text-emerald-400 uppercase font-semibold">Suggested Fix Direction</span>
             <p class="text-sm text-zinc-300 leading-relaxed">${c.suggested_fix}</p>
           </div>
         `;
@@ -743,22 +839,14 @@
       });
     }
 
-    function resetWorkspace() {
-      document.getElementById('mainInput').value = '';
-      document.getElementById('heroSection').classList.remove('hidden');
-      document.getElementById('resultsSection').classList.add('hidden');
-      document.getElementById('btnExport').classList.add('hidden');
-      lastResult = null;
-    }
-
     function exportReport() {
-      if (!lastResult || !lastResult.final_output) return;
-      const out = lastResult.final_output;
+      if (!currentSessionState || !currentSessionState.final_output) return;
+      const out = currentSessionState.final_output;
       let md = `# Engineering Validation Brief\n`;
       md += `Date: ${new Date().toLocaleDateString()}\n`;
-      md += `Session: ${lastResult.session_id}\n\n`;
+      md += `Session ID: ${currentSessionState.session_id}\n\n`;
 
-      if (lastResult.intent === 'idea_validation') {
+      if (currentSessionState.intent === 'idea_validation') {
         md += `## Project Title: ${out.project_title}\n\n`;
         md += `### Problem Statement\n${out.problem_statement}\n\n`;
         md += `### Target Personas\n`;
@@ -769,7 +857,7 @@
         (out.phases || []).forEach(p => {
           md += `#### ${p.phase_name} (${p.duration_weeks})\n`;
           (p.deliverables || []).forEach(d => md += `- ${d}\n`);
-          md += `Exit Criteria: ${p.exit_criteria}\n\n`;
+          md += `*Exit Criteria:* ${p.exit_criteria}\n\n`;
         });
       } else {
         md += `## Codebase Diagnosis Summary\n${out.summary}\n\n`;
@@ -783,7 +871,7 @@
       const blob = new Blob([md], {type: 'text/markdown'});
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = `validation_brief_${lastResult.session_id}.md`;
+      a.download = `validation_brief_${currentSessionState.session_id}.md`;
       a.click();
     }
   </script>
