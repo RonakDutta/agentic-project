@@ -3,13 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Agentic Co-Pilot | Multi-Agent Idea Validation & Codebase Intelligence</title>
+  <title>Agentic Co-Pilot | Idea Validation & Codebase Intelligence</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <!-- Standard High-Legibility Developer Typography: Inter & JetBrains Mono -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
   <script>
+    mermaid.initialize({ startOnLoad: false, theme: 'dark' });
     tailwind.config = {
       darkMode: 'class',
       theme: {
@@ -19,17 +20,14 @@
             mono: ['"JetBrains Mono"', 'monospace'],
           },
           colors: {
-            app: {
-              bg: '#090a0f',
-              surface: '#0f1117',
-              panel: '#151821',
-              border: '#202433',
-              borderLight: '#2c3247',
-              text: '#f1f3f9',
-              muted: '#8b93a7',
-              faint: '#545b73',
-              accent: '#3b82f6',
-            }
+            canvas: '#090a0f',
+            surface: '#11141d',
+            surfaceHover: '#171b26',
+            card: '#141824',
+            borderSubtle: '#1e2436',
+            borderLight: '#2a324b',
+            accent: '#3b82f6',
+            accentGlow: 'rgba(59, 130, 246, 0.15)',
           }
         }
       }
@@ -38,6 +36,7 @@
   <style>
     body {
       background-color: #090a0f;
+      background-image: radial-gradient(circle at 50% 0%, #161e33 0%, #090a0f 65%);
       color: #f1f3f9;
       font-family: 'Inter', sans-serif;
       line-height: 1.6;
@@ -53,127 +52,130 @@
       background: transparent;
     }
     ::-webkit-scrollbar-thumb {
-      background: #202433;
+      background: #1e2436;
       border-radius: 4px;
     }
     ::-webkit-scrollbar-thumb:hover {
-      background: #2c3247;
-    }
-    .agent-active {
-      border-color: #3b82f6 !important;
-      background-color: #172554 !important;
-      color: #93c5fd !important;
+      background: #2a324b;
     }
   </style>
 </head>
-<body class="min-h-screen flex flex-col font-sans selection:bg-blue-950 selection:text-white">
+<body class="min-h-screen flex flex-col font-sans selection:bg-blue-900 selection:text-white">
 
-  <!-- Top Navigation Bar -->
-  <header class="border-b border-app-border bg-app-bg/95 backdrop-blur-md sticky top-0 z-50">
-    <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+  <!-- Top Navigation Header -->
+  <header class="border-b border-borderSubtle bg-canvas/80 backdrop-blur-md sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
       
-      <!-- Brand & Project Details -->
+      <!-- Brand & Project Identity -->
       <div class="flex items-center space-x-3">
         <div class="font-bold tracking-tight text-white text-base">Agentic Co-Pilot</div>
-        <span class="text-xs font-mono text-zinc-500 uppercase tracking-widest border-l border-app-border pl-3">
-          Multi-Agent System
+        <span class="text-xs font-mono text-zinc-500 uppercase tracking-widest border-l border-borderSubtle pl-3 hidden sm:inline">
+          Autonomous Team
         </span>
-        <span class="text-xs text-app-muted hidden sm:inline">Idea Validation & AST Codebase Analysis</span>
+        <span class="text-xs text-zinc-400 hidden md:inline">Idea Validation & Code Analysis</span>
       </div>
 
-      <!-- Engine & Export Header -->
+      <!-- Actions & Engine Indicator -->
       <div class="flex items-center space-x-3 text-xs font-mono">
-        <span class="text-app-muted border border-app-border bg-app-surface px-3 py-1.5 rounded-lg">
-          Engine: Groq / Llama 3.3
+        <span class="text-zinc-400 border border-borderSubtle bg-surface px-3 py-1.5 rounded-xl">
+          Engine: Groq LLM
         </span>
-        <button id="btnExportTop" onclick="exportReport()" class="hidden text-white bg-blue-600 hover:bg-blue-500 px-3.5 py-1.5 rounded-lg transition font-medium">
-          Export Report (.md)
+        <button id="btnExportTop" onclick="exportReport()" class="hidden text-white bg-blue-600 hover:bg-blue-500 px-3.5 py-1.5 rounded-xl transition font-medium shadow-sm">
+          Export Brief (.md)
         </button>
       </div>
 
     </div>
   </header>
 
-  <!-- Persistent Workbench Workspace -->
-  <main class="flex-1 max-w-7xl w-full mx-auto px-6 py-8 space-y-8">
+  <!-- Main Container -->
+  <main class="flex-1 max-w-6xl w-full mx-auto px-6 py-10 space-y-12">
 
-    <!-- PERSISTENT CONTROL BAR (Always Accessible, Never Disappears) -->
-    <section class="border border-app-border bg-app-surface rounded-2xl p-6 space-y-5 shadow-lg">
+    <!-- COZY UN-BOXY INPUT WORKBENCH -->
+    <section class="bg-surface/60 backdrop-blur-sm border border-borderSubtle rounded-3xl p-6 sm:p-8 space-y-6 shadow-xl">
       
-      <!-- Top Row: Pillar Switcher & Context Controls -->
-      <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-app-border">
+      <!-- Mode Switcher -->
+      <div class="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-borderSubtle/60">
         
-        <!-- Pillar Selector -->
-        <div class="flex items-center space-x-2 bg-app-bg p-1 rounded-xl border border-app-border">
-          <button id="btnModeIdea" onclick="selectPillar('idea')" class="px-4 py-2 rounded-lg text-xs font-semibold transition bg-blue-600 text-white shadow-sm">
-            Pillar 1: Idea Validation & Roadmap
+        <div class="flex items-center space-x-2 bg-canvas/90 p-1.5 rounded-2xl border border-borderSubtle">
+          <button id="btnModeIdea" onclick="selectPillar('idea')" class="px-5 py-2.5 rounded-xl text-xs font-semibold transition bg-blue-600 text-white shadow-sm">
+            Validate an Idea
           </button>
-          <button id="btnModeCode" onclick="selectPillar('code')" class="px-4 py-2 rounded-lg text-xs font-semibold transition text-app-muted hover:text-white">
-            Pillar 2: Codebase Diagnosis & AST
+          <button id="btnModeCode" onclick="selectPillar('code')" class="px-5 py-2.5 rounded-xl text-xs font-semibold transition text-zinc-400 hover:text-white">
+            Find Code Bugs
           </button>
         </div>
 
         <!-- Code Repo Bar (Appears when Code mode is selected) -->
         <div id="repoControlsRow" class="hidden flex items-center space-x-2 text-xs font-mono">
-          <button onclick="loadSampleRepo()" class="text-blue-400 hover:text-blue-300 border border-app-border bg-app-bg px-3 py-1.5 rounded-lg transition">
-            Load Sample Repo
+          <button onclick="loadSampleRepo()" class="text-blue-400 hover:text-blue-300 border border-borderSubtle bg-canvas px-3.5 py-2 rounded-xl transition">
+            Load Demo Repo
           </button>
-          <button onclick="inspectRepo()" id="btnInspectAST" class="text-zinc-300 hover:text-white border border-app-border bg-app-bg px-3 py-1.5 rounded-lg transition">
-            Inspect AST
+          <button onclick="inspectRepo()" id="btnInspectAST" class="text-zinc-300 hover:text-white border border-borderSubtle bg-canvas px-3.5 py-2 rounded-xl transition">
+            Scan Files
           </button>
-          <span id="repoStatsBadge" class="hidden text-zinc-400 text-xs px-2 py-1 bg-app-bg rounded border border-app-border">
-            0 files indexed
+          <span id="repoStatsBadge" class="hidden text-zinc-400 text-xs px-2.5 py-1.5 bg-canvas rounded-xl border border-borderSubtle">
+            0 files scanned
           </span>
         </div>
 
       </div>
 
       <!-- Optional Repository Path (in Code mode) -->
-      <div id="repoPathRow" class="hidden flex items-center space-x-2 bg-app-bg p-2.5 rounded-xl border border-app-border">
-        <span class="text-xs font-mono text-zinc-500 pl-2">Repo Path:</span>
+      <div id="repoPathRow" class="hidden flex items-center space-x-3 bg-canvas p-3 rounded-2xl border border-borderSubtle">
+        <span class="text-xs font-mono text-zinc-500 pl-2">Folder Path:</span>
         <input type="text" id="repoPathInput" placeholder="C:/path/to/python-project" class="flex-1 bg-transparent text-xs font-mono text-zinc-200 focus:outline-none px-2">
       </div>
 
-      <!-- Main Input Textarea (Always Editable) -->
-      <div class="space-y-2">
-        <div class="flex items-center justify-between text-xs">
-          <label id="inputLabel" class="font-semibold text-zinc-200">Enter project or startup idea description:</label>
-          <span class="text-zinc-500 font-mono text-[11px]">Type freely or pick a sample below</span>
-        </div>
-        <textarea id="mainPrompt" rows="4" placeholder="Describe the problem, target audience, and solution scope..." class="w-full bg-app-bg border border-app-border focus:border-blue-500 rounded-xl p-4 text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none resize-none leading-relaxed transition"></textarea>
+      <!-- Optional GitHub Repo Input (in Idea mode for prototype auditing) -->
+      <div id="ideaRepoInputRow" class="flex items-center space-x-3 bg-canvas/60 p-3 rounded-2xl border border-borderSubtle">
+        <svg class="w-4 h-4 text-zinc-500 ml-2" fill="currentColor" viewBox="0 0 24 24">
+          <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+        </svg>
+        <span class="text-xs font-mono text-zinc-500">GitHub Prototype:</span>
+        <input type="text" id="ideaRepoInput" placeholder="https://github.com/owner/repo (optional reference repo to audit)" class="flex-1 bg-transparent text-xs text-zinc-200 placeholder:text-zinc-600 focus:outline-none">
       </div>
 
-      <!-- Bottom Action Row: Quick Starter Chips + Submit Button -->
-      <div class="flex flex-wrap items-center justify-between gap-3 pt-1">
+      <!-- Main Input Textarea -->
+      <div class="space-y-2">
+        <div class="flex items-center justify-between text-xs">
+          <label id="inputLabel" class="font-semibold text-zinc-200">Describe your startup or project idea:</label>
+          <span class="text-zinc-500 text-[11px]">Type freely or pick an example below</span>
+        </div>
+        <textarea id="mainPrompt" rows="4" placeholder="What problem are you solving? Who is it for? What is your solution..." class="w-full bg-canvas/90 border border-borderSubtle focus:border-blue-500 rounded-2xl p-4 text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none resize-none leading-relaxed transition shadow-inner"></textarea>
+      </div>
+
+      <!-- Action Row: Starter Pills + Run Button -->
+      <div class="flex flex-wrap items-center justify-between gap-4 pt-1">
         
-        <!-- Quick Starter Chips -->
+        <!-- Starter Chips -->
         <div class="flex flex-wrap items-center gap-2">
-          <span class="text-xs text-zinc-500 font-medium">Sample:</span>
+          <span class="text-xs text-zinc-500">Quick sample:</span>
           
           <div id="ideaChips" class="flex flex-wrap items-center gap-2">
-            <button onclick="setPrompt('iot')" class="text-xs text-app-muted hover:text-white border border-app-border hover:border-zinc-600 bg-app-bg px-3 py-1.5 rounded-lg transition">
+            <button onclick="setPrompt('iot')" class="text-xs text-zinc-400 hover:text-white border border-borderSubtle hover:border-zinc-600 bg-canvas/80 px-3 py-1.5 rounded-xl transition">
               IoT Energy Spike Monitor
             </button>
-            <button onclick="setPrompt('peer')" class="text-xs text-app-muted hover:text-white border border-app-border hover:border-zinc-600 bg-app-bg px-3 py-1.5 rounded-lg transition">
+            <button onclick="setPrompt('peer')" class="text-xs text-zinc-400 hover:text-white border border-borderSubtle hover:border-zinc-600 bg-canvas/80 px-3 py-1.5 rounded-xl transition">
               AI Student Code Reviewer
             </button>
-            <button onclick="setPrompt('water')" class="text-xs text-app-muted hover:text-white border border-app-border hover:border-zinc-600 bg-app-bg px-3 py-1.5 rounded-lg transition">
-              Smart Ultrasonic Water Meter
+            <button onclick="setPrompt('water')" class="text-xs text-zinc-400 hover:text-white border border-borderSubtle hover:border-zinc-600 bg-canvas/80 px-3 py-1.5 rounded-xl transition">
+              Smart Water Meter
             </button>
           </div>
 
           <div id="codeChips" class="hidden flex flex-wrap items-center gap-2">
-            <button onclick="setPrompt('token_err')" class="text-xs text-app-muted hover:text-white border border-app-border hover:border-zinc-600 bg-app-bg px-3 py-1.5 rounded-lg transition">
+            <button onclick="setPrompt('token_err')" class="text-xs text-zinc-400 hover:text-white border border-borderSubtle hover:border-zinc-600 bg-canvas/80 px-3 py-1.5 rounded-xl transition">
               Token Expired Bug
             </button>
-            <button onclick="setPrompt('auth_flow')" class="text-xs text-app-muted hover:text-white border border-app-border hover:border-zinc-600 bg-app-bg px-3 py-1.5 rounded-lg transition">
+            <button onclick="setPrompt('auth_flow')" class="text-xs text-zinc-400 hover:text-white border border-borderSubtle hover:border-zinc-600 bg-canvas/80 px-3 py-1.5 rounded-xl transition">
               Order Auth Flow
             </button>
           </div>
         </div>
 
-        <!-- Execute Button -->
-        <button id="btnRun" onclick="executeWorkflow()" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs px-6 py-2.5 rounded-xl transition flex items-center space-x-2 shadow-md">
+        <!-- Submit Button -->
+        <button id="btnRun" onclick="executeWorkflow()" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs px-6 py-3 rounded-2xl transition flex items-center space-x-2 shadow-lg shadow-blue-900/30">
           <span id="btnRunText">Run Multi-Agent Pipeline</span>
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
@@ -184,25 +186,25 @@
 
     </section>
 
-    <!-- BEHIND THE SCENES: HOW THE AGENTS WORKED -->
-    <section class="border border-app-border bg-app-surface rounded-2xl p-6 sm:p-8 space-y-6">
+    <!-- BEHIND THE SCENES: HOW THE AGENTS WORKED (Un-boxy, flowing timeline) -->
+    <section class="bg-surface/40 border border-borderSubtle/80 rounded-3xl p-6 sm:p-8 space-y-6">
       
-      <div class="flex flex-wrap items-center justify-between gap-4 border-b border-app-border pb-4">
+      <div class="flex flex-wrap items-center justify-between gap-4 border-b border-borderSubtle/60 pb-4">
         <div>
           <h2 class="text-base sm:text-lg font-bold text-white tracking-tight">Behind the Scenes: How the Agents Worked</h2>
-          <p class="text-xs text-zinc-400 mt-1">Each specialized agent handles one part of the problem and passes its discoveries to the next agent.</p>
+          <p class="text-xs text-zinc-400 mt-0.5">Each specialized agent solves one part of the problem and passes its discoveries to the next agent.</p>
         </div>
-        <div class="text-xs font-mono text-zinc-400 bg-app-bg px-3 py-1.5 rounded-lg border border-app-border">
+        <div class="text-xs font-mono text-zinc-400 bg-canvas px-3 py-1.5 rounded-xl border border-borderSubtle">
           Status: <span id="pipelineStatusText" class="text-zinc-200 font-semibold">Ready</span>
           <span id="pipelineTimer" class="ml-2 text-zinc-500"></span>
         </div>
       </div>
 
-      <!-- Quick Agent Progress Strip -->
-      <div class="grid grid-cols-1 sm:grid-cols-5 gap-3">
+      <!-- Quick Progress Strip -->
+      <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
         
-        <!-- Agent 1: Orchestrator / Planner -->
-        <div id="nodeOrchestrator" class="border border-app-border bg-app-bg p-3.5 rounded-xl space-y-1 transition-all">
+        <!-- Agent 1 -->
+        <div id="nodeOrchestrator" class="border border-borderSubtle bg-canvas/70 p-3.5 rounded-2xl space-y-1 transition-all">
           <div class="flex items-center justify-between text-[11px] font-mono text-zinc-500">
             <span>Agent 01</span>
             <span id="statusOrch" class="text-zinc-600 uppercase font-semibold">Idle</span>
@@ -211,8 +213,8 @@
           <p class="text-[11px] text-zinc-400 leading-snug">Breaks down the input</p>
         </div>
 
-        <!-- Agent 2: Research / AST -->
-        <div id="nodeResearch" class="border border-app-border bg-app-bg p-3.5 rounded-xl space-y-1 transition-all">
+        <!-- Agent 2 -->
+        <div id="nodeResearch" class="border border-borderSubtle bg-canvas/70 p-3.5 rounded-2xl space-y-1 transition-all">
           <div class="flex items-center justify-between text-[11px] font-mono text-zinc-500">
             <span>Agent 02</span>
             <span id="statusResearch" class="text-zinc-600 uppercase font-semibold">Idle</span>
@@ -221,18 +223,18 @@
           <p class="text-[11px] text-zinc-400 leading-snug" id="descAgent2">Searches existing solutions</p>
         </div>
 
-        <!-- Agent 3: Architecture / Navigation -->
-        <div id="nodeArch" class="border border-app-border bg-app-bg p-3.5 rounded-xl space-y-1 transition-all">
+        <!-- Agent 3 -->
+        <div id="nodeArch" class="border border-borderSubtle bg-canvas/70 p-3.5 rounded-2xl space-y-1 transition-all">
           <div class="flex items-center justify-between text-[11px] font-mono text-zinc-500">
             <span>Agent 03</span>
             <span id="statusArch" class="text-zinc-600 uppercase font-semibold">Idle</span>
           </div>
           <div class="font-bold text-xs text-zinc-200" id="nameAgent3">System Architect</div>
-          <p class="text-[11px] text-zinc-400 leading-snug" id="descAgent3">Audits code & architecture</p>
+          <p class="text-[11px] text-zinc-400 leading-snug" id="descAgent3">Audits code & tech stack</p>
         </div>
 
-        <!-- Agent 4: Roadmap / Diagnosis -->
-        <div id="nodeRoadmap" class="border border-app-border bg-app-bg p-3.5 rounded-xl space-y-1 transition-all">
+        <!-- Agent 4 -->
+        <div id="nodeRoadmap" class="border border-borderSubtle bg-canvas/70 p-3.5 rounded-2xl space-y-1 transition-all">
           <div class="flex items-center justify-between text-[11px] font-mono text-zinc-500">
             <span>Agent 04</span>
             <span id="statusRoadmap" class="text-zinc-600 uppercase font-semibold">Idle</span>
@@ -241,8 +243,8 @@
           <p class="text-[11px] text-zinc-400 leading-snug" id="descAgent4">Milestones & failure stress-test</p>
         </div>
 
-        <!-- Agent 5: Deterministic Critic -->
-        <div id="nodeCritic" class="border border-app-border bg-app-bg p-3.5 rounded-xl space-y-1 transition-all">
+        <!-- Agent 5 -->
+        <div id="nodeCritic" class="border border-borderSubtle bg-canvas/70 p-3.5 rounded-2xl space-y-1 transition-all col-span-2 sm:col-span-1">
           <div class="flex items-center justify-between text-[11px] font-mono text-zinc-500">
             <span>Agent 05</span>
             <span id="statusCritic" class="text-zinc-600 uppercase font-semibold">Idle</span>
@@ -257,53 +259,53 @@
       <div id="agentStepsDetail" class="space-y-4 pt-2"></div>
 
       <!-- Expandable Raw Logs Toggle -->
-      <div id="traceAccordion" class="hidden pt-2 border-t border-app-border">
+      <div id="traceAccordion" class="hidden pt-2 border-t border-borderSubtle/60">
         <button onclick="toggleTraceLog()" class="text-xs font-mono text-zinc-400 hover:text-white flex items-center space-x-1">
           <span id="traceLogCount">View raw timestamp records</span>
           <svg id="traceChevron" class="w-3.5 h-3.5 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
           </svg>
         </button>
-        <div id="traceLogContainer" class="hidden mt-3 max-h-48 overflow-y-auto space-y-1.5 p-3 rounded-xl bg-app-bg border border-app-border text-xs font-mono"></div>
+        <div id="traceLogContainer" class="hidden mt-3 max-h-48 overflow-y-auto space-y-1.5 p-3 rounded-2xl bg-canvas border border-borderSubtle text-xs font-mono"></div>
       </div>
 
     </section>
 
-    <!-- OUTPUT CANVAS (Spacious, Detailed, High-Legibility) -->
+    <!-- FULL PROJECT BREAKDOWN (Clean, Spacious, Editorial Flow) -->
     <section id="outputArea" class="hidden space-y-12">
 
-      <!-- Metrics Summary Strip -->
+      <!-- Metrics Strip (Clean and borderless) -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div class="border border-app-border bg-app-surface p-4 rounded-xl space-y-1">
-          <div class="text-[11px] font-mono text-zinc-500 uppercase">Grounding Verdict</div>
+        <div class="bg-surface/50 border border-borderSubtle p-5 rounded-2xl space-y-1">
+          <div class="text-[11px] font-mono text-zinc-500 uppercase">Fact Verification</div>
           <div id="kpiGrounding" class="text-base font-bold text-emerald-400">100% Grounded</div>
         </div>
-        <div class="border border-app-border bg-app-surface p-4 rounded-xl space-y-1">
-          <div class="text-[11px] font-mono text-zinc-500 uppercase">Total Latency</div>
+        <div class="bg-surface/50 border border-borderSubtle p-5 rounded-2xl space-y-1">
+          <div class="text-[11px] font-mono text-zinc-500 uppercase">Response Time</div>
           <div id="kpiLatency" class="text-base font-bold text-white">0ms</div>
         </div>
-        <div class="border border-app-border bg-app-surface p-4 rounded-xl space-y-1">
-          <div class="text-[11px] font-mono text-zinc-500 uppercase">Pipeline Mode</div>
-          <div id="kpiTrack" class="text-base font-bold text-white">Idea Track</div>
+        <div class="bg-surface/50 border border-borderSubtle p-5 rounded-2xl space-y-1">
+          <div class="text-[11px] font-mono text-zinc-500 uppercase">Feasibility Rating</div>
+          <div id="kpiTrack" class="text-base font-bold text-blue-400">Idea Track</div>
         </div>
-        <div class="border border-app-border bg-app-surface p-4 rounded-xl space-y-1">
-          <div class="text-[11px] font-mono text-zinc-500 uppercase">Self-Correction Revisions</div>
-          <div id="kpiRevisions" class="text-base font-bold text-white">0 Cycles</div>
+        <div class="bg-surface/50 border border-borderSubtle p-5 rounded-2xl space-y-1">
+          <div class="text-[11px] font-mono text-zinc-500 uppercase">Self-Correction</div>
+          <div id="kpiRevisions" class="text-base font-bold text-white">0 Retries Needed</div>
         </div>
       </div>
 
-      <!-- DETAILED IDEA VALIDATION VIEW (Hero) -->
+      <!-- DETAILED IDEA VIEW -->
       <div id="ideaView" class="space-y-12">
         
         <!-- Executive Briefing Header -->
-        <div class="border border-app-border bg-app-surface p-8 sm:p-10 rounded-2xl space-y-6">
-          <div class="flex flex-wrap items-start justify-between gap-4 border-b border-app-border pb-6">
+        <div class="bg-surface/60 border border-borderSubtle p-8 sm:p-10 rounded-3xl space-y-6 shadow-md">
+          <div class="flex flex-wrap items-start justify-between gap-4 border-b border-borderSubtle pb-6">
             <div class="space-y-1">
               <span class="text-xs font-mono text-blue-400 uppercase tracking-wider font-semibold">Validated Engineering Concept</span>
               <h2 id="ideaProjectTitle" class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight"></h2>
             </div>
-            <span class="text-xs font-mono text-zinc-400 border border-app-border px-3 py-1.5 rounded-lg bg-app-bg">
-              Academic Minor Project Scope
+            <span class="text-xs font-mono text-zinc-400 border border-borderSubtle px-3 py-1.5 rounded-xl bg-canvas">
+              Minor Project Scope
             </span>
           </div>
 
@@ -312,7 +314,7 @@
             <p id="ideaProblemStatement" class="text-sm sm:text-base text-zinc-200 leading-relaxed"></p>
           </div>
 
-          <div class="pt-4 border-t border-app-border/60">
+          <div class="pt-4 border-t border-borderSubtle/60">
             <span class="text-xs font-mono text-zinc-400 uppercase font-semibold">Core Value Proposition:</span>
             <span id="ideaCoreValue" class="text-sm sm:text-base text-white font-medium ml-2"></span>
           </div>
@@ -320,7 +322,7 @@
 
         <!-- 1. Target Users -->
         <div class="space-y-4">
-          <div class="border-b border-app-border pb-3 flex items-baseline justify-between">
+          <div class="border-b border-borderSubtle pb-3 flex items-baseline justify-between">
             <h3 class="text-base sm:text-lg font-bold text-white">1. Target Users</h3>
             <span class="text-xs text-zinc-500">Who experiences this problem</span>
           </div>
@@ -329,7 +331,7 @@
 
         <!-- 2. Competitors & Market Research -->
         <div class="space-y-4">
-          <div class="border-b border-app-border pb-3 flex items-baseline justify-between">
+          <div class="border-b border-borderSubtle pb-3 flex items-baseline justify-between">
             <h3 class="text-base sm:text-lg font-bold text-white">2. Competitors & Market Research</h3>
             <span class="text-xs text-zinc-500">Live search references</span>
           </div>
@@ -338,7 +340,7 @@
 
         <!-- 3. Recommended Tech Stack -->
         <div class="space-y-4">
-          <div class="border-b border-app-border pb-3 flex items-baseline justify-between">
+          <div class="border-b border-borderSubtle pb-3 flex items-baseline justify-between">
             <h3 class="text-base sm:text-lg font-bold text-white">3. Recommended Tech Stack</h3>
             <span class="text-xs text-zinc-500">Production choices & engineering tradeoffs</span>
           </div>
@@ -347,17 +349,17 @@
 
         <!-- 4. Implementation Trap: Wrong Code vs Correct Code -->
         <div class="space-y-4">
-          <div class="border-b border-app-border pb-3 flex items-baseline justify-between">
+          <div class="border-b border-borderSubtle pb-3 flex items-baseline justify-between">
             <div>
               <h3 class="text-base sm:text-lg font-bold text-white">4. Implementation Trap: Wrong Code vs Correct Code</h3>
               <p class="text-xs text-zinc-400 mt-0.5">The #1 technical mistake developers make when building this project, and how to fix it.</p>
             </div>
-            <span class="text-xs font-mono text-amber-300 border border-amber-900/60 bg-amber-950/20 px-2.5 py-1 rounded-lg">
+            <span class="text-xs font-mono text-amber-300 border border-amber-900/60 bg-amber-950/20 px-3 py-1 rounded-xl">
               Architecture Audit
             </span>
           </div>
           
-          <div class="border border-app-border bg-app-surface p-7 rounded-2xl space-y-5">
+          <div class="bg-surface/60 border border-borderSubtle p-7 sm:p-8 rounded-3xl space-y-6">
             <div class="space-y-1">
               <span class="text-xs font-mono text-zinc-500 uppercase font-semibold">Identified Technical Trap:</span>
               <h4 id="pitfallTitle" class="text-base font-bold text-white"></h4>
@@ -366,21 +368,21 @@
 
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 pt-2">
               <!-- Wrong Code Box -->
-              <div class="rounded-xl border border-red-900/60 bg-red-950/20 p-5 space-y-3">
+              <div class="rounded-2xl border border-red-900/50 bg-red-950/15 p-5 space-y-3">
                 <div class="flex items-center justify-between border-b border-red-900/40 pb-2.5">
                   <span class="text-xs font-mono font-bold text-red-400 uppercase tracking-wider">Common Mistake (Wrong Approach)</span>
                   <span class="text-[11px] font-mono text-red-300/80">Fails under load</span>
                 </div>
-                <pre id="pitfallWrongCode" class="text-xs font-mono text-red-200 overflow-x-auto leading-relaxed p-3 rounded-lg bg-black/40 border border-red-900/30 whitespace-pre"></pre>
+                <pre id="pitfallWrongCode" class="text-xs font-mono text-red-200 overflow-x-auto leading-relaxed p-3.5 rounded-xl bg-black/40 border border-red-900/30 whitespace-pre"></pre>
               </div>
 
               <!-- Correct Code Box -->
-              <div class="rounded-xl border border-emerald-900/60 bg-emerald-950/20 p-5 space-y-3">
+              <div class="rounded-2xl border border-emerald-900/50 bg-emerald-950/15 p-5 space-y-3">
                 <div class="flex items-center justify-between border-b border-emerald-900/40 pb-2.5">
                   <span class="text-xs font-mono font-bold text-emerald-400 uppercase tracking-wider">Recommended Fix (Correct Approach)</span>
                   <span class="text-[11px] font-mono text-emerald-300/80">Production standard</span>
                 </div>
-                <pre id="pitfallCorrectCode" class="text-xs font-mono text-emerald-200 overflow-x-auto leading-relaxed p-3 rounded-lg bg-black/40 border border-emerald-900/30 whitespace-pre"></pre>
+                <pre id="pitfallCorrectCode" class="text-xs font-mono text-emerald-200 overflow-x-auto leading-relaxed p-3.5 rounded-xl bg-black/40 border border-emerald-900/30 whitespace-pre"></pre>
               </div>
             </div>
           </div>
@@ -388,7 +390,7 @@
 
         <!-- 5. Development Roadmap & Major Risks -->
         <div class="space-y-5">
-          <div class="border-b border-app-border pb-3 flex items-baseline justify-between">
+          <div class="border-b border-borderSubtle pb-3 flex items-baseline justify-between">
             <h3 class="text-base sm:text-lg font-bold text-white">5. Development Roadmap & Major Risks</h3>
             <span class="text-xs text-zinc-500">Timeline & failure stress-test</span>
           </div>
@@ -409,9 +411,9 @@
           <div id="risksContainer" class="space-y-4 pt-2"></div>
         </div>
 
-        <!-- 6. Evaluation Defense Tips -->
-        <div class="border border-app-border bg-app-surface p-8 rounded-2xl space-y-3">
-          <div class="flex items-center justify-between border-b border-app-border pb-3">
+        <!-- 6. Presentation Tips -->
+        <div class="bg-surface/60 border border-borderSubtle p-8 rounded-3xl space-y-3">
+          <div class="flex items-center justify-between border-b border-borderSubtle pb-3">
             <h3 class="text-sm font-bold text-white uppercase tracking-wider font-mono">Tips for Your Presentation & Viva</h3>
             <span class="text-xs font-mono text-zinc-500">To impress your evaluators</span>
           </div>
@@ -419,13 +421,13 @@
         </div>
 
         <!-- 7. CONVERSATIONAL FOLLOW-UP (ChatGPT Style) -->
-        <div class="border border-app-border bg-app-surface p-8 sm:p-10 rounded-2xl space-y-6">
-          <div class="flex flex-wrap items-center justify-between gap-4 border-b border-app-border pb-4">
+        <div class="bg-surface/60 border border-borderSubtle p-8 sm:p-10 rounded-3xl space-y-6 shadow-lg">
+          <div class="flex flex-wrap items-center justify-between gap-4 border-b border-borderSubtle pb-4">
             <div>
               <h3 class="text-base sm:text-lg font-bold text-white">Ask a Follow-Up Question</h3>
-              <p class="text-xs text-zinc-400 mt-1">Keep the conversation going: ask for architecture changes, scaling advice, or deeper code explanations.</p>
+              <p class="text-xs text-zinc-400 mt-0.5">Keep the conversation going: ask for architecture changes, scaling advice, or deeper code explanations.</p>
             </div>
-            <span class="text-xs font-mono text-blue-400 border border-app-border px-3 py-1.5 rounded-lg bg-app-bg">
+            <span class="text-xs font-mono text-blue-400 border border-borderSubtle px-3 py-1.5 rounded-xl bg-canvas">
               Session Memory Active
             </span>
           </div>
@@ -436,21 +438,21 @@
           <!-- Quick Prompts -->
           <div class="flex flex-wrap items-center gap-2 pt-1">
             <span class="text-xs text-zinc-500 font-medium">Quick ask:</span>
-            <button onclick="setFollowupPrompt('Can we replace the backend with FastAPI or Go?')" class="text-xs text-app-muted hover:text-white border border-app-border hover:border-zinc-600 bg-app-bg px-3 py-1.5 rounded-lg transition">
+            <button onclick="setFollowupPrompt('Can we replace the backend with FastAPI or Go?')" class="text-xs text-zinc-400 hover:text-white border border-borderSubtle hover:border-zinc-600 bg-canvas px-3 py-1.5 rounded-xl transition">
               Switch backend to FastAPI / Go
             </button>
-            <button onclick="setFollowupPrompt('How do we scale this architecture to 10,000 active users?')" class="text-xs text-app-muted hover:text-white border border-app-border hover:border-zinc-600 bg-app-bg px-3 py-1.5 rounded-lg transition">
+            <button onclick="setFollowupPrompt('How do we scale this architecture to 10,000 active users?')" class="text-xs text-zinc-400 hover:text-white border border-borderSubtle hover:border-zinc-600 bg-canvas px-3 py-1.5 rounded-xl transition">
               Scale to 10k users
             </button>
-            <button onclick="setFollowupPrompt('Explain the common code mistake in simpler words.')" class="text-xs text-app-muted hover:text-white border border-app-border hover:border-zinc-600 bg-app-bg px-3 py-1.5 rounded-lg transition">
+            <button onclick="setFollowupPrompt('Explain the common code mistake in simpler words.')" class="text-xs text-zinc-400 hover:text-white border border-borderSubtle hover:border-zinc-600 bg-canvas px-3 py-1.5 rounded-xl transition">
               Explain code mistake simply
             </button>
           </div>
 
           <!-- Input Bar -->
           <div class="flex items-end gap-3 pt-2">
-            <textarea id="followupInput" rows="2" placeholder="Type your follow-up question here (e.g. 'How do we handle real-time alerts?')..." class="flex-1 bg-app-bg border border-app-border focus:border-blue-500 rounded-xl p-3.5 text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none resize-none leading-relaxed transition"></textarea>
-            <button id="btnSendFollowup" onclick="sendFollowup()" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs px-6 py-3.5 rounded-xl transition flex items-center space-x-2 shadow-md">
+            <textarea id="followupInput" rows="2" placeholder="Type your follow-up question here (e.g. 'How do we handle real-time alerts?')..." class="flex-1 bg-canvas border border-borderSubtle focus:border-blue-500 rounded-2xl p-3.5 text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none resize-none leading-relaxed transition"></textarea>
+            <button id="btnSendFollowup" onclick="sendFollowup()" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs px-6 py-3.5 rounded-2xl transition flex items-center space-x-2 shadow-md">
               <span id="btnFollowupText">Send</span>
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
@@ -461,13 +463,12 @@
 
       </div>
 
-
-      <!-- CODEBASE ANALYSIS VIEW (Pillar 2) -->
+      <!-- CODEBASE ANALYSIS VIEW -->
       <div id="codeView" class="space-y-8 hidden">
-        <div class="border border-app-border bg-app-surface p-8 rounded-2xl space-y-4">
-          <div class="flex items-center justify-between border-b border-app-border pb-4">
+        <div class="bg-surface/60 border border-borderSubtle p-8 rounded-3xl space-y-4">
+          <div class="flex items-center justify-between border-b border-borderSubtle pb-4">
             <h3 class="text-xl font-bold text-white">Codebase Diagnosis Summary</h3>
-            <span id="codeCriticBadge" class="text-xs font-mono font-semibold px-3 py-1 rounded-lg border border-emerald-800 bg-emerald-950/40 text-emerald-300">
+            <span id="codeCriticBadge" class="text-xs font-mono font-semibold px-3 py-1 rounded-xl border border-emerald-800 bg-emerald-950/40 text-emerald-300">
               [VERIFIED IN AST]
             </span>
           </div>
@@ -475,7 +476,7 @@
         </div>
 
         <div class="space-y-5">
-          <h3 class="text-base font-bold text-white">Ranked Candidate Locations</h3>
+          <h3 class="text-base font-bold text-white">Where to Look in Code</h3>
           <div id="codeCandidatesContainer" class="space-y-5"></div>
         </div>
       </div>
@@ -495,6 +496,7 @@
       const btnCode = document.getElementById('btnModeCode');
       const repoControls = document.getElementById('repoControlsRow');
       const repoPathRow = document.getElementById('repoPathRow');
+      const ideaRepoInputRow = document.getElementById('ideaRepoInputRow');
       const inputLabel = document.getElementById('inputLabel');
       const mainPrompt = document.getElementById('mainPrompt');
       const ideaChips = document.getElementById('ideaChips');
@@ -509,39 +511,41 @@
       const descAgent4 = document.getElementById('descAgent4');
 
       if (mode === 'idea') {
-        btnIdea.className = 'px-4 py-2 rounded-lg text-xs font-semibold transition bg-blue-600 text-white shadow-sm';
-        btnCode.className = 'px-4 py-2 rounded-lg text-xs font-semibold transition text-app-muted hover:text-white';
+        btnIdea.className = 'px-5 py-2.5 rounded-xl text-xs font-semibold transition bg-blue-600 text-white shadow-sm';
+        btnCode.className = 'px-5 py-2.5 rounded-xl text-xs font-semibold transition text-zinc-400 hover:text-white';
         repoControls.classList.add('hidden');
         repoPathRow.classList.add('hidden');
+        if (ideaRepoInputRow) ideaRepoInputRow.classList.remove('hidden');
         ideaChips.classList.remove('hidden');
         codeChips.classList.add('hidden');
-        inputLabel.innerText = "Enter project or startup idea description:";
-        mainPrompt.placeholder = "Describe your project idea in plain language (problem, target audience, hardware/software scope)...";
+        inputLabel.innerText = "Describe your startup or project idea:";
+        mainPrompt.placeholder = "What problem are you solving? Who is it for? What is your solution...";
         btnRunText.innerText = "Run Multi-Agent Pipeline";
 
-        nameAgent2.innerText = "Market Research";
-        descAgent2.innerText = "Web search & competitor extraction";
-        nameAgent3.innerText = "Architect Agent";
-        descAgent3.innerText = "Tech stack tradeoff evaluation";
+        nameAgent2.innerText = "Market Researcher";
+        descAgent2.innerText = "Searches existing solutions";
+        nameAgent3.innerText = "System Architect";
+        descAgent3.innerText = "Audits code & tech stack";
         nameAgent4.innerText = "Roadmap & Risk";
-        descAgent4.innerText = "3-phase milestones & risk matrix";
+        descAgent4.innerText = "Milestones & failure stress-test";
       } else {
-        btnCode.className = 'px-4 py-2 rounded-lg text-xs font-semibold transition bg-blue-600 text-white shadow-sm';
-        btnIdea.className = 'px-4 py-2 rounded-lg text-xs font-semibold transition text-app-muted hover:text-white';
+        btnCode.className = 'px-5 py-2.5 rounded-xl text-xs font-semibold transition bg-blue-600 text-white shadow-sm';
+        btnIdea.className = 'px-5 py-2.5 rounded-xl text-xs font-semibold transition text-zinc-400 hover:text-white';
         repoControls.classList.remove('hidden');
         repoPathRow.classList.remove('hidden');
+        if (ideaRepoInputRow) ideaRepoInputRow.classList.add('hidden');
         ideaChips.classList.add('hidden');
         codeChips.classList.remove('hidden');
         inputLabel.innerText = "Enter error traceback or code exploration question:";
         mainPrompt.placeholder = "Paste an exception traceback or ask about code structure (e.g. ValueError in verify_token)...";
         btnRunText.innerText = "Diagnose Codebase with AST";
 
-        nameAgent2.innerText = "AST Code Indexer";
-        descAgent2.innerText = "Syntactic function & symbol extraction";
+        nameAgent2.innerText = "Code Structure Indexer";
+        descAgent2.innerText = "Scans classes & function symbols";
         nameAgent3.innerText = "Navigation Agent";
-        descAgent3.innerText = "Context narrowing & call graph traversal";
+        descAgent3.innerText = "Narrows context & searches symbols";
         nameAgent4.innerText = "Diagnosis Agent";
-        descAgent4.innerText = "Root-cause fault hypothesis";
+        descAgent4.innerText = "Pinpoints bug root cause";
       }
     }
 
@@ -584,7 +588,7 @@
         const data = await res.json();
         if (data.status === 'ok') {
           const badge = document.getElementById('repoStatsBadge');
-          badge.innerText = `${data.summary.total_files} files, ${data.summary.total_chunks} functions parsed into AST`;
+          badge.innerText = `${data.summary.total_files} files, ${data.summary.total_chunks} functions scanned`;
           badge.classList.remove('hidden');
         }
       } catch (e) {
@@ -598,13 +602,13 @@
       statusSpan.innerText = statusText;
 
       if (isActive) {
-        node.className = "border border-blue-500 bg-blue-950/40 p-3.5 rounded-xl space-y-1 transition-all";
+        node.className = "border border-blue-500 bg-blue-950/40 p-3.5 rounded-2xl space-y-1 transition-all shadow-md shadow-blue-950/40";
         statusSpan.className = "text-blue-400 uppercase font-bold text-[11px]";
       } else if (isDone) {
-        node.className = "border border-emerald-900 bg-emerald-950/20 p-3.5 rounded-xl space-y-1 transition-all";
+        node.className = "border border-emerald-900 bg-emerald-950/20 p-3.5 rounded-2xl space-y-1 transition-all";
         statusSpan.className = "text-emerald-400 uppercase font-bold text-[11px]";
       } else {
-        node.className = "border border-app-border bg-app-bg p-3.5 rounded-xl space-y-1 transition-all";
+        node.className = "border border-borderSubtle bg-canvas/70 p-3.5 rounded-2xl space-y-1 transition-all";
         statusSpan.className = "text-zinc-600 uppercase font-semibold text-[11px]";
       }
     }
@@ -612,13 +616,18 @@
     async function executeWorkflow() {
       const query = document.getElementById('mainPrompt').value.trim();
       const repoPath = document.getElementById('repoPathInput').value.trim();
+      const githubRepo = document.getElementById('ideaRepoInput')?.value.trim();
 
       if (!query) {
         alert("Please enter a description or query.");
         return;
       }
 
-      // Update Live Pipeline Monitor
+      let combinedQuery = query;
+      if (activePillar === 'idea' && githubRepo) {
+        combinedQuery += `\nReference Repository: ${githubRepo}`;
+      }
+
       document.getElementById('pipelineStatusText').innerText = "Running Agents...";
       document.getElementById('pipelineStatusText').className = "text-blue-400 font-semibold";
       
@@ -629,7 +638,6 @@
         document.getElementById('pipelineTimer').innerText = `(${sec}s)`;
       }, 100);
 
-      // Animate active steps progressively
       setAgentNodeState('nodeOrchestrator', 'Active', true, false);
       setAgentNodeState('nodeResearch', 'Queued', false, false);
       setAgentNodeState('nodeArch', 'Queued', false, false);
@@ -657,7 +665,7 @@
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({
-            query: query,
+            query: combinedQuery,
             repo_path: repoPath,
             force_intent: intent
           })
@@ -667,7 +675,6 @@
         currentSessionState = state;
         clearInterval(timerInterval);
 
-        // Mark all nodes complete
         setAgentNodeState('nodeOrchestrator', 'Done', false, true);
         setAgentNodeState('nodeResearch', 'Done', false, true);
         setAgentNodeState('nodeArch', 'Done', false, true);
@@ -678,7 +685,6 @@
         document.getElementById('pipelineStatusText').className = "text-emerald-400 font-semibold";
         document.getElementById('btnExportTop').classList.remove('hidden');
 
-        // Reveal Output Canvas
         document.getElementById('outputArea').classList.remove('hidden');
         renderMetrics(state);
         renderTraceLog(state);
@@ -694,7 +700,6 @@
           renderCodeResults(state);
         }
 
-        // Smooth scroll to output
         document.getElementById('outputArea').scrollIntoView({ behavior: 'smooth' });
 
       } catch (err) {
@@ -724,23 +729,23 @@
         const findingsList = Array.isArray(d.findings) ? d.findings : [];
         
         const card = document.createElement('div');
-        card.className = 'border border-app-border bg-app-bg p-5 sm:p-6 rounded-2xl space-y-3 transition-all hover:border-zinc-700';
+        card.className = 'border border-borderSubtle bg-canvas/80 p-5 sm:p-6 rounded-2xl space-y-3 transition-all hover:border-zinc-700';
         
         card.innerHTML = `
-          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-app-border/70 pb-3">
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-borderSubtle/70 pb-3">
             <div class="flex items-center space-x-2.5">
               <span class="text-xs font-mono font-bold text-blue-400 bg-blue-950/70 border border-blue-800/80 px-2.5 py-0.5 rounded-lg">Step 0${idx + 1}</span>
               <h4 class="text-sm sm:text-base font-bold text-white">${step.agent_name}</h4>
             </div>
             <div class="flex items-center space-x-3 text-xs font-mono">
-              <span class="text-zinc-400 border border-app-border bg-app-surface px-2.5 py-1 rounded-md">${d.tool ? d.tool : 'Reasoning Engine'}</span>
+              <span class="text-zinc-400 border border-borderSubtle bg-surface px-2.5 py-1 rounded-md">${d.tool ? d.tool : 'Reasoning Engine'}</span>
               <span class="text-emerald-400 font-semibold">+${step.elapsed_ms}ms</span>
             </div>
           </div>
 
           <div class="space-y-1">
             <span class="text-[11px] font-mono uppercase text-zinc-500 font-semibold">Goal & Thinking:</span>
-            <p class="text-xs sm:text-sm text-zinc-300 leading-relaxed italic bg-app-surface/60 p-3 rounded-xl border border-app-border/50">
+            <p class="text-xs sm:text-sm text-zinc-300 leading-relaxed italic bg-surface/60 p-3.5 rounded-xl border border-borderSubtle/50">
               "${d.thinking || step.action}"
             </p>
           </div>
@@ -755,7 +760,7 @@
           ` : ''}
 
           ${d.handoff ? `
-            <div class="pt-2 border-t border-app-border/60 flex items-center space-x-2 text-xs">
+            <div class="pt-2 border-t border-borderSubtle/60 flex items-center space-x-2 text-xs">
               <span class="font-mono text-[11px] uppercase text-zinc-500 font-semibold">Passed Forward:</span>
               <span class="text-zinc-300 font-medium">${d.handoff}</span>
             </div>
@@ -790,11 +795,11 @@
 
     function renderMetrics(state) {
       document.getElementById('kpiLatency').innerText = `${state.total_latency_ms}ms`;
-      document.getElementById('kpiRevisions').innerText = `${state.revision_count} Cycles`;
+      document.getElementById('kpiRevisions').innerText = `${state.revision_count} Retries Needed`;
       
       const out = state.final_output || {};
       if (out.feasibility_score) {
-        document.getElementById('kpiTrack').innerText = `${out.feasibility_score}/100 Score`;
+        document.getElementById('kpiTrack').innerText = `${out.feasibility_score}/100 Rating`;
       } else {
         document.getElementById('kpiTrack').innerText = state.intent === 'idea_validation' ? 'Idea Track' : 'Codebase Track';
       }
@@ -819,14 +824,14 @@
       personasContainer.innerHTML = '';
       (out.target_personas || []).forEach(p => {
         const div = document.createElement('div');
-        div.className = 'border border-app-border bg-app-surface p-6 rounded-2xl space-y-3';
+        div.className = 'border border-borderSubtle bg-surface/60 p-6 rounded-3xl space-y-3';
         div.innerHTML = `
           <div class="text-xs font-mono font-bold text-blue-400 uppercase tracking-wider">${p.persona}</div>
           <div class="space-y-1">
             <span class="text-xs font-mono text-zinc-500 uppercase">Core Pain Point</span>
             <p class="text-sm text-zinc-300 leading-relaxed">${p.pain_point}</p>
           </div>
-          <div class="p-3.5 rounded-xl bg-app-bg border border-app-border space-y-1">
+          <div class="p-3.5 rounded-2xl bg-canvas border border-borderSubtle space-y-1">
             <span class="text-xs font-mono text-emerald-400 uppercase font-semibold">Expected Benefit</span>
             <p class="text-xs text-zinc-200 leading-relaxed">${p.expected_benefit}</p>
           </div>
@@ -839,14 +844,14 @@
       compContainer.innerHTML = '';
       (out.competitors || []).forEach(c => {
         const div = document.createElement('div');
-        div.className = 'border border-app-border bg-app-surface p-6 rounded-2xl space-y-3';
+        div.className = 'border border-borderSubtle bg-surface/60 p-6 rounded-3xl space-y-3';
         div.innerHTML = `
-          <div class="flex items-center justify-between border-b border-app-border pb-3">
+          <div class="flex items-center justify-between border-b border-borderSubtle pb-3">
             <h4 class="font-bold text-white text-sm">${c.name}</h4>
             <span class="text-[10px] font-mono text-zinc-500">Live Search Ref</span>
           </div>
           <p class="text-sm text-zinc-400 leading-relaxed">${c.summary || ''}</p>
-          <div class="p-3.5 rounded-xl bg-app-bg border border-app-border space-y-1">
+          <div class="p-3.5 rounded-2xl bg-canvas border border-borderSubtle space-y-1">
             <span class="text-xs font-mono text-blue-400 font-semibold uppercase">Our Differentiator</span>
             <p class="text-xs text-zinc-200 leading-relaxed">${c.gaps || 'Tailored to requirements'}</p>
           </div>
@@ -860,18 +865,18 @@
       const stack = out.tech_stack || {};
       for (const [category, item] of Object.entries(stack)) {
         const div = document.createElement('div');
-        div.className = 'border border-app-border bg-app-surface p-6 rounded-2xl space-y-3';
+        div.className = 'border border-borderSubtle bg-surface/60 p-6 rounded-3xl space-y-3';
         div.innerHTML = `
           <div class="text-xs font-mono text-blue-400 uppercase font-bold tracking-wider">${category}</div>
-          <div class="text-base font-mono font-bold text-white bg-app-bg px-3.5 py-1.5 rounded-lg border border-app-border inline-block">
+          <div class="text-base font-mono font-bold text-white bg-canvas px-4 py-2 rounded-xl border border-borderSubtle inline-block">
             ${item.choice || ''}
           </div>
           <div class="space-y-1">
             <span class="text-xs font-mono text-zinc-500 uppercase font-semibold">Engineering Rationale</span>
             <p class="text-sm text-zinc-300 leading-relaxed">${item.rationale || ''}</p>
           </div>
-          <div class="p-3.5 rounded-xl bg-app-bg border border-app-border space-y-1">
-            <span class="text-xs font-mono text-amber-300 uppercase font-semibold">Technical Tradeoff to Watch</span>
+          <div class="p-3.5 rounded-2xl bg-canvas border border-borderSubtle space-y-1">
+            <span class="text-xs font-mono text-amber-300 uppercase font-semibold">Technical Tradeoff</span>
             <p class="text-xs text-zinc-400 leading-relaxed">${item.tradeoffs || 'Standard operational overhead'}</p>
           </div>
         `;
@@ -901,27 +906,27 @@
       roadmapContainer.innerHTML = '';
       (out.phases || []).forEach(ph => {
         const div = document.createElement('div');
-        div.className = 'border border-app-border bg-app-surface p-7 rounded-2xl space-y-4';
+        div.className = 'border border-borderSubtle bg-surface/60 p-7 sm:p-8 rounded-3xl space-y-4';
         div.innerHTML = `
-          <div class="flex flex-wrap items-center justify-between gap-3 border-b border-app-border pb-3">
+          <div class="flex flex-wrap items-center justify-between gap-3 border-b border-borderSubtle pb-3">
             <div>
               <span class="text-xs font-mono text-blue-400 uppercase font-semibold tracking-wider">Milestone Step 0${ph.phase_number}</span>
               <h4 class="font-bold text-base text-white mt-0.5">${ph.phase_name}</h4>
             </div>
-            <span class="text-xs font-mono text-zinc-300 border border-app-border px-3 py-1 rounded-lg bg-app-bg">
+            <span class="text-xs font-mono text-zinc-300 border border-borderSubtle px-3 py-1 rounded-xl bg-canvas">
               ${ph.duration_weeks}
             </span>
           </div>
 
           <div class="space-y-2">
-            <span class="text-xs font-mono text-zinc-400 uppercase font-semibold block">Core Deliverables & Tasks:</span>
+            <span class="text-xs font-mono text-zinc-400 uppercase font-semibold block">What to Build:</span>
             <ul class="list-disc list-inside space-y-1 text-sm text-zinc-200 leading-relaxed">
               ${(ph.deliverables || []).map(d => `<li>${d}</li>`).join('')}
             </ul>
           </div>
 
-          <div class="p-4 rounded-xl bg-emerald-950/20 border border-emerald-900/50 space-y-1">
-            <span class="text-xs font-mono text-emerald-400 uppercase font-semibold block">Tangible Exit Criteria</span>
+          <div class="p-4 rounded-2xl bg-emerald-950/20 border border-emerald-900/50 space-y-1">
+            <span class="text-xs font-mono text-emerald-400 uppercase font-semibold block">How to Know You Are Done</span>
             <p class="text-xs sm:text-sm text-zinc-200 leading-relaxed">${ph.exit_criteria}</p>
           </div>
         `;
@@ -933,20 +938,20 @@
       risksContainer.innerHTML = '';
       (out.risks || []).forEach(r => {
         const div = document.createElement('div');
-        div.className = 'border border-app-border bg-app-surface p-6 rounded-2xl space-y-3';
+        div.className = 'border border-borderSubtle bg-surface/60 p-6 rounded-3xl space-y-3';
         div.innerHTML = `
           <div class="flex flex-wrap items-start justify-between gap-3">
             <div class="space-y-1 flex-1">
-              <span class="text-xs font-mono text-zinc-500 uppercase tracking-wider">Potential Failure Scenario</span>
+              <span class="text-xs font-mono text-zinc-500 uppercase tracking-wider">Possible Risk</span>
               <h4 class="text-base font-bold text-white leading-snug">${r.risk}</h4>
             </div>
-            <span class="text-xs font-mono px-3 py-1 rounded-lg border border-app-border bg-app-bg text-zinc-300 whitespace-nowrap self-start">
+            <span class="text-xs font-mono px-3 py-1 rounded-xl border border-borderSubtle bg-canvas text-zinc-300 whitespace-nowrap self-start">
               ${r.category} (${r.severity})
             </span>
           </div>
 
-          <div class="p-4 rounded-xl bg-app-bg border border-app-border space-y-1">
-            <span class="text-xs font-mono text-blue-400 font-semibold uppercase">Engineered Mitigation Strategy</span>
+          <div class="p-4 rounded-2xl bg-canvas border border-borderSubtle space-y-1">
+            <span class="text-xs font-mono text-blue-400 font-semibold uppercase">Recommended Solution</span>
             <p class="text-sm text-zinc-300 leading-relaxed">${r.mitigation}</p>
           </div>
         `;
@@ -990,7 +995,7 @@
 
       const loadingCard = document.createElement('div');
       loadingCard.id = 'followupLoadingCard';
-      loadingCard.className = 'border border-app-border bg-app-bg p-4 rounded-xl space-y-1 text-xs font-mono text-zinc-400';
+      loadingCard.className = 'border border-borderSubtle bg-canvas p-4 rounded-2xl space-y-1 text-xs font-mono text-zinc-400';
       loadingCard.innerText = 'Co-Pilot agents are reviewing context and preparing answer...';
       thread.appendChild(loadingCard);
 
@@ -1009,9 +1014,9 @@
         if (existingLoading) existingLoading.remove();
 
         const agentCard = document.createElement('div');
-        agentCard.className = 'border border-app-border bg-app-surface p-6 sm:p-7 rounded-2xl space-y-3';
+        agentCard.className = 'border border-borderSubtle bg-surface/70 p-6 sm:p-7 rounded-3xl space-y-3';
         agentCard.innerHTML = `
-          <div class="flex items-center justify-between border-b border-app-border pb-3">
+          <div class="flex items-center justify-between border-b border-borderSubtle pb-3">
             <div class="flex items-center space-x-2">
               <span class="text-xs font-mono font-bold text-emerald-400 bg-emerald-950/50 border border-emerald-800/80 px-2.5 py-0.5 rounded-lg">${data.agent_name || 'Technical Co-Pilot'}</span>
               <span class="text-xs text-zinc-400">${data.action_taken || 'Follow-up Response'}</span>
@@ -1033,7 +1038,6 @@
       }
     }
 
-
     function renderCodeResults(state) {
       const out = state.final_output || {};
       document.getElementById('codeSummaryText').innerText = out.summary || "Diagnosis complete.";
@@ -1041,10 +1045,10 @@
       const critic = out.critic || {};
       const badge = document.getElementById('codeCriticBadge');
       if (critic.is_valid) {
-        badge.className = 'text-xs font-mono font-semibold px-3 py-1 rounded-lg border border-emerald-800 bg-emerald-950/40 text-emerald-300';
+        badge.className = 'text-xs font-mono font-semibold px-3 py-1 rounded-xl border border-emerald-800 bg-emerald-950/40 text-emerald-300';
         badge.innerText = '[VERIFIED IN AST]';
       } else {
-        badge.className = 'text-xs font-mono font-semibold px-3 py-1 rounded-lg border border-amber-800 bg-amber-950/40 text-amber-300';
+        badge.className = 'text-xs font-mono font-semibold px-3 py-1 rounded-xl border border-amber-800 bg-amber-950/40 text-amber-300';
         badge.innerText = '[NEEDS REVISION]';
       }
 
@@ -1053,26 +1057,26 @@
 
       (out.candidates || []).forEach(c => {
         const card = document.createElement('div');
-        card.className = 'border border-app-border bg-app-surface p-7 rounded-2xl space-y-4';
+        card.className = 'border border-borderSubtle bg-surface/60 p-7 rounded-3xl space-y-4';
         card.innerHTML = `
-          <div class="flex flex-wrap items-center justify-between gap-3 border-b border-app-border pb-3">
+          <div class="flex flex-wrap items-center justify-between gap-3 border-b border-borderSubtle pb-3">
             <div class="flex items-center space-x-2 font-mono text-sm">
-              <span class="bg-blue-950 border border-blue-800 text-blue-300 px-2 py-0.5 rounded font-bold">#${c.rank}</span>
+              <span class="bg-blue-950 border border-blue-800 text-blue-300 px-2 py-0.5 rounded-lg font-bold">#${c.rank}</span>
               <span class="font-bold text-white">${c.symbol_name}</span>
               <span class="text-zinc-400 text-xs">in ${c.file_path}:${c.line_start}-${c.line_end}</span>
             </div>
-            <span class="font-mono text-xs text-zinc-400 border border-app-border px-2.5 py-0.5 rounded">
-              Confidence: ${c.confidence}
+            <span class="font-mono text-xs text-zinc-400 border border-borderSubtle px-2.5 py-0.5 rounded-xl">
+              Match: ${Math.round(c.confidence * 100)}%
             </span>
           </div>
 
           <div class="space-y-1">
-            <span class="text-xs font-mono text-zinc-500 uppercase font-semibold">Root Cause Analysis</span>
+            <span class="text-xs font-mono text-zinc-500 uppercase font-semibold">Why This Happens</span>
             <p class="text-sm text-zinc-200 leading-relaxed">${c.root_cause_hypothesis}</p>
           </div>
 
-          <div class="bg-app-bg p-4 rounded-xl border border-app-border space-y-1">
-            <span class="text-xs font-mono text-emerald-400 uppercase font-semibold">Suggested Fix Direction</span>
+          <div class="bg-canvas p-4 rounded-2xl border border-borderSubtle space-y-1">
+            <span class="text-xs font-mono text-emerald-400 uppercase font-semibold">How to Fix It</span>
             <p class="text-sm text-zinc-300 leading-relaxed">${c.suggested_fix}</p>
           </div>
         `;
@@ -1090,7 +1094,7 @@
       if (currentSessionState.intent === 'idea_validation') {
         md += `## Project Title: ${out.project_title}\n\n`;
         md += `### Problem Statement\n${out.problem_statement}\n\n`;
-        md += `### Target Personas\n`;
+        md += `### Target Users\n`;
         (out.target_personas || []).forEach(p => {
           md += `- **${p.persona}:** ${p.pain_point} -> Benefit: ${p.expected_benefit}\n`;
         });
