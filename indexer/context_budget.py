@@ -10,6 +10,7 @@ Prevents context window overflow and token waste by:
 
 from dataclasses import dataclass, field, asdict
 from typing import Any, Dict, List, Optional
+from core.config import settings
 
 
 @dataclass
@@ -54,8 +55,8 @@ class ContextBudgetManager:
     Greedily selects highest-priority evidence items within a token budget.
     """
 
-    def __init__(self, default_budget: int = 3500):
-        self.default_budget = default_budget
+    def __init__(self, default_budget: Optional[int] = None):
+        self.default_budget = default_budget or settings.context_token_budget
 
     @staticmethod
     def estimate_tokens(text: str) -> int:
