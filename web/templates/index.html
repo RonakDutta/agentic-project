@@ -7,27 +7,25 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script>
-    mermaid.initialize({ startOnLoad: false, theme: 'dark' });
     tailwind.config = {
       darkMode: 'class',
       theme: {
         extend: {
           fontFamily: {
-            sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+            sans: ['"Plus Jakarta Sans"', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
             mono: ['"JetBrains Mono"', 'monospace'],
           },
           colors: {
-            canvas: '#090a0f',
-            surface: '#11141d',
-            surfaceHover: '#171b26',
-            card: '#141824',
-            borderSubtle: '#1e2436',
-            borderLight: '#2a324b',
+            canvas: '#080a10',
+            surface: '#0f1422',
+            surfaceHover: '#161d30',
+            card: '#121828',
+            borderSubtle: '#1b2438',
+            borderLight: '#26334f',
             accent: '#3b82f6',
-            accentGlow: 'rgba(59, 130, 246, 0.15)',
           }
         }
       }
@@ -35,10 +33,10 @@
   </script>
   <style>
     body {
-      background-color: #090a0f;
-      background-image: radial-gradient(circle at 50% 0%, #161e33 0%, #090a0f 65%);
-      color: #f1f3f9;
-      font-family: 'Inter', sans-serif;
+      background-color: #080a10;
+      background-image: radial-gradient(circle at 50% 0%, #151e36 0%, #080a10 60%);
+      color: #f1f4fb;
+      font-family: 'Plus Jakarta Sans', sans-serif;
       line-height: 1.6;
     }
     pre, code {
@@ -52,11 +50,107 @@
       background: transparent;
     }
     ::-webkit-scrollbar-thumb {
-      background: #1e2436;
+      background: #1b2438;
       border-radius: 4px;
     }
     ::-webkit-scrollbar-thumb:hover {
-      background: #2a324b;
+      background: #26334f;
+    }
+
+    /* Clean Markdown Chat Typography */
+    .prose-chat {
+      color: #e2e8f0;
+      line-height: 1.7;
+      font-size: 0.875rem;
+    }
+    .prose-chat h1, .prose-chat h2, .prose-chat h3, .prose-chat h4 {
+      color: #ffffff;
+      font-weight: 700;
+      margin-top: 1rem;
+      margin-bottom: 0.5rem;
+    }
+    .prose-chat h2 { font-size: 1.15rem; }
+    .prose-chat h3 { font-size: 1rem; }
+    .prose-chat p {
+      margin-bottom: 0.75rem;
+    }
+    .prose-chat p:last-child {
+      margin-bottom: 0;
+    }
+    .prose-chat ul, .prose-chat ol {
+      margin-bottom: 0.75rem;
+      padding-left: 1.25rem;
+    }
+    .prose-chat ul { list-style-type: disc; }
+    .prose-chat ol { list-style-type: decimal; }
+    .prose-chat li {
+      margin-bottom: 0.25rem;
+    }
+    .prose-chat code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid #1e293b;
+      padding: 0.15rem 0.4rem;
+      border-radius: 0.375rem;
+      color: #93c5fd;
+    }
+    .prose-chat pre {
+      background: #06080e;
+      border: 1px solid #1e293b;
+      border-radius: 0.75rem;
+      padding: 0.85rem;
+      overflow-x: auto;
+      margin: 0.75rem 0;
+    }
+    .prose-chat pre code {
+      background: transparent;
+      border: none;
+      padding: 0;
+      color: #cbd5e1;
+    }
+    .prose-chat table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0.85rem 0;
+      font-size: 0.8rem;
+      border-radius: 0.5rem;
+      overflow: hidden;
+      border: 1px solid #1e293b;
+    }
+    .prose-chat th {
+      background: #0f172a;
+      color: #94a3b8;
+      text-align: left;
+      padding: 0.5rem 0.75rem;
+      border-bottom: 1px solid #1e293b;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .prose-chat td {
+      padding: 0.5rem 0.75rem;
+      border-bottom: 1px solid #1e293b;
+      color: #cbd5e1;
+    }
+    .prose-chat blockquote {
+      border-left: 3px solid #3b82f6;
+      padding-left: 0.75rem;
+      color: #94a3b8;
+      font-style: italic;
+      margin: 0.75rem 0;
+    }
+
+    @keyframes fadeInSlide {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    .animate-step-reveal {
+      animation: fadeInSlide 0.4s ease-out forwards;
     }
   </style>
 </head>
@@ -68,11 +162,11 @@
       
       <!-- Brand & Project Identity -->
       <div class="flex items-center space-x-3">
-        <div class="font-bold tracking-tight text-white text-base">Agentic Co-Pilot</div>
+        <div class="font-extrabold tracking-tight text-white text-base">Agentic Co-Pilot</div>
         <span class="text-xs font-mono text-zinc-500 uppercase tracking-widest border-l border-borderSubtle pl-3 hidden sm:inline">
           Autonomous Team
         </span>
-        <span class="text-xs text-zinc-400 hidden md:inline">Idea Validation & Code Analysis</span>
+        <span class="text-xs text-zinc-400 hidden md:inline">Idea Validation & Codebase Intelligence</span>
       </div>
 
       <!-- Actions & Engine Indicator -->
@@ -106,41 +200,42 @@
           </button>
         </div>
 
-        <!-- Code Repo Bar (Appears when Code mode is selected) -->
-        <div id="repoControlsRow" class="hidden flex items-center space-x-2 text-xs font-mono">
-          <button onclick="loadSampleRepo()" class="text-blue-400 hover:text-blue-300 border border-borderSubtle bg-canvas px-3.5 py-2 rounded-xl transition">
-            Load Demo Repo
-          </button>
-          <button onclick="inspectRepo()" id="btnInspectAST" class="text-zinc-300 hover:text-white border border-borderSubtle bg-canvas px-3.5 py-2 rounded-xl transition">
-            Scan Files
-          </button>
-          <span id="repoStatsBadge" class="hidden text-zinc-400 text-xs px-2.5 py-1.5 bg-canvas rounded-xl border border-borderSubtle">
-            0 files scanned
-          </span>
+        <div class="text-xs text-zinc-400">
+          <span id="modeDescription">Startup idea feasibility, market research & architecture</span>
         </div>
 
       </div>
 
-      <!-- Optional Repository Path (in Code mode) -->
-      <div id="repoPathRow" class="hidden flex items-center space-x-3 bg-canvas p-3 rounded-2xl border border-borderSubtle">
-        <span class="text-xs font-mono text-zinc-500 pl-2">Folder Path:</span>
-        <input type="text" id="repoPathInput" placeholder="C:/path/to/python-project" class="flex-1 bg-transparent text-xs font-mono text-zinc-200 focus:outline-none px-2">
-      </div>
+      <!-- Codebase Analysis Target Row (Visible in Code Mode Only) -->
+      <div id="codeTargetSection" class="hidden space-y-3 bg-canvas/80 p-4 rounded-2xl border border-borderSubtle">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <span class="text-xs font-mono text-zinc-400 uppercase font-semibold">Repository Target (Local Folder or GitHub URL):</span>
+          <div class="flex items-center space-x-2 text-xs font-mono">
+            <button onclick="loadSampleRepo()" class="text-blue-400 hover:text-blue-300 border border-borderSubtle bg-surface px-3 py-1.5 rounded-xl transition">
+              Load Demo Repo
+            </button>
+            <button onclick="inspectRepo()" id="btnInspectAST" class="text-zinc-300 hover:text-white border border-borderSubtle bg-surface px-3 py-1.5 rounded-xl transition">
+              Scan Files
+            </button>
+            <span id="repoStatsBadge" class="hidden text-zinc-400 text-xs px-2.5 py-1 bg-surface rounded-xl border border-borderSubtle">
+              0 files scanned
+            </span>
+          </div>
+        </div>
 
-      <!-- Optional GitHub Repo Input (in Idea mode for prototype auditing) -->
-      <div id="ideaRepoInputRow" class="flex items-center space-x-3 bg-canvas/60 p-3 rounded-2xl border border-borderSubtle">
-        <svg class="w-4 h-4 text-zinc-500 ml-2" fill="currentColor" viewBox="0 0 24 24">
-          <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
-        </svg>
-        <span class="text-xs font-mono text-zinc-500">GitHub Prototype:</span>
-        <input type="text" id="ideaRepoInput" placeholder="https://github.com/owner/repo (optional reference repo to audit)" class="flex-1 bg-transparent text-xs text-zinc-200 placeholder:text-zinc-600 focus:outline-none">
+        <div class="flex items-center space-x-3 bg-surface p-2.5 rounded-xl border border-borderSubtle">
+          <svg class="w-4 h-4 text-zinc-500 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+          </svg>
+          <input type="text" id="repoPathInput" placeholder="C:/path/to/python-project or https://github.com/owner/repo" class="flex-1 bg-transparent text-xs font-mono text-zinc-200 placeholder:text-zinc-600 focus:outline-none px-1">
+        </div>
       </div>
 
       <!-- Main Input Textarea -->
       <div class="space-y-2">
         <div class="flex items-center justify-between text-xs">
           <label id="inputLabel" class="font-semibold text-zinc-200">Describe your startup or project idea:</label>
-          <span class="text-zinc-500 text-[11px]">Type freely or pick an example below</span>
+          <span class="text-zinc-500 text-[11px]">Type freely or pick a sample below</span>
         </div>
         <textarea id="mainPrompt" rows="4" placeholder="What problem are you solving? Who is it for? What is your solution..." class="w-full bg-canvas/90 border border-borderSubtle focus:border-blue-500 rounded-2xl p-4 text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none resize-none leading-relaxed transition shadow-inner"></textarea>
       </div>
@@ -186,13 +281,13 @@
 
     </section>
 
-    <!-- BEHIND THE SCENES: HOW THE AGENTS WORKED (Un-boxy, flowing timeline) -->
+    <!-- BEHIND THE SCENES: HOW THE AGENTS WORKED (Sequential Timeline) -->
     <section class="bg-surface/40 border border-borderSubtle/80 rounded-3xl p-6 sm:p-8 space-y-6">
       
       <div class="flex flex-wrap items-center justify-between gap-4 border-b border-borderSubtle/60 pb-4">
         <div>
           <h2 class="text-base sm:text-lg font-bold text-white tracking-tight">Behind the Scenes: How the Agents Worked</h2>
-          <p class="text-xs text-zinc-400 mt-0.5">Each specialized agent solves one part of the problem and passes its discoveries to the next agent.</p>
+          <p class="text-xs text-zinc-400 mt-0.5">Watch each specialist agent analyze the input sequentially and pass discoveries to the next agent.</p>
         </div>
         <div class="text-xs font-mono text-zinc-400 bg-canvas px-3 py-1.5 rounded-xl border border-borderSubtle">
           Status: <span id="pipelineStatusText" class="text-zinc-200 font-semibold">Ready</span>
@@ -255,7 +350,7 @@
 
       </div>
 
-      <!-- Detailed Agent Storyboard (What each agent thought, used, and found) -->
+      <!-- Detailed Agent Storyboard (Revealed sequentially step-by-step) -->
       <div id="agentStepsDetail" class="space-y-4 pt-2"></div>
 
       <!-- Expandable Raw Logs Toggle -->
@@ -271,10 +366,10 @@
 
     </section>
 
-    <!-- FULL PROJECT BREAKDOWN (Clean, Spacious, Editorial Flow) -->
+    <!-- FULL PROJECT BREAKDOWN (Clean, Spacious, Un-Boxy Editorial Layout) -->
     <section id="outputArea" class="hidden space-y-12">
 
-      <!-- Metrics Strip (Clean and borderless) -->
+      <!-- Metrics Strip (Clean and minimal) -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div class="bg-surface/50 border border-borderSubtle p-5 rounded-2xl space-y-1">
           <div class="text-[11px] font-mono text-zinc-500 uppercase">Fact Verification</div>
@@ -294,7 +389,7 @@
         </div>
       </div>
 
-      <!-- DETAILED IDEA VIEW -->
+      <!-- DETAILED IDEA VIEW (No code boxes, clean editorial document) -->
       <div id="ideaView" class="space-y-12">
         
         <!-- Executive Briefing Header -->
@@ -329,69 +424,32 @@
           <div id="personasContainer" class="grid grid-cols-1 md:grid-cols-3 gap-5"></div>
         </div>
 
-        <!-- 2. Competitors & Market Research -->
+        <!-- 2. Competitors & Market Research (Comparison Table) -->
         <div class="space-y-4">
           <div class="border-b border-borderSubtle pb-3 flex items-baseline justify-between">
             <h3 class="text-base sm:text-lg font-bold text-white">2. Competitors & Market Research</h3>
-            <span class="text-xs text-zinc-500">Live search references</span>
+            <span class="text-xs text-zinc-500">Live search references & differentiators</span>
           </div>
-          <div id="competitorsContainer" class="grid grid-cols-1 md:grid-cols-3 gap-5"></div>
+          <div class="bg-surface/50 border border-borderSubtle rounded-2xl overflow-hidden">
+            <div id="competitorsContainer" class="divide-y divide-borderSubtle"></div>
+          </div>
         </div>
 
-        <!-- 3. Recommended Tech Stack -->
+        <!-- 3. Recommended Tech Stack (Clean Architecture Breakdown) -->
         <div class="space-y-4">
           <div class="border-b border-borderSubtle pb-3 flex items-baseline justify-between">
             <h3 class="text-base sm:text-lg font-bold text-white">3. Recommended Tech Stack</h3>
             <span class="text-xs text-zinc-500">Production choices & engineering tradeoffs</span>
           </div>
-          <div id="techStackContainer" class="grid grid-cols-1 md:grid-cols-2 gap-5"></div>
-        </div>
-
-        <!-- 4. Implementation Trap: Wrong Code vs Correct Code -->
-        <div class="space-y-4">
-          <div class="border-b border-borderSubtle pb-3 flex items-baseline justify-between">
-            <div>
-              <h3 class="text-base sm:text-lg font-bold text-white">4. Implementation Trap: Wrong Code vs Correct Code</h3>
-              <p class="text-xs text-zinc-400 mt-0.5">The #1 technical mistake developers make when building this project, and how to fix it.</p>
-            </div>
-            <span class="text-xs font-mono text-amber-300 border border-amber-900/60 bg-amber-950/20 px-3 py-1 rounded-xl">
-              Architecture Audit
-            </span>
-          </div>
-          
-          <div class="bg-surface/60 border border-borderSubtle p-7 sm:p-8 rounded-3xl space-y-6">
-            <div class="space-y-1">
-              <span class="text-xs font-mono text-zinc-500 uppercase font-semibold">Identified Technical Trap:</span>
-              <h4 id="pitfallTitle" class="text-base font-bold text-white"></h4>
-              <p id="pitfallExplanation" class="text-sm text-zinc-300 leading-relaxed"></p>
-            </div>
-
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 pt-2">
-              <!-- Wrong Code Box -->
-              <div class="rounded-2xl border border-red-900/50 bg-red-950/15 p-5 space-y-3">
-                <div class="flex items-center justify-between border-b border-red-900/40 pb-2.5">
-                  <span class="text-xs font-mono font-bold text-red-400 uppercase tracking-wider">Common Mistake (Wrong Approach)</span>
-                  <span class="text-[11px] font-mono text-red-300/80">Fails under load</span>
-                </div>
-                <pre id="pitfallWrongCode" class="text-xs font-mono text-red-200 overflow-x-auto leading-relaxed p-3.5 rounded-xl bg-black/40 border border-red-900/30 whitespace-pre"></pre>
-              </div>
-
-              <!-- Correct Code Box -->
-              <div class="rounded-2xl border border-emerald-900/50 bg-emerald-950/15 p-5 space-y-3">
-                <div class="flex items-center justify-between border-b border-emerald-900/40 pb-2.5">
-                  <span class="text-xs font-mono font-bold text-emerald-400 uppercase tracking-wider">Recommended Fix (Correct Approach)</span>
-                  <span class="text-[11px] font-mono text-emerald-300/80">Production standard</span>
-                </div>
-                <pre id="pitfallCorrectCode" class="text-xs font-mono text-emerald-200 overflow-x-auto leading-relaxed p-3.5 rounded-xl bg-black/40 border border-emerald-900/30 whitespace-pre"></pre>
-              </div>
-            </div>
+          <div class="bg-surface/50 border border-borderSubtle rounded-2xl overflow-hidden">
+            <div id="techStackContainer" class="divide-y divide-borderSubtle"></div>
           </div>
         </div>
 
-        <!-- 5. Development Roadmap & Major Risks -->
+        <!-- 4. Development Roadmap & Major Risks -->
         <div class="space-y-5">
           <div class="border-b border-borderSubtle pb-3 flex items-baseline justify-between">
-            <h3 class="text-base sm:text-lg font-bold text-white">5. Development Roadmap & Major Risks</h3>
+            <h3 class="text-base sm:text-lg font-bold text-white">4. Development Roadmap & Major Risks</h3>
             <span class="text-xs text-zinc-500">Timeline & failure stress-test</span>
           </div>
 
@@ -404,14 +462,19 @@
             <p id="bearCaseText" class="text-sm text-zinc-200 leading-relaxed"></p>
           </div>
 
-          <!-- 3-Phase Roadmap -->
-          <div id="roadmapContainer" class="space-y-5"></div>
+          <!-- Milestone Roadmap (Connected Timeline Flow) -->
+          <div id="roadmapContainer" class="space-y-4"></div>
 
-          <!-- Technical Risks -->
-          <div id="risksContainer" class="space-y-4 pt-2"></div>
+          <!-- Technical Risks Table -->
+          <div class="space-y-2 pt-2">
+            <span class="text-xs font-mono text-zinc-400 uppercase font-semibold">Identified Vulnerabilities & Mitigations</span>
+            <div class="bg-surface/50 border border-borderSubtle rounded-2xl overflow-hidden">
+              <div id="risksContainer" class="divide-y divide-borderSubtle"></div>
+            </div>
+          </div>
         </div>
 
-        <!-- 6. Presentation Tips -->
+        <!-- 5. Presentation Tips -->
         <div class="bg-surface/60 border border-borderSubtle p-8 rounded-3xl space-y-3">
           <div class="flex items-center justify-between border-b border-borderSubtle pb-3">
             <h3 class="text-sm font-bold text-white uppercase tracking-wider font-mono">Tips for Your Presentation & Viva</h3>
@@ -420,50 +483,9 @@
           <ul id="evalTipsContainer" class="list-disc list-inside text-sm text-zinc-200 space-y-2 leading-relaxed pt-1"></ul>
         </div>
 
-        <!-- 7. CONVERSATIONAL FOLLOW-UP (ChatGPT Style) -->
-        <div class="bg-surface/60 border border-borderSubtle p-8 sm:p-10 rounded-3xl space-y-6 shadow-lg">
-          <div class="flex flex-wrap items-center justify-between gap-4 border-b border-borderSubtle pb-4">
-            <div>
-              <h3 class="text-base sm:text-lg font-bold text-white">Ask a Follow-Up Question</h3>
-              <p class="text-xs text-zinc-400 mt-0.5">Keep the conversation going: ask for architecture changes, scaling advice, or deeper code explanations.</p>
-            </div>
-            <span class="text-xs font-mono text-blue-400 border border-borderSubtle px-3 py-1.5 rounded-xl bg-canvas">
-              Session Memory Active
-            </span>
-          </div>
-
-          <!-- Conversation Stream -->
-          <div id="followupThread" class="space-y-4"></div>
-
-          <!-- Quick Prompts -->
-          <div class="flex flex-wrap items-center gap-2 pt-1">
-            <span class="text-xs text-zinc-500 font-medium">Quick ask:</span>
-            <button onclick="setFollowupPrompt('Can we replace the backend with FastAPI or Go?')" class="text-xs text-zinc-400 hover:text-white border border-borderSubtle hover:border-zinc-600 bg-canvas px-3 py-1.5 rounded-xl transition">
-              Switch backend to FastAPI / Go
-            </button>
-            <button onclick="setFollowupPrompt('How do we scale this architecture to 10,000 active users?')" class="text-xs text-zinc-400 hover:text-white border border-borderSubtle hover:border-zinc-600 bg-canvas px-3 py-1.5 rounded-xl transition">
-              Scale to 10k users
-            </button>
-            <button onclick="setFollowupPrompt('Explain the common code mistake in simpler words.')" class="text-xs text-zinc-400 hover:text-white border border-borderSubtle hover:border-zinc-600 bg-canvas px-3 py-1.5 rounded-xl transition">
-              Explain code mistake simply
-            </button>
-          </div>
-
-          <!-- Input Bar -->
-          <div class="flex items-end gap-3 pt-2">
-            <textarea id="followupInput" rows="2" placeholder="Type your follow-up question here (e.g. 'How do we handle real-time alerts?')..." class="flex-1 bg-canvas border border-borderSubtle focus:border-blue-500 rounded-2xl p-3.5 text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none resize-none leading-relaxed transition"></textarea>
-            <button id="btnSendFollowup" onclick="sendFollowup()" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs px-6 py-3.5 rounded-2xl transition flex items-center space-x-2 shadow-md">
-              <span id="btnFollowupText">Send</span>
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
-              </svg>
-            </button>
-          </div>
-        </div>
-
       </div>
 
-      <!-- CODEBASE ANALYSIS VIEW -->
+      <!-- CODEBASE ANALYSIS VIEW (With Wrong Code vs Correct Code AST Comparison) -->
       <div id="codeView" class="space-y-8 hidden">
         <div class="bg-surface/60 border border-borderSubtle p-8 rounded-3xl space-y-4">
           <div class="flex items-center justify-between border-b border-borderSubtle pb-4">
@@ -476,8 +498,52 @@
         </div>
 
         <div class="space-y-5">
-          <h3 class="text-base font-bold text-white">Where to Look in Code</h3>
-          <div id="codeCandidatesContainer" class="space-y-5"></div>
+          <div class="border-b border-borderSubtle pb-3 flex items-baseline justify-between">
+            <h3 class="text-base sm:text-lg font-bold text-white">Ranked Fault Candidates & Patch Suggestions</h3>
+            <span class="text-xs text-zinc-500">AST symbols matched against query</span>
+          </div>
+          <div id="codeCandidatesContainer" class="space-y-6"></div>
+        </div>
+      </div>
+
+      <!-- CONVERSATIONAL FOLLOW-UP (ChatGPT Style, Markdown Rendered, Shared) -->
+      <div class="bg-surface/60 border border-borderSubtle p-8 sm:p-10 rounded-3xl space-y-6 shadow-lg">
+        <div class="flex flex-wrap items-center justify-between gap-4 border-b border-borderSubtle pb-4">
+          <div>
+            <h3 class="text-base sm:text-lg font-bold text-white">Ask a Follow-Up Question</h3>
+            <p class="text-xs text-zinc-400 mt-0.5">Keep the conversation going: ask for architecture adjustments, scaling advice, or deeper code explanations.</p>
+          </div>
+          <span class="text-xs font-mono text-blue-400 border border-borderSubtle px-3 py-1.5 rounded-xl bg-canvas">
+            Session Memory Active
+          </span>
+        </div>
+
+        <!-- Conversation Stream -->
+        <div id="followupThread" class="space-y-4"></div>
+
+        <!-- Quick Prompts -->
+        <div class="flex flex-wrap items-center gap-2 pt-1">
+          <span class="text-xs text-zinc-500 font-medium">Quick ask:</span>
+          <button onclick="setFollowupPrompt('Can we replace the backend with FastAPI or Go?')" class="text-xs text-zinc-400 hover:text-white border border-borderSubtle hover:border-zinc-600 bg-canvas px-3 py-1.5 rounded-xl transition">
+            Switch backend to FastAPI / Go
+          </button>
+          <button onclick="setFollowupPrompt('How do we scale this architecture to 10,000 active users?')" class="text-xs text-zinc-400 hover:text-white border border-borderSubtle hover:border-zinc-600 bg-canvas px-3 py-1.5 rounded-xl transition">
+            Scale to 10k users
+          </button>
+          <button onclick="setFollowupPrompt('What tricky questions could the viva examiner ask about this?')" class="text-xs text-zinc-400 hover:text-white border border-borderSubtle hover:border-zinc-600 bg-canvas px-3 py-1.5 rounded-xl transition">
+            Anticipate viva questions
+          </button>
+        </div>
+
+        <!-- Input Bar -->
+        <div class="flex items-end gap-3 pt-2">
+          <textarea id="followupInput" rows="2" placeholder="Type your follow-up question here (e.g. 'How do we handle real-time alerts?')..." class="flex-1 bg-canvas border border-borderSubtle focus:border-blue-500 rounded-2xl p-3.5 text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none resize-none leading-relaxed transition"></textarea>
+          <button id="btnSendFollowup" onclick="sendFollowup()" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs px-6 py-3.5 rounded-2xl transition flex items-center space-x-2 shadow-md">
+            <span id="btnFollowupText">Send</span>
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+            </svg>
+          </button>
         </div>
       </div>
 
@@ -494,9 +560,8 @@
       activePillar = mode;
       const btnIdea = document.getElementById('btnModeIdea');
       const btnCode = document.getElementById('btnModeCode');
-      const repoControls = document.getElementById('repoControlsRow');
-      const repoPathRow = document.getElementById('repoPathRow');
-      const ideaRepoInputRow = document.getElementById('ideaRepoInputRow');
+      const codeTargetSection = document.getElementById('codeTargetSection');
+      const modeDescription = document.getElementById('modeDescription');
       const inputLabel = document.getElementById('inputLabel');
       const mainPrompt = document.getElementById('mainPrompt');
       const ideaChips = document.getElementById('ideaChips');
@@ -513,9 +578,8 @@
       if (mode === 'idea') {
         btnIdea.className = 'px-5 py-2.5 rounded-xl text-xs font-semibold transition bg-blue-600 text-white shadow-sm';
         btnCode.className = 'px-5 py-2.5 rounded-xl text-xs font-semibold transition text-zinc-400 hover:text-white';
-        repoControls.classList.add('hidden');
-        repoPathRow.classList.add('hidden');
-        if (ideaRepoInputRow) ideaRepoInputRow.classList.remove('hidden');
+        codeTargetSection.classList.add('hidden');
+        modeDescription.innerText = "Startup idea feasibility, market research & architecture";
         ideaChips.classList.remove('hidden');
         codeChips.classList.add('hidden');
         inputLabel.innerText = "Describe your startup or project idea:";
@@ -531,9 +595,8 @@
       } else {
         btnCode.className = 'px-5 py-2.5 rounded-xl text-xs font-semibold transition bg-blue-600 text-white shadow-sm';
         btnIdea.className = 'px-5 py-2.5 rounded-xl text-xs font-semibold transition text-zinc-400 hover:text-white';
-        repoControls.classList.remove('hidden');
-        repoPathRow.classList.remove('hidden');
-        if (ideaRepoInputRow) ideaRepoInputRow.classList.add('hidden');
+        codeTargetSection.classList.remove('hidden');
+        modeDescription.innerText = "AST code parser, fault localization & patch generation";
         ideaChips.classList.add('hidden');
         codeChips.classList.remove('hidden');
         inputLabel.innerText = "Enter error traceback or code exploration question:";
@@ -598,34 +661,76 @@
 
     function setAgentNodeState(nodeId, statusText, isActive, isDone) {
       const node = document.getElementById(nodeId);
+      if (!node) return;
       const statusSpan = node.querySelector('span:last-child');
-      statusSpan.innerText = statusText;
+      if (statusSpan) statusSpan.innerText = statusText;
 
       if (isActive) {
         node.className = "border border-blue-500 bg-blue-950/40 p-3.5 rounded-2xl space-y-1 transition-all shadow-md shadow-blue-950/40";
-        statusSpan.className = "text-blue-400 uppercase font-bold text-[11px]";
+        if (statusSpan) statusSpan.className = "text-blue-400 uppercase font-bold text-[11px]";
       } else if (isDone) {
         node.className = "border border-emerald-900 bg-emerald-950/20 p-3.5 rounded-2xl space-y-1 transition-all";
-        statusSpan.className = "text-emerald-400 uppercase font-bold text-[11px]";
+        if (statusSpan) statusSpan.className = "text-emerald-400 uppercase font-bold text-[11px]";
       } else {
         node.className = "border border-borderSubtle bg-canvas/70 p-3.5 rounded-2xl space-y-1 transition-all";
-        statusSpan.className = "text-zinc-600 uppercase font-semibold text-[11px]";
+        if (statusSpan) statusSpan.className = "text-zinc-600 uppercase font-semibold text-[11px]";
       }
+    }
+
+    function renderSingleAgentCard(step, idx) {
+      const container = document.getElementById('agentStepsDetail');
+      const d = step.details || {};
+      const findingsList = Array.isArray(d.findings) ? d.findings : [];
+
+      const card = document.createElement('div');
+      card.className = 'border border-borderSubtle bg-canvas/80 p-5 sm:p-6 rounded-2xl space-y-3 transition-all animate-step-reveal';
+
+      card.innerHTML = `
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-borderSubtle/70 pb-3">
+          <div class="flex items-center space-x-2.5">
+            <span class="text-xs font-mono font-bold text-blue-400 bg-blue-950/70 border border-blue-800/80 px-2.5 py-0.5 rounded-lg">Step 0${idx + 1}</span>
+            <h4 class="text-sm sm:text-base font-bold text-white">${step.agent_name}</h4>
+          </div>
+          <div class="flex items-center space-x-3 text-xs font-mono">
+            <span class="text-zinc-400 border border-borderSubtle bg-surface px-2.5 py-1 rounded-md">${d.tool ? d.tool : 'Reasoning Engine'}</span>
+            <span class="text-emerald-400 font-semibold">+${step.elapsed_ms}ms</span>
+          </div>
+        </div>
+
+        <div class="space-y-1">
+          <span class="text-[11px] font-mono uppercase text-zinc-500 font-semibold">Goal & Thinking:</span>
+          <p class="text-xs sm:text-sm text-zinc-300 leading-relaxed italic bg-surface/60 p-3.5 rounded-xl border border-borderSubtle/50">
+            "${d.thinking || step.action}"
+          </p>
+        </div>
+
+        ${findingsList.length > 0 ? `
+          <div class="space-y-1.5 pt-1">
+            <span class="text-[11px] font-mono uppercase text-emerald-400 font-semibold">What It Found:</span>
+            <ul class="space-y-1 text-xs sm:text-sm text-zinc-200 pl-4 list-disc marker:text-emerald-500 leading-relaxed">
+              ${findingsList.map(f => `<li>${f}</li>`).join('')}
+            </ul>
+          </div>
+        ` : ''}
+
+        ${d.handoff ? `
+          <div class="pt-2 border-t border-borderSubtle/60 flex items-center space-x-2 text-xs">
+            <span class="font-mono text-[11px] uppercase text-zinc-500 font-semibold">Passed Forward:</span>
+            <span class="text-zinc-300 font-medium">${d.handoff}</span>
+          </div>
+        ` : ''}
+      `;
+
+      container.appendChild(card);
     }
 
     async function executeWorkflow() {
       const query = document.getElementById('mainPrompt').value.trim();
       const repoPath = document.getElementById('repoPathInput').value.trim();
-      const githubRepo = document.getElementById('ideaRepoInput')?.value.trim();
 
       if (!query) {
         alert("Please enter a description or query.");
         return;
-      }
-
-      let combinedQuery = query;
-      if (activePillar === 'idea' && githubRepo) {
-        combinedQuery += `\nReference Repository: ${githubRepo}`;
       }
 
       document.getElementById('pipelineStatusText').innerText = "Running Agents...";
@@ -638,26 +743,16 @@
         document.getElementById('pipelineTimer').innerText = `(${sec}s)`;
       }, 100);
 
-      setAgentNodeState('nodeOrchestrator', 'Active', true, false);
+      // Clear previous steps and hide output
+      const stepsContainer = document.getElementById('agentStepsDetail');
+      stepsContainer.innerHTML = '';
+      document.getElementById('outputArea').classList.add('hidden');
+
+      setAgentNodeState('nodeOrchestrator', 'Working...', true, false);
       setAgentNodeState('nodeResearch', 'Queued', false, false);
       setAgentNodeState('nodeArch', 'Queued', false, false);
       setAgentNodeState('nodeRoadmap', 'Queued', false, false);
       setAgentNodeState('nodeCritic', 'Queued', false, false);
-
-      setTimeout(() => {
-        setAgentNodeState('nodeOrchestrator', 'Done', false, true);
-        setAgentNodeState('nodeResearch', 'Active', true, false);
-      }, 800);
-
-      setTimeout(() => {
-        setAgentNodeState('nodeResearch', 'Done', false, true);
-        setAgentNodeState('nodeArch', 'Active', true, false);
-      }, 1800);
-
-      setTimeout(() => {
-        setAgentNodeState('nodeArch', 'Done', false, true);
-        setAgentNodeState('nodeRoadmap', 'Active', true, false);
-      }, 2600);
 
       try {
         const intent = activePillar === 'idea' ? 'idea_validation' : 'codebase_analysis';
@@ -665,7 +760,7 @@
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({
-            query: combinedQuery,
+            query: query,
             repo_path: repoPath,
             force_intent: intent
           })
@@ -675,20 +770,39 @@
         currentSessionState = state;
         clearInterval(timerInterval);
 
-        setAgentNodeState('nodeOrchestrator', 'Done', false, true);
-        setAgentNodeState('nodeResearch', 'Done', false, true);
-        setAgentNodeState('nodeArch', 'Done', false, true);
-        setAgentNodeState('nodeRoadmap', 'Done', false, true);
-        setAgentNodeState('nodeCritic', 'Verified', false, true);
+        // Progressive sequential reveal of steps 1 through 5
+        const traces = state.execution_trace || [];
+        const agentSteps = traces.filter(t => t.details && (t.details.thinking || t.details.findings));
+        const nodeIds = ['nodeOrchestrator', 'nodeResearch', 'nodeArch', 'nodeRoadmap', 'nodeCritic'];
 
-        document.getElementById('pipelineStatusText').innerText = "Workflow Completed";
+        for (let i = 0; i < agentSteps.length; i++) {
+          const step = agentSteps[i];
+          const currentNodeId = nodeIds[i] || nodeIds[nodeIds.length - 1];
+
+          setAgentNodeState(currentNodeId, 'Working...', true, false);
+          document.getElementById('pipelineStatusText').innerText = `${step.agent_name} is processing...`;
+
+          // Small delay for smooth visual cadence
+          await new Promise(r => setTimeout(r, 650));
+
+          renderSingleAgentCard(step, i);
+          setAgentNodeState(currentNodeId, 'Done', false, true);
+
+          // Pre-activate next node
+          if (i + 1 < nodeIds.length) {
+            setAgentNodeState(nodeIds[i + 1], 'Working...', true, false);
+          }
+        }
+
+        setAgentNodeState('nodeCritic', 'Verified', false, true);
+        document.getElementById('pipelineStatusText').innerText = "All Agents Complete";
         document.getElementById('pipelineStatusText').className = "text-emerald-400 font-semibold";
         document.getElementById('btnExportTop').classList.remove('hidden');
 
+        // Smoothly reveal full output
         document.getElementById('outputArea').classList.remove('hidden');
         renderMetrics(state);
         renderTraceLog(state);
-        renderAgentSteps(state);
 
         if (intent === 'idea_validation') {
           document.getElementById('ideaView').classList.remove('hidden');
@@ -715,60 +829,6 @@
       const chevron = document.getElementById('traceChevron');
       container.classList.toggle('hidden');
       chevron.classList.toggle('rotate-180');
-    }
-
-    function renderAgentSteps(state) {
-      const traces = state.execution_trace || [];
-      const container = document.getElementById('agentStepsDetail');
-      container.innerHTML = '';
-
-      const agentSteps = traces.filter(t => t.details && (t.details.thinking || t.details.findings));
-
-      agentSteps.forEach((step, idx) => {
-        const d = step.details || {};
-        const findingsList = Array.isArray(d.findings) ? d.findings : [];
-        
-        const card = document.createElement('div');
-        card.className = 'border border-borderSubtle bg-canvas/80 p-5 sm:p-6 rounded-2xl space-y-3 transition-all hover:border-zinc-700';
-        
-        card.innerHTML = `
-          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-borderSubtle/70 pb-3">
-            <div class="flex items-center space-x-2.5">
-              <span class="text-xs font-mono font-bold text-blue-400 bg-blue-950/70 border border-blue-800/80 px-2.5 py-0.5 rounded-lg">Step 0${idx + 1}</span>
-              <h4 class="text-sm sm:text-base font-bold text-white">${step.agent_name}</h4>
-            </div>
-            <div class="flex items-center space-x-3 text-xs font-mono">
-              <span class="text-zinc-400 border border-borderSubtle bg-surface px-2.5 py-1 rounded-md">${d.tool ? d.tool : 'Reasoning Engine'}</span>
-              <span class="text-emerald-400 font-semibold">+${step.elapsed_ms}ms</span>
-            </div>
-          </div>
-
-          <div class="space-y-1">
-            <span class="text-[11px] font-mono uppercase text-zinc-500 font-semibold">Goal & Thinking:</span>
-            <p class="text-xs sm:text-sm text-zinc-300 leading-relaxed italic bg-surface/60 p-3.5 rounded-xl border border-borderSubtle/50">
-              "${d.thinking || step.action}"
-            </p>
-          </div>
-
-          ${findingsList.length > 0 ? `
-            <div class="space-y-1.5 pt-1">
-              <span class="text-[11px] font-mono uppercase text-emerald-400 font-semibold">What It Found:</span>
-              <ul class="space-y-1 text-xs sm:text-sm text-zinc-200 pl-4 list-disc marker:text-emerald-500 leading-relaxed">
-                ${findingsList.map(f => `<li>${f}</li>`).join('')}
-              </ul>
-            </div>
-          ` : ''}
-
-          ${d.handoff ? `
-            <div class="pt-2 border-t border-borderSubtle/60 flex items-center space-x-2 text-xs">
-              <span class="font-mono text-[11px] uppercase text-zinc-500 font-semibold">Passed Forward:</span>
-              <span class="text-zinc-300 font-medium">${d.handoff}</span>
-            </div>
-          ` : ''}
-        `;
-
-        container.appendChild(card);
-      });
     }
 
     function renderTraceLog(state) {
@@ -819,78 +879,75 @@
       document.getElementById('ideaProblemStatement').innerText = out.problem_statement || "";
       document.getElementById('ideaCoreValue').innerText = out.core_value_prop || "";
 
-      // 1. Personas
+      // 1. Personas (Clean split cards)
       const personasContainer = document.getElementById('personasContainer');
       personasContainer.innerHTML = '';
       (out.target_personas || []).forEach(p => {
         const div = document.createElement('div');
-        div.className = 'border border-borderSubtle bg-surface/60 p-6 rounded-3xl space-y-3';
+        div.className = 'bg-surface/50 border border-borderSubtle p-6 rounded-2xl space-y-3';
         div.innerHTML = `
           <div class="text-xs font-mono font-bold text-blue-400 uppercase tracking-wider">${p.persona}</div>
           <div class="space-y-1">
-            <span class="text-xs font-mono text-zinc-500 uppercase">Core Pain Point</span>
-            <p class="text-sm text-zinc-300 leading-relaxed">${p.pain_point}</p>
+            <span class="text-[11px] font-mono text-zinc-500 uppercase">Core Pain Point</span>
+            <p class="text-sm text-zinc-200 leading-relaxed">${p.pain_point}</p>
           </div>
-          <div class="p-3.5 rounded-2xl bg-canvas border border-borderSubtle space-y-1">
-            <span class="text-xs font-mono text-emerald-400 uppercase font-semibold">Expected Benefit</span>
-            <p class="text-xs text-zinc-200 leading-relaxed">${p.expected_benefit}</p>
+          <div class="pt-2 border-t border-borderSubtle/60 space-y-1">
+            <span class="text-[11px] font-mono text-emerald-400 uppercase font-semibold">Expected Benefit</span>
+            <p class="text-xs text-zinc-300 leading-relaxed">${p.expected_benefit}</p>
           </div>
         `;
         personasContainer.appendChild(div);
       });
 
-      // 2. Competitors
+      // 2. Competitors (Clean comparison list with differentiators)
       const compContainer = document.getElementById('competitorsContainer');
       compContainer.innerHTML = '';
       (out.competitors || []).forEach(c => {
         const div = document.createElement('div');
-        div.className = 'border border-borderSubtle bg-surface/60 p-6 rounded-3xl space-y-3';
+        div.className = 'p-5 sm:p-6 space-y-2 hover:bg-surface/40 transition';
         div.innerHTML = `
-          <div class="flex items-center justify-between border-b border-borderSubtle pb-3">
+          <div class="flex flex-wrap items-baseline justify-between gap-2">
             <h4 class="font-bold text-white text-sm">${c.name}</h4>
-            <span class="text-[10px] font-mono text-zinc-500">Live Search Ref</span>
+            <span class="text-[11px] font-mono text-zinc-500">Live Search Reference</span>
           </div>
-          <p class="text-sm text-zinc-400 leading-relaxed">${c.summary || ''}</p>
-          <div class="p-3.5 rounded-2xl bg-canvas border border-borderSubtle space-y-1">
-            <span class="text-xs font-mono text-blue-400 font-semibold uppercase">Our Differentiator</span>
-            <p class="text-xs text-zinc-200 leading-relaxed">${c.gaps || 'Tailored to requirements'}</p>
+          <p class="text-sm text-zinc-300 leading-relaxed">${c.summary || ''}</p>
+          <div class="pt-1 flex items-baseline space-x-2 text-xs">
+            <span class="font-mono text-blue-400 font-semibold uppercase text-[11px]">Our Advantage:</span>
+            <span class="text-zinc-200">${c.gaps || 'Tailored specifically to requirements'}</span>
           </div>
         `;
         compContainer.appendChild(div);
       });
 
-      // 3. Tech Stack
+      // 3. Tech Stack (Clean architecture breakdown)
       const techContainer = document.getElementById('techStackContainer');
       techContainer.innerHTML = '';
       const stack = out.tech_stack || {};
       for (const [category, item] of Object.entries(stack)) {
         const div = document.createElement('div');
-        div.className = 'border border-borderSubtle bg-surface/60 p-6 rounded-3xl space-y-3';
+        div.className = 'p-5 sm:p-6 space-y-2 hover:bg-surface/40 transition';
         div.innerHTML = `
-          <div class="text-xs font-mono text-blue-400 uppercase font-bold tracking-wider">${category}</div>
-          <div class="text-base font-mono font-bold text-white bg-canvas px-4 py-2 rounded-xl border border-borderSubtle inline-block">
-            ${item.choice || ''}
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <span class="text-xs font-mono text-blue-400 uppercase font-bold tracking-wider">${category}</span>
+            <span class="text-xs font-mono font-bold text-white bg-canvas px-3 py-1 rounded-lg border border-borderSubtle">
+              ${item.choice || ''}
+            </span>
           </div>
-          <div class="space-y-1">
-            <span class="text-xs font-mono text-zinc-500 uppercase font-semibold">Engineering Rationale</span>
-            <p class="text-sm text-zinc-300 leading-relaxed">${item.rationale || ''}</p>
-          </div>
-          <div class="p-3.5 rounded-2xl bg-canvas border border-borderSubtle space-y-1">
-            <span class="text-xs font-mono text-amber-300 uppercase font-semibold">Technical Tradeoff</span>
-            <p class="text-xs text-zinc-400 leading-relaxed">${item.tradeoffs || 'Standard operational overhead'}</p>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1 text-xs sm:text-sm">
+            <div>
+              <span class="text-[11px] font-mono text-zinc-500 uppercase font-semibold block">Engineering Rationale:</span>
+              <p class="text-zinc-300 leading-relaxed mt-0.5">${item.rationale || ''}</p>
+            </div>
+            <div>
+              <span class="text-[11px] font-mono text-amber-300 uppercase font-semibold block">Technical Tradeoff:</span>
+              <p class="text-zinc-400 leading-relaxed mt-0.5">${item.tradeoffs || 'Standard operational overhead'}</p>
+            </div>
           </div>
         `;
         techContainer.appendChild(div);
       }
 
-      // 4. Implementation Trap (Wrong Code vs Correct Code)
-      const pitfall = out.implementation_pitfall || {};
-      document.getElementById('pitfallTitle').innerText = pitfall.title || "Synchronous Blocking I/O vs Async Pipeline";
-      document.getElementById('pitfallExplanation').innerText = pitfall.explanation || "Developers frequently make mistakes when architecting this component under concurrent load.";
-      document.getElementById('pitfallWrongCode').innerText = pitfall.wrong_code || "# Common Mistake: Blocking synchronous requests\nimport requests\n\ndef fetch_data(urls):\n    return [requests.get(u).json() for u in urls]";
-      document.getElementById('pitfallCorrectCode').innerText = pitfall.correct_code || "# Recommended Fix: Async non-blocking with connection pool\nimport httpx\nimport asyncio\n\nasync def fetch_data(urls: list[str]) -> list[dict]:\n    async with httpx.AsyncClient(timeout=5.0) as client:\n        tasks = [client.get(u) for u in urls]\n        return [r.json() for r in await asyncio.gather(*tasks)]";
-
-      // 5. Bear Case Stress-Test Alert
+      // 4. Bear Case Stress-Test Alert
       const bearAlert = document.getElementById('bearCaseAlert');
       const bearText = document.getElementById('bearCaseText');
       if (out.bear_case_critic) {
@@ -901,14 +958,14 @@
         bearAlert.classList.remove('hidden');
       }
 
-      // Roadmap Phases
+      // Roadmap Phases (Milestone timeline)
       const roadmapContainer = document.getElementById('roadmapContainer');
       roadmapContainer.innerHTML = '';
       (out.phases || []).forEach(ph => {
         const div = document.createElement('div');
-        div.className = 'border border-borderSubtle bg-surface/60 p-7 sm:p-8 rounded-3xl space-y-4';
+        div.className = 'bg-surface/50 border border-borderSubtle p-6 rounded-2xl space-y-3';
         div.innerHTML = `
-          <div class="flex flex-wrap items-center justify-between gap-3 border-b border-borderSubtle pb-3">
+          <div class="flex flex-wrap items-center justify-between gap-3 border-b border-borderSubtle/60 pb-3">
             <div>
               <span class="text-xs font-mono text-blue-400 uppercase font-semibold tracking-wider">Milestone Step 0${ph.phase_number}</span>
               <h4 class="font-bold text-base text-white mt-0.5">${ph.phase_name}</h4>
@@ -918,41 +975,37 @@
             </span>
           </div>
 
-          <div class="space-y-2">
-            <span class="text-xs font-mono text-zinc-400 uppercase font-semibold block">What to Build:</span>
+          <div class="space-y-1.5">
+            <span class="text-[11px] font-mono text-zinc-400 uppercase font-semibold block">Deliverables:</span>
             <ul class="list-disc list-inside space-y-1 text-sm text-zinc-200 leading-relaxed">
               ${(ph.deliverables || []).map(d => `<li>${d}</li>`).join('')}
             </ul>
           </div>
 
-          <div class="p-4 rounded-2xl bg-emerald-950/20 border border-emerald-900/50 space-y-1">
-            <span class="text-xs font-mono text-emerald-400 uppercase font-semibold block">How to Know You Are Done</span>
-            <p class="text-xs sm:text-sm text-zinc-200 leading-relaxed">${ph.exit_criteria}</p>
+          <div class="pt-2 border-t border-borderSubtle/60 flex items-baseline space-x-2 text-xs">
+            <span class="font-mono text-emerald-400 uppercase font-semibold text-[11px]">Exit Criteria:</span>
+            <span class="text-zinc-200">${ph.exit_criteria}</span>
           </div>
         `;
         roadmapContainer.appendChild(div);
       });
 
-      // Risks
+      // Risks Table
       const risksContainer = document.getElementById('risksContainer');
       risksContainer.innerHTML = '';
       (out.risks || []).forEach(r => {
         const div = document.createElement('div');
-        div.className = 'border border-borderSubtle bg-surface/60 p-6 rounded-3xl space-y-3';
+        div.className = 'p-5 sm:p-6 space-y-2 hover:bg-surface/40 transition';
         div.innerHTML = `
-          <div class="flex flex-wrap items-start justify-between gap-3">
-            <div class="space-y-1 flex-1">
-              <span class="text-xs font-mono text-zinc-500 uppercase tracking-wider">Possible Risk</span>
-              <h4 class="text-base font-bold text-white leading-snug">${r.risk}</h4>
-            </div>
-            <span class="text-xs font-mono px-3 py-1 rounded-xl border border-borderSubtle bg-canvas text-zinc-300 whitespace-nowrap self-start">
+          <div class="flex flex-wrap items-baseline justify-between gap-2">
+            <h4 class="text-sm font-bold text-white">${r.risk}</h4>
+            <span class="text-xs font-mono px-2.5 py-0.5 rounded-lg border border-borderSubtle bg-canvas text-zinc-300">
               ${r.category} (${r.severity})
             </span>
           </div>
-
-          <div class="p-4 rounded-2xl bg-canvas border border-borderSubtle space-y-1">
-            <span class="text-xs font-mono text-blue-400 font-semibold uppercase">Recommended Solution</span>
-            <p class="text-sm text-zinc-300 leading-relaxed">${r.mitigation}</p>
+          <div class="flex items-baseline space-x-2 text-xs sm:text-sm">
+            <span class="font-mono text-blue-400 uppercase font-semibold text-[11px]">Mitigation:</span>
+            <span class="text-zinc-300">${r.mitigation}</span>
           </div>
         `;
         risksContainer.appendChild(div);
@@ -972,6 +1025,16 @@
       document.getElementById('followupInput').value = text;
     }
 
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
     async function sendFollowup() {
       const input = document.getElementById('followupInput');
       const query = input.value.trim();
@@ -981,11 +1044,12 @@
       const btnText = document.getElementById('btnFollowupText');
       const thread = document.getElementById('followupThread');
 
+      // User Message Bubble (Neat and right-accented)
       const userCard = document.createElement('div');
-      userCard.className = 'border border-blue-900/60 bg-blue-950/20 p-5 rounded-2xl space-y-1';
+      userCard.className = 'bg-blue-950/30 border border-blue-900/50 p-4 rounded-2xl space-y-1 ml-auto max-w-2xl';
       userCard.innerHTML = `
-        <span class="text-[11px] font-mono uppercase text-blue-400 font-semibold">You asked:</span>
-        <p class="text-sm text-zinc-100 font-medium">${query}</p>
+        <span class="text-[11px] font-mono uppercase text-blue-400 font-semibold">You:</span>
+        <p class="text-sm text-zinc-100 font-medium">${escapeHtml(query)}</p>
       `;
       thread.appendChild(userCard);
       input.value = '';
@@ -995,8 +1059,8 @@
 
       const loadingCard = document.createElement('div');
       loadingCard.id = 'followupLoadingCard';
-      loadingCard.className = 'border border-borderSubtle bg-canvas p-4 rounded-2xl space-y-1 text-xs font-mono text-zinc-400';
-      loadingCard.innerText = 'Co-Pilot agents are reviewing context and preparing answer...';
+      loadingCard.className = 'border border-borderSubtle bg-canvas p-4 rounded-2xl text-xs font-mono text-zinc-400';
+      loadingCard.innerText = 'Analyzing project context and preparing answer...';
       thread.appendChild(loadingCard);
 
       try {
@@ -1013,17 +1077,21 @@
         const existingLoading = document.getElementById('followupLoadingCard');
         if (existingLoading) existingLoading.remove();
 
+        // Assistant Message Bubble (Parsed Markdown HTML)
         const agentCard = document.createElement('div');
-        agentCard.className = 'border border-borderSubtle bg-surface/70 p-6 sm:p-7 rounded-3xl space-y-3';
+        agentCard.className = 'border border-borderSubtle bg-surface/70 p-6 sm:p-7 rounded-2xl space-y-3';
+        
+        const parsedMarkdown = marked.parse(data.answer || '');
+        
         agentCard.innerHTML = `
           <div class="flex items-center justify-between border-b border-borderSubtle pb-3">
             <div class="flex items-center space-x-2">
               <span class="text-xs font-mono font-bold text-emerald-400 bg-emerald-950/50 border border-emerald-800/80 px-2.5 py-0.5 rounded-lg">${data.agent_name || 'Technical Co-Pilot'}</span>
-              <span class="text-xs text-zinc-400">${data.action_taken || 'Follow-up Response'}</span>
+              <span class="text-xs text-zinc-400">${data.action_taken || 'Response'}</span>
             </div>
             <span class="text-[11px] font-mono text-zinc-500">Live Context</span>
           </div>
-          <div class="text-sm text-zinc-200 leading-relaxed whitespace-pre-line">${data.answer || ''}</div>
+          <div class="prose-chat">${parsedMarkdown}</div>
         `;
         thread.appendChild(agentCard);
         agentCard.scrollIntoView({ behavior: 'smooth' });
@@ -1057,27 +1125,54 @@
 
       (out.candidates || []).forEach(c => {
         const card = document.createElement('div');
-        card.className = 'border border-borderSubtle bg-surface/60 p-7 rounded-3xl space-y-4';
+        card.className = 'border border-borderSubtle bg-surface/40 p-6 sm:p-8 rounded-3xl space-y-5';
         card.innerHTML = `
-          <div class="flex flex-wrap items-center justify-between gap-3 border-b border-borderSubtle pb-3">
-            <div class="flex items-center space-x-2 font-mono text-sm">
-              <span class="bg-blue-950 border border-blue-800 text-blue-300 px-2 py-0.5 rounded-lg font-bold">#${c.rank}</span>
-              <span class="font-bold text-white">${c.symbol_name}</span>
-              <span class="text-zinc-400 text-xs">in ${c.file_path}:${c.line_start}-${c.line_end}</span>
+          <div class="flex flex-wrap items-center justify-between gap-3 border-b border-borderSubtle pb-4">
+            <div class="flex items-center space-x-3">
+              <span class="bg-blue-950 border border-blue-800 text-blue-300 px-2.5 py-1 rounded-xl text-xs font-mono font-bold">#${c.rank}</span>
+              <h4 class="font-mono font-bold text-base text-white">${c.symbol_name}</h4>
+              <span class="text-zinc-400 text-xs font-mono">${c.file_path}:${c.line_start}-${c.line_end}</span>
             </div>
-            <span class="font-mono text-xs text-zinc-400 border border-borderSubtle px-2.5 py-0.5 rounded-xl">
-              Match: ${Math.round(c.confidence * 100)}%
+            <span class="font-mono text-xs text-zinc-300 border border-borderSubtle bg-canvas px-3 py-1 rounded-xl">
+              Confidence: ${c.confidence ? c.confidence.toUpperCase() : 'MEDIUM'}
             </span>
           </div>
 
-          <div class="space-y-1">
-            <span class="text-xs font-mono text-zinc-500 uppercase font-semibold">Why This Happens</span>
-            <p class="text-sm text-zinc-200 leading-relaxed">${c.root_cause_hypothesis}</p>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="space-y-1">
+              <span class="text-[11px] font-mono text-zinc-500 uppercase font-semibold">Root Cause Hypothesis:</span>
+              <p class="text-sm text-zinc-300 leading-relaxed">${c.root_cause_hypothesis}</p>
+            </div>
+            <div class="space-y-1">
+              <span class="text-[11px] font-mono text-emerald-400 uppercase font-semibold">Recommended Fix:</span>
+              <p class="text-sm text-zinc-300 leading-relaxed">${c.suggested_fix}</p>
+            </div>
           </div>
 
-          <div class="bg-canvas p-4 rounded-2xl border border-borderSubtle space-y-1">
-            <span class="text-xs font-mono text-emerald-400 uppercase font-semibold">How to Fix It</span>
-            <p class="text-sm text-zinc-300 leading-relaxed">${c.suggested_fix}</p>
+          <!-- Side-by-Side Wrong Code vs Correct Code AST Comparison -->
+          <div class="space-y-2 pt-2">
+            <span class="text-[11px] font-mono text-zinc-400 uppercase font-semibold">AST Code Inspection & Proposed Patch:</span>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              
+              <!-- Wrong / Buggy Code -->
+              <div class="rounded-2xl border border-red-900/50 bg-red-950/15 p-4 space-y-2">
+                <div class="flex items-center justify-between border-b border-red-900/40 pb-2">
+                  <span class="text-xs font-mono font-bold text-red-400 uppercase tracking-wider">Buggy Code Lines (AST Evidence)</span>
+                  <span class="text-[11px] font-mono text-red-300/80">Lines ${c.line_start}-${c.line_end}</span>
+                </div>
+                <pre class="text-xs font-mono text-red-200 overflow-x-auto leading-relaxed p-3.5 rounded-xl bg-black/50 border border-red-900/30 whitespace-pre">${escapeHtml(c.wrong_code || '# Buggy implementation in AST')}</pre>
+              </div>
+
+              <!-- Correct / Fixed Code -->
+              <div class="rounded-2xl border border-emerald-900/50 bg-emerald-950/15 p-4 space-y-2">
+                <div class="flex items-center justify-between border-b border-emerald-900/40 pb-2">
+                  <span class="text-xs font-mono font-bold text-emerald-400 uppercase tracking-wider">Correct Code (Proposed Patch)</span>
+                  <span class="text-[11px] font-mono text-emerald-300/80">Verified Fix</span>
+                </div>
+                <pre class="text-xs font-mono text-emerald-200 overflow-x-auto leading-relaxed p-3.5 rounded-xl bg-black/50 border border-emerald-900/30 whitespace-pre">${escapeHtml(c.correct_code || '# Proposed fix')}</pre>
+              </div>
+
+            </div>
           </div>
         `;
         container.appendChild(card);
@@ -1098,7 +1193,7 @@
         (out.target_personas || []).forEach(p => {
           md += `- **${p.persona}:** ${p.pain_point} -> Benefit: ${p.expected_benefit}\n`;
         });
-        md += `\n### 3-Phase Milestone Roadmap\n`;
+        md += `\n### Milestone Roadmap\n`;
         (out.phases || []).forEach(p => {
           md += `#### ${p.phase_name} (${p.duration_weeks})\n`;
           (p.deliverables || []).forEach(d => md += `- ${d}\n`);

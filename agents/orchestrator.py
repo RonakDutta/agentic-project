@@ -374,15 +374,16 @@ class OrchestratorAgent:
                 context_summary = f"Code Diagnosis Summary: {context.get('summary', '')}\n"
 
         system_prompt = (
-            "You are an expert pair-programming and technical advisor co-pilot. "
+            "You are a helpful, direct pair-programming technical co-pilot. "
             "The user is asking a follow-up question regarding a previously analyzed project or codebase. "
-            "Provide a helpful, precise, easy-to-read response. Use clear, simple language without unnecessary corporate jargon. "
-            "If code is helpful, include short, practical Python snippets. "
+            "Write a clean, easy-to-read response in GitHub-flavored Markdown. "
+            "Keep paragraphs concise and focused. Do NOT use horizontal rule separators (---). "
+            "Use clear bold headers, bullet points, and syntax-highlighted code blocks where appropriate. "
             "Output strict JSON with this schema:\n"
             "{\n"
-            '  "answer": "Clear, friendly, well-formatted markdown answer to the user question",\n'
-            '  "agent_name": "Specialist Agent responding (e.g. System Architect, Market Analyst, or Lead Developer)",\n'
-            '  "action_taken": "What the agent did (e.g. Evaluated architectural tradeoff or explained code snippet)"\n'
+            '  "answer": "Clean, nicely formatted markdown answer",\n'
+            '  "agent_name": "Specialist persona responding (e.g. Lead Architect, Systems Engineer, or Code Reviewer)",\n'
+            '  "action_taken": "One short sentence describing the analysis"\n'
             "}"
         )
 

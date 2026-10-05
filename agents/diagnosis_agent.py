@@ -21,6 +21,8 @@ class FaultCandidate:
     confidence: str  # 'high', 'medium', 'low'
     root_cause_hypothesis: str
     suggested_fix: str
+    wrong_code: str = ""
+    correct_code: str = ""
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -32,7 +34,10 @@ class FaultCandidate:
             "confidence": self.confidence,
             "root_cause_hypothesis": self.root_cause_hypothesis,
             "suggested_fix": self.suggested_fix,
+            "wrong_code": self.wrong_code,
+            "correct_code": self.correct_code,
         }
+
 
 
 @dataclass
@@ -71,7 +76,9 @@ CRITICAL GROUNDING RULES:
       "line_end": 25,
       "confidence": "high",
       "root_cause_hypothesis": "Detailed explanation of why this specific code is causing or related to the problem.",
-      "suggested_fix": "Clear explanation of what needs to be changed or checked."
+      "suggested_fix": "Clear explanation of what needs to be changed or checked.",
+      "wrong_code": "# The buggy code lines from the chunk",
+      "correct_code": "# The corrected code patch"
     }
   ]
 }
@@ -107,7 +114,7 @@ class DiagnosisAgent:
         user_prompt = (
             f"Reported Issue / Question:\n{nav_result.query}\n\n"
             f"Retrieved Code Chunks:\n{evidence_text}\n\n"
-            f"Analyze the problem, evaluate the code chunks, and return the ranked diagnosis in the required JSON format."
+            f"Analyze the problem, evaluate the code chunks, identify the faulty code lines (wrong_code), and provide the corrected code patch (correct_code) in the required JSON format."
         )
 
         trace.append("Calling Groq LLM for root-cause analysis and fault ranking...")
@@ -124,17 +131,26 @@ class DiagnosisAgent:
 
         ranked_candidates: List[FaultCandidate] = []
         for item in raw_candidates:
+            symbol = item.get("symbol_name", "")
+            matched_chunk = next((c for c in nav_result.candidate_chunks if c.name == symbol), None)
+            fallback_wrong = matched_chunk.code if matched_chunk else "# Buggy code implementation"
+            fix_text = item.get("suggested_fix", "Apply bug fix.")
+            fallback_correct = item.get("correct_code") or f"# Proposed patch for {symbol}\n# {fix_text}"
+
             cand = FaultCandidate(
                 rank=item.get("rank", len(ranked_candidates) + 1),
                 file_path=item.get("file_path", ""),
-                symbol_name=item.get("symbol_name", ""),
+                symbol_name=symbol,
                 line_start=int(item.get("line_start", 1)),
                 line_end=int(item.get("line_end", 1)),
                 confidence=item.get("confidence", "medium"),
                 root_cause_hypothesis=item.get("root_cause_hypothesis", ""),
-                suggested_fix=item.get("suggested_fix", ""),
+                suggested_fix=fix_text,
+                wrong_code=item.get("wrong_code") or fallback_wrong,
+                correct_code=fallback_correct,
             )
             ranked_candidates.append(cand)
+
 
         trace.append(f"Diagnosis completed with {len(ranked_candidates)} ranked candidate hypotheses.")
 
