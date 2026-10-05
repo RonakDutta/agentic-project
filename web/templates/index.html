@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Agentic Co-Pilot | Idea & Code Intelligence</title>
+  <title>Agentic Co-Pilot | Idea Validation & Engineering Intelligence</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <script>
     tailwind.config = {
       darkMode: 'class',
@@ -18,16 +18,16 @@
             mono: ['"JetBrains Mono"', 'monospace'],
           },
           colors: {
-            cozy: {
-              bg: '#0e0e11',
-              card: '#16161a',
-              cardHover: '#1c1c22',
-              border: '#26262e',
-              borderHover: '#383844',
-              muted: '#71717a',
-              text: '#f4f4f6',
-              accent: '#6366f1',
-              accentHover: '#4f46e5',
+            brand: {
+              bg: '#090a0f',
+              surface: '#11131a',
+              card: '#161922',
+              cardHover: '#1c202c',
+              border: '#232736',
+              borderSubtle: '#1b1f2b',
+              text: '#f1f3f9',
+              muted: '#8c93a8',
+              accent: '#4f46e5',
             }
           }
         }
@@ -36,201 +36,152 @@
   </script>
   <style>
     body {
-      background-color: #0e0e11;
-      color: #f4f4f6;
+      background-color: #090a0f;
+      color: #f1f3f9;
       font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     }
     pre, code {
       font-family: 'JetBrains Mono', monospace;
     }
     ::-webkit-scrollbar {
-      width: 5px;
-      height: 5px;
+      width: 6px;
+      height: 6px;
     }
     ::-webkit-scrollbar-track {
       background: transparent;
     }
     ::-webkit-scrollbar-thumb {
-      background: #27272a;
+      background: #232736;
       border-radius: 4px;
     }
     ::-webkit-scrollbar-thumb:hover {
-      background: #3f3f46;
+      background: #32384c;
     }
-    .soft-blur {
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
+    .soft-glow {
+      box-shadow: 0 0 50px -10px rgba(79, 70, 229, 0.15);
     }
   </style>
 </head>
-<body class="min-h-screen flex flex-col font-sans selection:bg-indigo-900/60 selection:text-white">
+<body class="min-h-screen flex flex-col font-sans selection:bg-indigo-950 selection:text-white">
 
-  <!-- Minimal Cozy Top Navigation -->
-  <header class="border-b border-cozy-border/60 bg-cozy-bg/85 soft-blur sticky top-0 z-50">
-    <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+  <!-- Breathable, Clean Header -->
+  <header class="border-b border-brand-border/60 bg-brand-bg/90 backdrop-blur-md sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto px-6 h-18 py-4 flex items-center justify-between">
       
-      <!-- Brand & Project Title -->
-      <div class="flex items-center space-x-3">
-        <div class="h-9 w-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
-          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-          </svg>
+      <!-- Minimalist Typography Brand (No weird lucide icon logo) -->
+      <div>
+        <div class="flex items-center space-x-2.5">
+          <span class="font-extrabold tracking-tight text-white text-lg">IdeaCraft</span>
+          <span class="text-xs font-mono text-zinc-500 uppercase tracking-widest">Co-Pilot</span>
         </div>
-        <div>
-          <div class="font-bold tracking-tight text-white text-base">Agentic Co-Pilot</div>
-          <div class="text-[11px] text-zinc-400">Multi-Agent RAG System for Idea & Codebase Analysis</div>
-        </div>
+        <p class="text-xs text-brand-muted mt-0.5">Multi-Agent RAG System for Idea Validation & Codebase Analysis</p>
       </div>
 
-      <!-- Right Header Actions -->
-      <div class="flex items-center space-x-2.5">
-        <span class="text-xs font-mono text-zinc-400 border border-cozy-border bg-cozy-card px-2.5 py-1 rounded-lg">
-          Groq / 120B Engine
+      <!-- Actions & Engine Indicator -->
+      <div class="flex items-center space-x-3">
+        <span class="text-xs font-mono text-brand-muted border border-brand-border bg-brand-surface px-3 py-1.5 rounded-xl">
+          Llama 3.3 / 120B Agent Mesh
         </span>
-        <button onclick="resetWorkspace()" class="text-xs text-zinc-300 hover:text-white border border-cozy-border hover:border-cozy-borderHover bg-cozy-card hover:bg-cozy-cardHover px-3 py-1.5 rounded-lg transition font-medium flex items-center space-x-1.5">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-          </svg>
-          <span>New Session</span>
+        <button onclick="resetCanvas()" class="text-xs text-brand-text hover:text-white border border-brand-border hover:border-zinc-600 bg-brand-surface hover:bg-brand-card px-3.5 py-1.5 rounded-xl transition font-medium">
+          New Validation
         </button>
-        <button id="btnExport" onclick="exportReport()" class="hidden text-xs text-white bg-indigo-600 hover:bg-indigo-500 px-3 py-1.5 rounded-lg transition font-medium flex items-center space-x-1.5 shadow-sm">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-          </svg>
-          <span>Export Report</span>
+        <button id="btnExport" onclick="exportReport()" class="hidden text-xs text-white bg-indigo-600 hover:bg-indigo-500 px-4 py-1.5 rounded-xl transition font-medium shadow-sm">
+          Export Brief
         </button>
       </div>
 
     </div>
   </header>
 
-  <!-- Main Canvas Container -->
-  <main class="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-8 flex flex-col space-y-6">
+  <!-- Main Breathable Canvas -->
+  <main class="flex-1 max-w-5xl w-full mx-auto px-6 py-10 space-y-12">
 
-    <!-- WELCOME / INTRO HERO (shown when idle) -->
-    <section id="heroSection" class="text-center py-6 space-y-3">
-      <h1 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-        What would you like to explore today?
+    <!-- HERO SECTION (Spacious & Inviting) -->
+    <section id="heroSection" class="text-center space-y-4 pt-4 pb-2">
+      <h1 class="text-3xl sm:text-4xl font-extrabold text-white tracking-tight max-w-2xl mx-auto leading-tight">
+        Validate your engineering ideas with cooperative AI agents.
       </h1>
-      <p class="text-zinc-400 text-sm max-w-xl mx-auto leading-relaxed">
-        Choose between deep codebase fault diagnosis using AST structure, or structured idea validation and milestone roadmapping.
+      <p class="text-brand-muted text-sm max-w-xl mx-auto leading-relaxed">
+        Our multi-agent system decomposes your concept into problem definitions, target personas, live market competitors, production tech stacks, and a 3-phase development roadmap.
       </p>
 
-      <!-- Quick Action Cards -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto pt-4 text-left">
-        <!-- Codebase Card -->
-        <button onclick="selectModeAndPrompt('code', 'sample')" class="group p-4 rounded-2xl border border-cozy-border bg-cozy-card hover:bg-cozy-cardHover hover:border-indigo-500/50 transition-all duration-200 text-left space-y-2">
-          <div class="flex items-center justify-between">
-            <div class="p-2 rounded-xl bg-indigo-500/10 text-indigo-400">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
-              </svg>
-            </div>
-            <span class="text-[11px] font-mono text-zinc-500 uppercase tracking-wider">Pillar 1</span>
-          </div>
-          <div class="font-semibold text-zinc-100 text-sm group-hover:text-white transition">Codebase Diagnosis</div>
-          <p class="text-xs text-zinc-400 leading-relaxed">
-            Locate bug roots, inspect AST syntax trees, and get line-level verified explanations.
-          </p>
-        </button>
-
-        <!-- Idea Card -->
-        <button onclick="selectModeAndPrompt('idea', 'sample')" class="group p-4 rounded-2xl border border-cozy-border bg-cozy-card hover:bg-cozy-cardHover hover:border-violet-500/50 transition-all duration-200 text-left space-y-2">
-          <div class="flex items-center justify-between">
-            <div class="p-2 rounded-xl bg-violet-500/10 text-violet-400">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
-              </svg>
-            </div>
-            <span class="text-[11px] font-mono text-zinc-500 uppercase tracking-wider">Pillar 2</span>
-          </div>
-          <div class="font-semibold text-zinc-100 text-sm group-hover:text-white transition">Idea Validation & Roadmap</div>
-          <p class="text-xs text-zinc-400 leading-relaxed">
-            Decompose product concepts, discover competitors, recommend tech stacks, and map roadmaps.
-          </p>
-        </button>
+      <!-- Mode Switcher: Idea Focus by default -->
+      <div class="pt-4 flex justify-center">
+        <div class="bg-brand-surface border border-brand-border p-1.5 rounded-2xl inline-flex space-x-1 shadow-sm">
+          <button id="tabIdea" onclick="switchMode('idea')" class="px-5 py-2 rounded-xl text-xs font-semibold transition bg-indigo-600 text-white shadow-md">
+            Pillar 1: Idea Validation & Roadmap
+          </button>
+          <button id="tabCode" onclick="switchMode('code')" class="px-5 py-2 rounded-xl text-xs font-semibold transition text-brand-muted hover:text-white">
+            Pillar 2: Codebase Diagnosis & AST
+          </button>
+        </div>
       </div>
     </section>
 
-    <!-- UNIFIED COZY INPUT CARD -->
-    <section class="border border-cozy-border bg-cozy-card rounded-2xl shadow-xl p-4 sm:p-5 space-y-4">
+    <!-- EXPANSIVE UNIFIED INPUT EXPERIENCE -->
+    <section class="border border-brand-border bg-brand-surface rounded-3xl p-6 sm:p-8 soft-glow space-y-5">
       
-      <!-- Mode Toggle & Path Pill -->
-      <div class="flex flex-wrap items-center justify-between gap-2.5 pb-2 border-b border-cozy-border/60">
-        
-        <!-- Segmented Mode Control -->
-        <div class="bg-cozy-bg p-1 rounded-xl border border-cozy-border flex items-center space-x-1">
-          <button id="modeBtnCode" onclick="setMode('code')" class="px-3.5 py-1.5 rounded-lg text-xs font-medium transition bg-zinc-800 text-white shadow-sm flex items-center space-x-1.5">
-            <svg class="w-3.5 h-3.5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
-            </svg>
-            <span>Codebase Mode</span>
-          </button>
-          <button id="modeBtnIdea" onclick="setMode('idea')" class="px-3.5 py-1.5 rounded-lg text-xs font-medium transition text-zinc-400 hover:text-white flex items-center space-x-1.5">
-            <svg class="w-3.5 h-3.5 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
-            </svg>
-            <span>Idea Mode</span>
+      <!-- Codebase Repo Bar (Shown only in Code Mode) -->
+      <div id="repoBar" class="hidden space-y-2 pb-4 border-b border-brand-border/60">
+        <div class="flex items-center justify-between text-xs">
+          <label class="font-mono text-zinc-400 font-semibold uppercase tracking-wider">Repository Location</label>
+          <button onclick="loadSampleRepo()" class="text-indigo-400 hover:text-indigo-300 font-mono text-xs underline">
+            Use Built-In Sample Microservice
           </button>
         </div>
-
-        <!-- Repo Path Controls (Visible in Code Mode) -->
-        <div id="repoControls" class="flex items-center space-x-2 text-xs">
-          <button onclick="loadSampleRepo()" class="text-zinc-400 hover:text-white border border-cozy-border bg-cozy-bg px-2.5 py-1.5 rounded-lg transition font-mono flex items-center space-x-1">
-            <svg class="w-3 h-3 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z"/>
-            </svg>
-            <span>Load Sample Repo</span>
-          </button>
-          <button onclick="inspectRepo()" id="btnInspect" class="hidden text-zinc-300 hover:text-white border border-cozy-border bg-cozy-bg px-2.5 py-1.5 rounded-lg transition font-mono">
+        <div class="flex items-center space-x-2 bg-brand-bg p-2 rounded-xl border border-brand-border">
+          <input type="text" id="repoPathInput" placeholder="C:/path/to/python-project" class="flex-1 bg-transparent text-xs font-mono text-brand-text focus:outline-none px-2">
+          <button onclick="inspectRepo()" class="text-xs font-mono text-zinc-300 hover:text-white border border-brand-border bg-brand-card px-3 py-1 rounded-lg">
             Inspect AST
           </button>
         </div>
-
-      </div>
-
-      <!-- Optional Repo Path Input (Visible in Code Mode) -->
-      <div id="repoPathRow" class="flex items-center space-x-2 bg-cozy-bg p-2 rounded-xl border border-cozy-border">
-        <span class="text-xs font-mono text-zinc-500 pl-2">Repo:</span>
-        <input type="text" id="repoPathInput" placeholder="Path to Python project..." class="flex-1 bg-transparent text-xs font-mono text-zinc-200 focus:outline-none placeholder:text-zinc-600">
-        <div id="repoStatsBadge" class="hidden font-mono text-[11px] text-zinc-400 px-2 py-0.5 rounded bg-zinc-800/80">
+        <div id="repoStatsBadge" class="hidden text-xs font-mono text-zinc-400 pl-1">
           <span id="statSummaryText">0 files indexed</span>
         </div>
       </div>
 
-      <!-- Main Textarea Input -->
-      <div class="relative">
-        <textarea id="mainQueryInput" rows="4" placeholder="Describe the error, ask a codebase question, or type your product idea..." class="w-full bg-cozy-bg border border-cozy-border focus:border-zinc-500 rounded-xl p-3.5 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none resize-none transition-all leading-relaxed"></textarea>
+      <!-- Main Textarea -->
+      <div class="space-y-2">
+        <div class="flex items-center justify-between text-xs text-brand-muted">
+          <span id="promptLabel" class="font-semibold text-zinc-300">Describe your project idea in plain language</span>
+          <span class="text-zinc-500 font-mono text-[11px]">Free-form or technical specifications</span>
+        </div>
+        <textarea id="mainInput" rows="5" placeholder="Example: A low-cost IoT energy monitoring system for residential apartment societies that uses ESP32 with CT current sensors to detect abnormal power spikes and alert residents..." class="w-full bg-brand-bg border border-brand-border focus:border-indigo-500/80 rounded-2xl p-4 text-sm text-brand-text placeholder:text-zinc-600 focus:outline-none resize-none leading-relaxed transition-all"></textarea>
       </div>
 
-      <!-- Bottom Input Row: Sample Quick Chips + Submit Button -->
-      <div class="flex flex-wrap items-center justify-between gap-3 pt-1">
+      <!-- Pre-set Chips & Submit -->
+      <div class="flex flex-wrap items-center justify-between gap-4 pt-1">
         
-        <!-- Quick Starter Chips -->
-        <div class="flex flex-wrap items-center gap-1.5">
-          <span class="text-xs text-zinc-500 font-medium">Try:</span>
-          <div id="codeChips" class="flex flex-wrap items-center gap-1.5">
-            <button onclick="setSamplePrompt('token_expired')" class="text-xs text-zinc-400 hover:text-zinc-200 border border-cozy-border hover:border-zinc-700 bg-cozy-bg px-2.5 py-1 rounded-lg transition">
-              Token Expired Bug
-            </button>
-            <button onclick="setSamplePrompt('order_auth')" class="text-xs text-zinc-400 hover:text-zinc-200 border border-cozy-border hover:border-zinc-700 bg-cozy-bg px-2.5 py-1 rounded-lg transition">
-              Order Auth Flow
-            </button>
-          </div>
-          <div id="ideaChips" class="hidden flex flex-wrap items-center gap-1.5">
-            <button onclick="setSamplePrompt('iot_energy')" class="text-xs text-zinc-400 hover:text-zinc-200 border border-cozy-border hover:border-zinc-700 bg-cozy-bg px-2.5 py-1 rounded-lg transition">
+        <!-- Suggestion Chips -->
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-xs text-zinc-500 font-medium">Quick sample:</span>
+          
+          <div id="ideaPresetChips" class="flex flex-wrap items-center gap-2">
+            <button onclick="fillIdea('iot')" class="text-xs text-zinc-400 hover:text-white border border-brand-border hover:border-zinc-600 bg-brand-bg px-3 py-1.5 rounded-xl transition">
               IoT Energy Auditing
             </button>
-            <button onclick="setSamplePrompt('ai_review')" class="text-xs text-zinc-400 hover:text-zinc-200 border border-cozy-border hover:border-zinc-700 bg-cozy-bg px-2.5 py-1 rounded-lg transition">
+            <button onclick="fillIdea('peer')" class="text-xs text-zinc-400 hover:text-white border border-brand-border hover:border-zinc-600 bg-brand-bg px-3 py-1.5 rounded-xl transition">
               AI Student Code Reviewer
+            </button>
+            <button onclick="fillIdea('water')" class="text-xs text-zinc-400 hover:text-white border border-brand-border hover:border-zinc-600 bg-brand-bg px-3 py-1.5 rounded-xl transition">
+              Smart Water Metering
+            </button>
+          </div>
+
+          <div id="codePresetChips" class="hidden flex flex-wrap items-center gap-2">
+            <button onclick="fillCode('token')" class="text-xs text-zinc-400 hover:text-white border border-brand-border hover:border-zinc-600 bg-brand-bg px-3 py-1.5 rounded-xl transition">
+              Token Expired Error
+            </button>
+            <button onclick="fillCode('checkout')" class="text-xs text-zinc-400 hover:text-white border border-brand-border hover:border-zinc-600 bg-brand-bg px-3 py-1.5 rounded-xl transition">
+              Order Auth Verification
             </button>
           </div>
         </div>
 
-        <!-- Primary Action Button -->
-        <button id="btnSubmit" onclick="submitQuery()" class="bg-white hover:bg-zinc-200 text-zinc-950 font-semibold px-5 py-2 rounded-xl text-xs transition shadow-md flex items-center space-x-2">
-          <span id="btnSubmitText">Run Co-Pilot</span>
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <!-- Submit Button -->
+        <button id="btnSubmit" onclick="runPipeline()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs px-6 py-2.5 rounded-xl transition flex items-center space-x-2 shadow-lg shadow-indigo-600/20">
+          <span id="btnSubmitText">Validate Idea & Plan Roadmap</span>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
           </svg>
         </button>
@@ -239,134 +190,167 @@
 
     </section>
 
-    <!-- LOADING STATE -->
-    <section id="loadingSection" class="hidden border border-cozy-border bg-cozy-card rounded-2xl p-8 text-center space-y-4">
-      <div class="inline-flex items-center justify-center p-3 rounded-2xl bg-indigo-500/10 text-indigo-400 animate-pulse">
+    <!-- LOADING / COLLABORATION STATE -->
+    <section id="loadingState" class="hidden border border-brand-border bg-brand-surface rounded-3xl p-10 text-center space-y-4">
+      <div class="inline-flex p-3 rounded-2xl bg-indigo-500/10 text-indigo-400 animate-pulse">
         <svg class="w-6 h-6 animate-spin" fill="none" viewBox="0 0 24 24">
           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
           <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
         </svg>
       </div>
       <div>
-        <h3 id="loadingTitle" class="text-sm font-semibold text-zinc-200">Agents collaborating on your request...</h3>
-        <p id="loadingSub" class="text-xs text-zinc-400 mt-1 font-mono">Orchestrator -> Tool Execution -> Verification Pass</p>
+        <h3 id="loadingTitle" class="text-base font-semibold text-white">Agents collaborating in real time...</h3>
+        <p id="loadingSub" class="text-xs text-brand-muted mt-1 font-mono">Decomposing Problem -> Gathering Market Data -> Synthesizing Architecture</p>
       </div>
-      <div class="font-mono text-xs text-zinc-500" id="timerDisplay">0.0s elapsed</div>
+      <div class="text-xs font-mono text-zinc-500" id="timerCount">0.0s elapsed</div>
     </section>
 
-    <!-- RESULTS SECTION -->
-    <section id="resultsSection" class="hidden space-y-6">
+    <!-- OUTPUT WORKSPACE (Spacious, Detailed & Non-Boxy) -->
+    <section id="resultsSection" class="hidden space-y-10">
 
-      <!-- COLLAPSIBLE AGENT THINKING / TRACE BAR (Gemini / ChatGPT Style) -->
-      <div class="border border-cozy-border bg-cozy-card rounded-2xl overflow-hidden transition-all">
-        <button onclick="toggleTraceAccordion()" class="w-full px-5 py-3.5 flex items-center justify-between text-left hover:bg-cozy-cardHover transition">
-          <div class="flex items-center space-x-2.5">
-            <div class="p-1.5 rounded-lg bg-zinc-800 text-zinc-300">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-              </svg>
-            </div>
+      <!-- COLLAPSIBLE AGENT REASONING ACCORDION (Gemini / ChatGPT Style) -->
+      <div class="border border-brand-border/70 bg-brand-surface rounded-2xl overflow-hidden">
+        <button onclick="toggleTrace()" class="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-brand-card transition">
+          <div class="flex items-center space-x-3">
+            <div class="p-1.5 rounded-lg bg-zinc-800 text-zinc-300 font-mono text-xs font-bold">AI</div>
             <div>
-              <span class="text-xs font-semibold text-zinc-200">Agent Reasoning Process</span>
-              <span id="traceSummaryPill" class="ml-2 font-mono text-[11px] text-zinc-400">11 steps completed in 4.2s</span>
+              <span class="text-xs font-semibold text-zinc-200">Agent Cooperative Reasoning</span>
+              <span id="traceSummary" class="ml-2 font-mono text-[11px] text-zinc-400">4 agents completed in 3.6s</span>
             </div>
           </div>
-          <svg id="traceChevron" class="w-4 h-4 text-zinc-400 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg id="chevronIcon" class="w-4 h-4 text-zinc-400 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
           </svg>
         </button>
 
-        <div id="traceBody" class="hidden border-t border-cozy-border/60 p-4 space-y-2 bg-cozy-bg/60">
-          <div id="traceTimelineList" class="space-y-2 text-xs font-mono"></div>
+        <div id="traceContent" class="hidden border-t border-brand-border/60 p-5 space-y-2.5 bg-brand-bg/50">
+          <div id="traceTimeline" class="space-y-2 text-xs font-mono"></div>
         </div>
       </div>
 
-      <!-- ANALYTICS / OBSERVABILITY STRIP -->
-      <div id="analyticsStrip" class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div class="border border-cozy-border bg-cozy-card p-3 rounded-xl">
-          <div class="text-[11px] font-mono text-zinc-500 uppercase">Verification</div>
-          <div id="metricGrounding" class="text-sm font-bold text-zinc-100 mt-0.5">100% Grounded</div>
+      <!-- ANALYTICS SUMMARY STRIP -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="p-4 rounded-2xl bg-brand-surface border border-brand-border/60 space-y-1">
+          <span class="text-[11px] font-mono text-zinc-500 uppercase">Feasibility Rating</span>
+          <div id="metricFeasibility" class="text-base font-bold text-white">High (92%)</div>
+          <div class="text-[11px] text-zinc-400">Grounded in technical constraints</div>
         </div>
-        <div class="border border-cozy-border bg-cozy-card p-3 rounded-xl">
-          <div class="text-[11px] font-mono text-zinc-500 uppercase">Latency</div>
-          <div id="metricLatency" class="text-sm font-bold text-zinc-100 mt-0.5">0ms</div>
+        <div class="p-4 rounded-2xl bg-brand-surface border border-brand-border/60 space-y-1">
+          <span class="text-[11px] font-mono text-zinc-500 uppercase">Agent Latency</span>
+          <div id="metricLatency" class="text-base font-bold text-white">1,420ms</div>
+          <div class="text-[11px] text-zinc-400">Sub-second Groq inference</div>
         </div>
-        <div class="border border-cozy-border bg-cozy-card p-3 rounded-xl">
-          <div class="text-[11px] font-mono text-zinc-500 uppercase">Intent Route</div>
-          <div id="metricIntent" class="text-sm font-bold text-zinc-100 mt-0.5">Codebase</div>
+        <div class="p-4 rounded-2xl bg-brand-surface border border-brand-border/60 space-y-1">
+          <span class="text-[11px] font-mono text-zinc-500 uppercase">Architecture Route</span>
+          <div id="metricTrack" class="text-base font-bold text-white">Idea Track</div>
+          <div class="text-[11px] text-zinc-400">Pillar 1: Product Inception</div>
         </div>
-        <div class="border border-cozy-border bg-cozy-card p-3 rounded-xl">
-          <div class="text-[11px] font-mono text-zinc-500 uppercase">Revisions</div>
-          <div id="metricRevisions" class="text-sm font-bold text-zinc-100 mt-0.5">0 Cycles</div>
+        <div class="p-4 rounded-2xl bg-brand-surface border border-brand-border/60 space-y-1">
+          <span class="text-[11px] font-mono text-zinc-500 uppercase">Grounding State</span>
+          <div id="metricGrounding" class="text-base font-bold text-emerald-400">Verified</div>
+          <div class="text-[11px] text-zinc-400">Zero-hallucination verification</div>
         </div>
       </div>
 
-      <!-- CODE OUTPUT VIEW -->
-      <div id="codeOutputView" class="space-y-5 hidden">
-        <!-- Diagnosis Summary Card -->
-        <div class="border border-cozy-border bg-cozy-card p-5 rounded-2xl space-y-2">
+      <!-- DETAILED IDEA VALIDATION VIEW (Hero) -->
+      <div id="ideaView" class="space-y-8">
+        
+        <!-- 1. Executive Brief Card -->
+        <div class="p-8 rounded-3xl bg-brand-surface border border-brand-border/60 space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-3 border-b border-brand-border/60 pb-4">
+            <div>
+              <span class="text-xs font-mono uppercase text-indigo-400 tracking-wider font-semibold">Validated Project Title</span>
+              <h2 id="ideaProjectTitle" class="text-xl sm:text-2xl font-extrabold text-white mt-0.5 tracking-tight"></h2>
+            </div>
+            <span class="text-xs font-mono text-zinc-400 border border-brand-border px-3 py-1 rounded-xl bg-brand-bg">
+              Academic Minor Project Scope
+            </span>
+          </div>
+
+          <div class="space-y-1">
+            <span class="text-xs font-mono text-zinc-400 uppercase tracking-wider font-semibold">Problem Framing</span>
+            <p id="ideaProblemStatement" class="text-sm text-zinc-300 leading-relaxed"></p>
+          </div>
+
+          <div class="pt-2 border-t border-brand-border/40">
+            <span class="text-xs font-mono text-zinc-400 uppercase tracking-wider font-semibold">Core Value Proposition:</span>
+            <span id="ideaCoreValue" class="text-sm text-zinc-100 font-medium ml-2"></span>
+          </div>
+        </div>
+
+        <!-- 2. Target User Personas & Empathy Map -->
+        <div class="space-y-4">
           <div class="flex items-center justify-between">
-            <h3 class="text-sm font-bold text-white">Diagnosis Summary</h3>
-            <span id="criticVerdictBadge" class="text-xs font-mono font-semibold px-2.5 py-0.5 rounded-lg border border-emerald-800/80 bg-emerald-950/40 text-emerald-300">
+            <h3 class="text-sm font-bold text-white uppercase tracking-wider font-mono">1. Target Personas & Empathy Breakdown</h3>
+            <span class="text-xs text-zinc-500">Who experiences this friction</span>
+          </div>
+          <div id="personasContainer" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
+        </div>
+
+        <!-- 3. Existing Market Solutions & Competitor Intelligence -->
+        <div class="space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-bold text-white uppercase tracking-wider font-mono">2. Market Intelligence & Existing Competitors</h3>
+            <span class="text-xs text-zinc-500">Grounded via Web Search Tool</span>
+          </div>
+          <div id="competitorsContainer" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
+        </div>
+
+        <!-- 4. Recommended Technology Architecture & Tradeoffs -->
+        <div class="space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-bold text-white uppercase tracking-wider font-mono">3. Recommended Architecture & Technical Tradeoffs</h3>
+            <span class="text-xs text-zinc-500">Engineering rationale and alternatives</span>
+          </div>
+          <div id="techStackContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+        </div>
+
+        <!-- 5. 3-Phase Development Roadmap -->
+        <div class="space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-bold text-white uppercase tracking-wider font-mono">4. Phased Milestone Roadmap</h3>
+            <span class="text-xs text-zinc-500">Chronological execution timeline</span>
+          </div>
+          <div id="roadmapContainer" class="space-y-3"></div>
+        </div>
+
+        <!-- 6. Technical & Scope Risk Matrix -->
+        <div class="space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-bold text-white uppercase tracking-wider font-mono">5. Technical Risk Mitigation Matrix</h3>
+            <span class="text-xs text-zinc-500">Anticipated bottlenecks and solutions</span>
+          </div>
+          <div id="risksContainer" class="space-y-2.5"></div>
+        </div>
+
+        <!-- 7. Academic Evaluation Defense Tips -->
+        <div class="p-6 rounded-3xl bg-brand-surface/60 border border-brand-border/60 space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xs font-mono font-bold text-zinc-300 uppercase tracking-wider">Evaluation & Viva Defense Tips</h3>
+            <span class="text-[11px] font-mono text-zinc-500">For presentation day</span>
+          </div>
+          <ul id="evalTipsContainer" class="list-disc list-inside text-xs sm:text-sm text-zinc-300 space-y-1.5 leading-relaxed"></ul>
+        </div>
+
+      </div>
+
+      <!-- CODEBASE ANALYSIS VIEW (Pillar 2) -->
+      <div id="codeView" class="space-y-8 hidden">
+        <!-- Diagnosis Summary -->
+        <div class="p-6 sm:p-8 rounded-3xl bg-brand-surface border border-brand-border/60 space-y-3">
+          <div class="flex items-center justify-between border-b border-brand-border/60 pb-3">
+            <h3 class="text-base font-bold text-white">Codebase Fault Diagnosis Summary</h3>
+            <span id="codeCriticBadge" class="text-xs font-mono font-semibold px-3 py-1 rounded-xl border border-emerald-800 bg-emerald-950/40 text-emerald-300">
               [VERIFIED IN AST]
             </span>
           </div>
-          <p id="codeSummaryText" class="text-xs sm:text-sm text-zinc-300 leading-relaxed"></p>
+          <p id="codeSummaryText" class="text-sm text-zinc-300 leading-relaxed"></p>
         </div>
 
-        <!-- Ranked Candidates List -->
-        <div class="space-y-3">
-          <h3 class="text-xs font-mono font-semibold text-zinc-400 uppercase tracking-wider">Candidate Locations (Ranked)</h3>
-          <div id="codeCandidatesContainer" class="space-y-3"></div>
-        </div>
-      </div>
-
-      <!-- IDEA OUTPUT VIEW -->
-      <div id="ideaOutputView" class="space-y-5 hidden">
-        <!-- Project Title & Problem Statement -->
-        <div class="border border-cozy-border bg-cozy-card p-5 rounded-2xl space-y-3">
-          <div class="flex items-center justify-between border-b border-cozy-border/60 pb-3">
-            <h2 id="ideaTitleHeader" class="text-base font-bold text-white"></h2>
-            <span class="text-xs font-mono text-zinc-400 border border-cozy-border px-2.5 py-0.5 rounded-lg">Validated Brief</span>
-          </div>
-          <div>
-            <span class="text-[11px] font-mono text-zinc-500 uppercase">Problem Statement</span>
-            <p id="ideaProblemText" class="text-xs sm:text-sm text-zinc-300 leading-relaxed mt-1"></p>
-          </div>
-          <div class="pt-2 border-t border-cozy-border/40">
-            <span class="text-[11px] font-mono text-zinc-500 uppercase">Core Value Proposition:</span>
-            <span id="ideaValueText" class="text-xs sm:text-sm text-zinc-200 font-medium ml-1"></span>
-          </div>
-        </div>
-
-        <!-- Target User Personas -->
-        <div class="border border-cozy-border bg-cozy-card p-5 rounded-2xl space-y-3">
-          <h3 class="text-xs font-mono font-semibold text-zinc-400 uppercase tracking-wider">Target User Personas</h3>
-          <div id="ideaPersonasGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3"></div>
-        </div>
-
-        <!-- Recommended Tech Stack -->
-        <div class="border border-cozy-border bg-cozy-card p-5 rounded-2xl space-y-3">
-          <h3 class="text-xs font-mono font-semibold text-zinc-400 uppercase tracking-wider">Recommended Tech Stack & Tradeoffs</h3>
-          <div id="ideaTechGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
-        </div>
-
-        <!-- 3-Phase Development Roadmap -->
-        <div class="border border-cozy-border bg-cozy-card p-5 rounded-2xl space-y-3">
-          <h3 class="text-xs font-mono font-semibold text-zinc-400 uppercase tracking-wider">3-Phase Development Roadmap</h3>
-          <div id="ideaRoadmapTimeline" class="space-y-3"></div>
-        </div>
-
-        <!-- Risk Matrix -->
-        <div class="border border-cozy-border bg-cozy-card p-5 rounded-2xl space-y-3">
-          <h3 class="text-xs font-mono font-semibold text-zinc-400 uppercase tracking-wider">Technical Risk Matrix & Mitigations</h3>
-          <div id="ideaRisksGrid" class="space-y-2"></div>
-        </div>
-
-        <!-- Academic Evaluation Tips -->
-        <div class="border border-cozy-border bg-cozy-card p-5 rounded-2xl space-y-2">
-          <h3 class="text-xs font-mono font-semibold text-zinc-400 uppercase tracking-wider">Evaluation Defense Tips</h3>
-          <ul id="ideaTipsList" class="list-disc list-inside text-xs sm:text-sm text-zinc-300 space-y-1 leading-relaxed"></ul>
+        <!-- Ranked Candidates -->
+        <div class="space-y-4">
+          <h3 class="text-sm font-bold text-white uppercase tracking-wider font-mono">Ranked Candidate Locations</h3>
+          <div id="codeCandidatesContainer" class="space-y-4"></div>
         </div>
       </div>
 
@@ -375,60 +359,59 @@
   </main>
 
   <script>
-    let activeMode = 'code';
-    let lastResponse = null;
-    let timerId = null;
+    let currentMode = 'idea';
+    let lastResult = null;
+    let timer = null;
 
-    function setMode(mode) {
-      activeMode = mode;
-      const btnCode = document.getElementById('modeBtnCode');
-      const btnIdea = document.getElementById('modeBtnIdea');
-      const repoControls = document.getElementById('repoControls');
-      const repoPathRow = document.getElementById('repoPathRow');
-      const codeChips = document.getElementById('codeChips');
-      const ideaChips = document.getElementById('ideaChips');
-      const queryInput = document.getElementById('mainQueryInput');
+    function switchMode(mode) {
+      currentMode = mode;
+      const tabIdea = document.getElementById('tabIdea');
+      const tabCode = document.getElementById('tabCode');
+      const repoBar = document.getElementById('repoBar');
+      const promptLabel = document.getElementById('promptLabel');
+      const mainInput = document.getElementById('mainInput');
+      const ideaChips = document.getElementById('ideaPresetChips');
+      const codeChips = document.getElementById('codePresetChips');
+      const btnText = document.getElementById('btnSubmitText');
 
-      if (mode === 'code') {
-        btnCode.className = 'px-3.5 py-1.5 rounded-lg text-xs font-medium transition bg-zinc-800 text-white shadow-sm flex items-center space-x-1.5';
-        btnIdea.className = 'px-3.5 py-1.5 rounded-lg text-xs font-medium transition text-zinc-400 hover:text-white flex items-center space-x-1.5';
-        repoControls.classList.remove('hidden');
-        repoPathRow.classList.remove('hidden');
-        codeChips.classList.remove('hidden');
-        ideaChips.classList.add('hidden');
-        queryInput.placeholder = "Describe the bug, paste a traceback, or ask about code structure (e.g. ValueError in verify_token)...";
-      } else {
-        btnIdea.className = 'px-3.5 py-1.5 rounded-lg text-xs font-medium transition bg-zinc-800 text-white shadow-sm flex items-center space-x-1.5';
-        btnCode.className = 'px-3.5 py-1.5 rounded-lg text-xs font-medium transition text-zinc-400 hover:text-white flex items-center space-x-1.5';
-        repoControls.classList.add('hidden');
-        repoPathRow.classList.add('hidden');
-        codeChips.classList.add('hidden');
+      if (mode === 'idea') {
+        tabIdea.className = 'px-5 py-2 rounded-xl text-xs font-semibold transition bg-indigo-600 text-white shadow-md';
+        tabCode.className = 'px-5 py-2 rounded-xl text-xs font-semibold transition text-brand-muted hover:text-white';
+        repoBar.classList.add('hidden');
         ideaChips.classList.remove('hidden');
-        queryInput.placeholder = "Describe your startup or project idea (problem, audience, scope)...";
-      }
-    }
-
-    function selectModeAndPrompt(mode, type) {
-      setMode(mode);
-      if (mode === 'code') {
-        loadSampleRepo();
-        setSamplePrompt('token_expired');
+        codeChips.classList.add('hidden');
+        promptLabel.innerText = "Describe your project idea in plain language";
+        mainInput.placeholder = "Example: A low-cost IoT energy monitoring system for residential apartment societies that uses ESP32 with CT current sensors to detect abnormal power spikes and alert residents...";
+        btnText.innerText = "Validate Idea & Plan Roadmap";
       } else {
-        setSamplePrompt('iot_energy');
+        tabCode.className = 'px-5 py-2 rounded-xl text-xs font-semibold transition bg-indigo-600 text-white shadow-md';
+        tabIdea.className = 'px-5 py-2 rounded-xl text-xs font-semibold transition text-brand-muted hover:text-white';
+        repoBar.classList.remove('hidden');
+        ideaChips.classList.add('hidden');
+        codeChips.classList.remove('hidden');
+        promptLabel.innerText = "Enter error traceback or code exploration query";
+        mainInput.placeholder = "Example: ValueError: Token expired when verify_token validates customer credentials during checkout...";
+        btnText.innerText = "Diagnose Codebase with AST";
       }
-      document.getElementById('mainQueryInput').scrollIntoView({ behavior: 'smooth' });
     }
 
-    function setSamplePrompt(type) {
-      const input = document.getElementById('mainQueryInput');
-      if (type === 'token_expired') {
-        input.value = "ValueError: Token expired when verify_token validates customer credentials during checkout in order processor.";
-      } else if (type === 'order_auth') {
-        input.value = "Where is customer authentication verified when placing an order, and how is session expiry checked?";
-      } else if (type === 'iot_energy') {
-        input.value = "A low-cost IoT energy monitoring system for residential apartment societies that uses ESP32 with CT current sensors to detect abnormal power spikes and alert residents.";
-      } else if (type === 'ai_review') {
+    function fillIdea(type) {
+      const input = document.getElementById('mainInput');
+      if (type === 'iot') {
+        input.value = "A low-cost IoT energy auditing system for residential societies that detects abnormal power spikes using ESP32 with CT current sensors and alerts residents.";
+      } else if (type === 'peer') {
         input.value = "An automated AI peer review platform for engineering students to evaluate their lab code submissions against code quality, linting, and AST standards.";
+      } else if (type === 'water') {
+        input.value = "A smart ultrasonic water meter for residential buildings using LoRaWAN to detect pipe leakages in real time and estimate daily household consumption.";
+      }
+    }
+
+    function fillCode(type) {
+      const input = document.getElementById('mainInput');
+      if (type === 'token') {
+        input.value = "ValueError: Token expired when verify_token validates customer credentials during checkout in order processor.";
+      } else if (type === 'checkout') {
+        input.value = "Where is customer authentication verified when placing an order, and how is session expiry checked?";
       }
     }
 
@@ -437,10 +420,9 @@
         const res = await fetch('/api/sample-repo-path');
         const data = await res.json();
         document.getElementById('repoPathInput').value = data.path;
-        document.getElementById('btnInspect').classList.remove('hidden');
         inspectRepo();
-      } catch (err) {
-        console.error(err);
+      } catch (e) {
+        console.error(e);
       }
     }
 
@@ -457,38 +439,37 @@
         const data = await res.json();
         if (data.status === 'ok') {
           const badge = document.getElementById('repoStatsBadge');
-          const text = document.getElementById('statSummaryText');
-          text.innerText = `${data.summary.total_files} files, ${data.summary.total_chunks} functions parsed`;
+          document.getElementById('statSummaryText').innerText = 
+            `${data.summary.total_files} files, ${data.summary.total_chunks} functions parsed into AST`;
           badge.classList.remove('hidden');
         }
-      } catch (err) {
-        console.error(err);
+      } catch (e) {
+        console.error(e);
       }
     }
 
-    async function submitQuery() {
-      const query = document.getElementById('mainQueryInput').value.trim();
+    async function runPipeline() {
+      const query = document.getElementById('mainInput').value.trim();
       const repoPath = document.getElementById('repoPathInput').value.trim();
 
       if (!query) {
-        alert("Please enter a question or idea description.");
+        alert("Please enter a description or query.");
         return;
       }
 
-      // Hide Hero, Show Loading
       document.getElementById('heroSection').classList.add('hidden');
       document.getElementById('resultsSection').classList.add('hidden');
-      document.getElementById('loadingSection').classList.remove('hidden');
+      document.getElementById('loadingState').classList.remove('hidden');
 
-      let startTime = Date.now();
-      clearInterval(timerId);
-      timerId = setInterval(() => {
-        let sec = ((Date.now() - startTime) / 1000).toFixed(1);
-        document.getElementById('timerDisplay').innerText = `${sec}s elapsed`;
+      let start = Date.now();
+      clearInterval(timer);
+      timer = setInterval(() => {
+        let sec = ((Date.now() - start) / 1000).toFixed(1);
+        document.getElementById('timerCount').innerText = `${sec}s elapsed`;
       }, 100);
 
       try {
-        const intent = activeMode === 'code' ? 'codebase_analysis' : 'idea_validation';
+        const intent = currentMode === 'idea' ? 'idea_validation' : 'codebase_analysis';
         const res = await fetch('/api/query', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
@@ -500,71 +481,179 @@
         });
 
         const state = await res.json();
-        lastResponse = state;
-        clearInterval(timerId);
-        document.getElementById('loadingSection').classList.add('hidden');
+        lastResult = state;
+        clearInterval(timer);
+        document.getElementById('loadingState').classList.add('hidden');
         document.getElementById('resultsSection').classList.remove('hidden');
         document.getElementById('btnExport').classList.remove('hidden');
 
-        renderTraceSummary(state);
-        renderAnalytics(state);
+        renderTrace(state);
+        renderMetrics(state);
 
-        if (intent === 'codebase_analysis') {
-          document.getElementById('codeOutputView').classList.remove('hidden');
-          document.getElementById('ideaOutputView').classList.add('hidden');
-          renderCodeResults(state);
-        } else {
-          document.getElementById('codeOutputView').classList.add('hidden');
-          document.getElementById('ideaOutputView').classList.remove('hidden');
+        if (intent === 'idea_validation') {
+          document.getElementById('ideaView').classList.remove('hidden');
+          document.getElementById('codeView').classList.add('hidden');
           renderIdeaResults(state);
+        } else {
+          document.getElementById('ideaView').classList.add('hidden');
+          document.getElementById('codeView').classList.remove('hidden');
+          renderCodeResults(state);
         }
 
       } catch (err) {
-        clearInterval(timerId);
-        document.getElementById('loadingSection').classList.add('hidden');
+        clearInterval(timer);
+        document.getElementById('loadingState').classList.add('hidden');
         alert("Execution error: " + err);
       }
     }
 
-    function toggleTraceAccordion() {
-      const body = document.getElementById('traceBody');
-      const chevron = document.getElementById('traceChevron');
-      body.classList.toggle('hidden');
+    function toggleTrace() {
+      const content = document.getElementById('traceContent');
+      const chevron = document.getElementById('chevronIcon');
+      content.classList.toggle('hidden');
       chevron.classList.toggle('rotate-180');
     }
 
-    function renderTraceSummary(state) {
+    function renderTrace(state) {
       const traces = state.execution_trace || [];
-      document.getElementById('traceSummaryPill').innerText = 
+      document.getElementById('traceSummary').innerText = 
         `${traces.length} steps completed in ${(state.total_latency_ms / 1000).toFixed(1)}s`;
 
-      const list = document.getElementById('traceTimelineList');
-      list.innerHTML = '';
+      const container = document.getElementById('traceTimeline');
+      container.innerHTML = '';
 
       traces.forEach(t => {
-        const item = document.createElement('div');
-        item.className = 'border-l-2 border-zinc-700 pl-3 py-1 flex items-start justify-between';
-        item.innerHTML = `
+        const row = document.createElement('div');
+        row.className = 'border-l-2 border-indigo-500/40 pl-3.5 py-1 flex items-start justify-between';
+        row.innerHTML = `
           <div>
-            <span class="text-zinc-200 font-semibold">[${t.agent_name}]</span>
-            <span class="text-zinc-400 text-[11px] ml-1.5">${t.action}</span>
+            <span class="text-zinc-200 font-bold">[${t.agent_name}]</span>
+            <span class="text-zinc-400 text-[11px] ml-2">${t.action}</span>
           </div>
-          <span class="text-zinc-500 text-[10px] whitespace-nowrap ml-2">+${t.elapsed_ms}ms</span>
+          <span class="text-zinc-500 text-[10px] whitespace-nowrap ml-3">+${t.elapsed_ms}ms</span>
         `;
-        list.appendChild(item);
+        container.appendChild(row);
       });
     }
 
-    function renderAnalytics(state) {
+    function renderMetrics(state) {
       document.getElementById('metricLatency').innerText = `${state.total_latency_ms}ms`;
-      document.getElementById('metricIntent').innerText = state.intent === 'codebase_analysis' ? 'Code Diagnosis' : 'Idea Roadmap';
-      document.getElementById('metricRevisions').innerText = `${state.revision_count} Cycles`;
-
+      document.getElementById('metricTrack').innerText = state.intent === 'idea_validation' ? 'Idea Validation' : 'Codebase Diagnosis';
+      
       const critic = state.final_output?.critic || {};
-      const grounding = critic.grounding_score !== undefined 
-        ? `${Math.round(critic.grounding_score * 100)}% Verified`
-        : 'Grounded';
-      document.getElementById('metricGrounding').innerText = grounding;
+      if (state.intent === 'codebase_analysis') {
+        const score = critic.grounding_score !== undefined ? `${Math.round(critic.grounding_score * 100)}% Verified` : 'Verified';
+        document.getElementById('metricGrounding').innerText = score;
+      } else {
+        document.getElementById('metricGrounding').innerText = 'Verified Grounding';
+      }
+    }
+
+    function renderIdeaResults(state) {
+      const out = state.final_output || {};
+      document.getElementById('ideaProjectTitle').innerText = out.project_title || "Validated Engineering Project";
+      document.getElementById('ideaProblemStatement').innerText = out.problem_statement || "";
+      document.getElementById('ideaCoreValue').innerText = out.core_value_prop || "";
+
+      // 1. Personas
+      const personasContainer = document.getElementById('personasContainer');
+      personasContainer.innerHTML = '';
+      (out.target_personas || []).forEach(p => {
+        const div = document.createElement('div');
+        div.className = 'p-5 rounded-2xl bg-brand-surface border border-brand-border/60 space-y-2';
+        div.innerHTML = `
+          <div class="text-xs font-mono font-bold text-indigo-400 uppercase tracking-wider">${p.persona}</div>
+          <div class="text-xs text-zinc-300 leading-relaxed"><span class="text-zinc-500 font-semibold">Pain Point:</span> ${p.pain_point}</div>
+          <div class="text-xs text-emerald-400/90 leading-relaxed"><span class="text-zinc-500 font-semibold">Benefit:</span> ${p.expected_benefit}</div>
+        `;
+        personasContainer.appendChild(div);
+      });
+
+      // 2. Competitors
+      const compContainer = document.getElementById('competitorsContainer');
+      compContainer.innerHTML = '';
+      (out.competitors || []).forEach(c => {
+        const div = document.createElement('div');
+        div.className = 'p-5 rounded-2xl bg-brand-surface border border-brand-border/60 space-y-2';
+        div.innerHTML = `
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-white text-xs">${c.name}</span>
+            <span class="text-[10px] font-mono text-zinc-500">Market Reference</span>
+          </div>
+          <p class="text-xs text-zinc-400 leading-relaxed">${c.summary || ''}</p>
+          <div class="text-[11px] text-emerald-400/90 pt-1 border-t border-brand-border/40">
+            <span class="text-zinc-500 font-mono">Our Advantage:</span> ${c.gaps || 'Direct tailored scope'}
+          </div>
+        `;
+        compContainer.appendChild(div);
+      });
+
+      // 3. Tech Stack
+      const techContainer = document.getElementById('techStackContainer');
+      techContainer.innerHTML = '';
+      const stack = out.tech_stack || {};
+      for (const [category, item] of Object.entries(stack)) {
+        const div = document.createElement('div');
+        div.className = 'p-5 rounded-2xl bg-brand-surface border border-brand-border/60 space-y-2';
+        div.innerHTML = `
+          <div class="text-[10px] font-mono text-indigo-400 uppercase font-bold tracking-wider">${category}</div>
+          <div class="text-sm font-bold text-white font-mono">${item.choice || ''}</div>
+          <div class="text-xs text-zinc-300 leading-relaxed">${item.rationale || ''}</div>
+          <div class="text-[11px] text-amber-300/80 pt-1 border-t border-brand-border/40 font-mono">
+            Tradeoff: ${item.tradeoffs || 'Standard operational overhead'}
+          </div>
+        `;
+        techContainer.appendChild(div);
+      }
+
+      // 4. Roadmap
+      const roadmapContainer = document.getElementById('roadmapContainer');
+      roadmapContainer.innerHTML = '';
+      (out.phases || []).forEach(ph => {
+        const div = document.createElement('div');
+        div.className = 'p-6 rounded-2xl bg-brand-surface border border-brand-border/60 space-y-2.5';
+        div.innerHTML = `
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-brand-border/40 pb-2">
+            <span class="font-bold text-sm text-white">${ph.phase_name}</span>
+            <span class="text-xs font-mono text-zinc-400 border border-brand-border px-2.5 py-0.5 rounded-lg bg-brand-bg">${ph.duration_weeks}</span>
+          </div>
+          <div class="text-xs text-zinc-300">
+            <span class="text-zinc-500 font-mono text-[11px] uppercase block mb-1 font-semibold">Deliverables:</span>
+            <ul class="list-disc list-inside space-y-1 text-zinc-300">
+              ${(ph.deliverables || []).map(d => `<li>${d}</li>`).join('')}
+            </ul>
+          </div>
+          <div class="text-xs text-emerald-400/90 font-mono pt-2 border-t border-brand-border/40">
+            Exit Criteria: ${ph.exit_criteria}
+          </div>
+        `;
+        roadmapContainer.appendChild(div);
+      });
+
+      // 5. Risks
+      const risksContainer = document.getElementById('risksContainer');
+      risksContainer.innerHTML = '';
+      (out.risks || []).forEach(r => {
+        const div = document.createElement('div');
+        div.className = 'p-4 rounded-2xl bg-brand-surface border border-brand-border/60 flex flex-col sm:flex-row sm:items-center justify-between gap-2';
+        div.innerHTML = `
+          <div class="space-y-1">
+            <div class="text-xs font-bold text-zinc-200">${r.risk}</div>
+            <div class="text-xs text-zinc-400"><span class="text-zinc-500 font-mono">Mitigation:</span> ${r.mitigation}</div>
+          </div>
+          <span class="text-[10px] font-mono px-2 py-0.5 rounded border border-brand-border text-zinc-400 self-start sm:self-auto">${r.category} Risk (${r.severity})</span>
+        `;
+        risksContainer.appendChild(div);
+      });
+
+      // 6. Tips
+      const tipsContainer = document.getElementById('evalTipsContainer');
+      tipsContainer.innerHTML = '';
+      (out.evaluation_tips || []).forEach(tip => {
+        const li = document.createElement('li');
+        li.innerText = tip;
+        tipsContainer.appendChild(li);
+      });
     }
 
     function renderCodeResults(state) {
@@ -572,12 +661,12 @@
       document.getElementById('codeSummaryText').innerText = out.summary || "Diagnosis complete.";
 
       const critic = out.critic || {};
-      const badge = document.getElementById('criticVerdictBadge');
+      const badge = document.getElementById('codeCriticBadge');
       if (critic.is_valid) {
-        badge.className = 'text-xs font-mono font-semibold px-2.5 py-0.5 rounded-lg border border-emerald-800/80 bg-emerald-950/40 text-emerald-300';
+        badge.className = 'text-xs font-mono font-semibold px-3 py-1 rounded-xl border border-emerald-800 bg-emerald-950/40 text-emerald-300';
         badge.innerText = '[VERIFIED IN AST]';
       } else {
-        badge.className = 'text-xs font-mono font-semibold px-2.5 py-0.5 rounded-lg border border-amber-800/80 bg-amber-950/40 text-amber-300';
+        badge.className = 'text-xs font-mono font-semibold px-3 py-1 rounded-xl border border-amber-800 bg-amber-950/40 text-amber-300';
         badge.innerText = '[NEEDS REVISION]';
       }
 
@@ -586,15 +675,15 @@
 
       (out.candidates || []).forEach(c => {
         const card = document.createElement('div');
-        card.className = 'border border-cozy-border bg-cozy-card p-4 sm:p-5 rounded-2xl space-y-3';
+        card.className = 'p-6 rounded-3xl bg-brand-surface border border-brand-border/60 space-y-3';
         card.innerHTML = `
-          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-cozy-border/60 pb-3">
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-brand-border/40 pb-3">
             <div class="flex items-center space-x-2 font-mono text-xs">
-              <span class="bg-indigo-950/60 border border-indigo-800/80 text-indigo-300 px-2 py-0.5 rounded font-bold">#${c.rank}</span>
+              <span class="bg-indigo-950 border border-indigo-800 text-indigo-300 px-2 py-0.5 rounded-lg font-bold">#${c.rank}</span>
               <span class="font-bold text-white text-sm">${c.symbol_name}</span>
               <span class="text-zinc-400">in ${c.file_path}:${c.line_start}-${c.line_end}</span>
             </div>
-            <span class="font-mono text-[11px] text-zinc-400 border border-cozy-border px-2 py-0.5 rounded">
+            <span class="font-mono text-[11px] text-zinc-400 border border-brand-border px-2 py-0.5 rounded">
               Confidence: ${c.confidence}
             </span>
           </div>
@@ -604,7 +693,7 @@
             <p class="text-xs sm:text-sm text-zinc-300 leading-relaxed">${c.root_cause_hypothesis}</p>
           </div>
 
-          <div class="bg-cozy-bg p-3.5 rounded-xl border border-cozy-border/70 space-y-1">
+          <div class="bg-brand-bg p-4 rounded-2xl border border-brand-border/60 space-y-1">
             <div class="text-[11px] font-mono text-emerald-400 uppercase font-semibold">Suggested Fix Direction</div>
             <p class="text-xs text-zinc-300 leading-relaxed">${c.suggested_fix}</p>
           </div>
@@ -613,128 +702,47 @@
       });
     }
 
-    function renderIdeaResults(state) {
-      const out = state.final_output || {};
-      document.getElementById('ideaTitleHeader').innerText = out.project_title || "Project Title";
-      document.getElementById('ideaProblemText').innerText = out.problem_statement || "";
-      document.getElementById('ideaValueText').innerText = out.core_value_prop || "";
-
-      // Personas
-      const personasGrid = document.getElementById('ideaPersonasGrid');
-      personasGrid.innerHTML = '';
-      (out.target_personas || []).forEach(p => {
-        const div = document.createElement('div');
-        div.className = 'bg-cozy-bg p-3.5 rounded-xl border border-cozy-border space-y-1.5';
-        div.innerHTML = `
-          <div class="font-semibold text-zinc-100 text-xs">${p.persona}</div>
-          <div class="text-xs text-zinc-400 leading-relaxed"><span class="text-zinc-500">Pain:</span> ${p.pain_point}</div>
-          <div class="text-xs text-emerald-400/90 leading-relaxed"><span class="text-zinc-500">Benefit:</span> ${p.expected_benefit}</div>
-        `;
-        personasGrid.appendChild(div);
-      });
-
-      // Tech Stack
-      const techGrid = document.getElementById('ideaTechGrid');
-      techGrid.innerHTML = '';
-      const stack = out.tech_stack || {};
-      for (const [category, item] of Object.entries(stack)) {
-        const div = document.createElement('div');
-        div.className = 'bg-cozy-bg p-3.5 rounded-xl border border-cozy-border space-y-1';
-        div.innerHTML = `
-          <div class="text-[10px] font-mono text-zinc-500 uppercase font-bold">${category}</div>
-          <div class="text-xs font-bold text-white font-mono">${item.choice || ''}</div>
-          <div class="text-xs text-zinc-400 leading-relaxed">${item.rationale || ''}</div>
-        `;
-        techGrid.appendChild(div);
-      }
-
-      // Roadmap
-      const roadmapContainer = document.getElementById('ideaRoadmapTimeline');
-      roadmapContainer.innerHTML = '';
-      (out.phases || []).forEach(phase => {
-        const div = document.createElement('div');
-        div.className = 'bg-cozy-bg p-4 rounded-xl border border-cozy-border space-y-2';
-        div.innerHTML = `
-          <div class="flex items-center justify-between">
-            <span class="font-bold text-xs sm:text-sm text-zinc-100">${phase.phase_name}</span>
-            <span class="text-xs font-mono text-zinc-400 border border-cozy-border px-2 py-0.5 rounded">${phase.duration_weeks}</span>
-          </div>
-          <div class="text-xs text-zinc-400">
-            <span class="text-zinc-500 uppercase text-[10px] font-mono block">Deliverables:</span>
-            <ul class="list-disc list-inside mt-1 space-y-0.5 text-zinc-300">
-              ${(phase.deliverables || []).map(d => `<li>${d}</li>`).join('')}
-            </ul>
-          </div>
-          <div class="text-xs text-emerald-400/90 font-mono pt-1 border-t border-cozy-border/40">
-            Exit Criteria: ${phase.exit_criteria}
-          </div>
-        `;
-        roadmapContainer.appendChild(div);
-      });
-
-      // Risks
-      const risksGrid = document.getElementById('ideaRisksGrid');
-      risksGrid.innerHTML = '';
-      (out.risks || []).forEach(r => {
-        const div = document.createElement('div');
-        div.className = 'bg-cozy-bg p-3 rounded-xl border border-cozy-border flex flex-col sm:flex-row sm:items-center justify-between gap-2';
-        div.innerHTML = `
-          <div class="space-y-0.5">
-            <div class="text-xs font-semibold text-zinc-200">${r.risk}</div>
-            <div class="text-xs text-zinc-400"><span class="text-zinc-500 font-mono">Mitigation:</span> ${r.mitigation}</div>
-          </div>
-          <span class="text-[10px] font-mono px-2 py-0.5 rounded border border-cozy-border text-zinc-400 self-start sm:self-auto">${r.severity} Severity</span>
-        `;
-        risksGrid.appendChild(div);
-      });
-
-      // Evaluation tips
-      const tipsList = document.getElementById('ideaTipsList');
-      tipsList.innerHTML = '';
-      (out.evaluation_tips || []).forEach(t => {
-        const li = document.createElement('li');
-        li.innerText = t;
-        tipsList.appendChild(li);
-      });
-    }
-
-    function resetWorkspace() {
-      document.getElementById('mainQueryInput').value = '';
+    function resetCanvas() {
+      document.getElementById('mainInput').value = '';
       document.getElementById('heroSection').classList.remove('hidden');
       document.getElementById('resultsSection').classList.add('hidden');
       document.getElementById('btnExport').classList.add('hidden');
-      lastResponse = null;
+      lastResult = null;
     }
 
     function exportReport() {
-      if (!lastResponse || !lastResponse.final_output) return;
-      const out = lastResponse.final_output;
-      let md = `# Agentic Co-Pilot Evaluation Report\n`;
+      if (!lastResult || !lastResult.final_output) return;
+      const out = lastResult.final_output;
+      let md = `# Engineering Validation Brief\n`;
       md += `Date: ${new Date().toLocaleDateString()}\n`;
-      md += `Session: ${lastResponse.session_id}\n\n`;
+      md += `Session: ${lastResult.session_id}\n\n`;
 
-      if (lastResponse.intent === 'codebase_analysis') {
+      if (lastResult.intent === 'idea_validation') {
+        md += `## Project Title: ${out.project_title}\n\n`;
+        md += `### Problem Statement\n${out.problem_statement}\n\n`;
+        md += `### Target Personas\n`;
+        (out.target_personas || []).forEach(p => {
+          md += `- **${p.persona}:** ${p.pain_point} -> Benefit: ${p.expected_benefit}\n`;
+        });
+        md += `\n### 3-Phase Milestone Roadmap\n`;
+        (out.phases || []).forEach(p => {
+          md += `#### ${p.phase_name} (${p.duration_weeks})\n`;
+          (p.deliverables || []).forEach(d => md += `- ${d}\n`);
+          md += `*Exit Criteria:* ${p.exit_criteria}\n\n`;
+        });
+      } else {
         md += `## Codebase Diagnosis Summary\n${out.summary}\n\n`;
         (out.candidates || []).forEach(c => {
           md += `### Candidate #${c.rank}: ${c.symbol_name} (${c.file_path}:${c.line_start}-${c.line_end})\n`;
           md += `Hypothesis: ${c.root_cause_hypothesis}\n`;
           md += `Suggested Fix: ${c.suggested_fix}\n\n`;
         });
-      } else {
-        md += `## Project: ${out.project_title}\n\n`;
-        md += `### Problem Statement\n${out.problem_statement}\n\n`;
-        md += `### 3-Phase Roadmap\n`;
-        (out.phases || []).forEach(p => {
-          md += `#### ${p.phase_name} (${p.duration_weeks})\n`;
-          (p.deliverables || []).forEach(d => md += `- ${d}\n`);
-          md += `Exit Criteria: ${p.exit_criteria}\n\n`;
-        });
       }
 
       const blob = new Blob([md], {type: 'text/markdown'});
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = `co_pilot_report_${lastResponse.session_id}.md`;
+      a.download = `validation_brief_${lastResult.session_id}.md`;
       a.click();
     }
   </script>
