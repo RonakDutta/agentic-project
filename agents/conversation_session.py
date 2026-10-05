@@ -249,6 +249,196 @@ class ConversationalFollowupEngine:
         self.session_manager = session_manager
         self.llm = llm_client
 
+    # Direct agent aliases -> canonical agent keys
+    DIRECT_AGENT_ALIASES: Dict[str, str] = {
+        "decomposer": "decomposer", "idea": "decomposer", "brief": "decomposer",
+        "market": "market", "competitor": "market",
+        "kill": "kill", "devil": "kill", "critic": "kill",
+        "arbiter": "arbiter", "reconciler": "arbiter",
+        "scorecard": "scorecard", "score": "scorecard", "rubric": "scorecard",
+        "prd": "prd", "product": "prd", "stories": "prd",
+        "roadmap": "roadmap", "milestone": "roadmap", "delivery": "roadmap",
+        "architect": "architect", "stack": "architect",
+        "risk": "risk", "audit": "risk", "security": "risk",
+        "code": "code", "ast": "code", "debug": "code",
+    }
+
+    DIRECT_AGENT_PROFILES: Dict[str, Dict[str, str]] = {
+        "decomposer": {"name": "Idea Decomposer", "role": "Product & Idea Decomposition Agent"},
+        "market": {"name": "Market Research Specialist", "role": "Competitive Intelligence & Market Positioning"},
+        "kill": {"name": "Adversarial Kill Agent", "role": "Devil's Advocate & Stress-Testing Auditor"},
+        "arbiter": {"name": "Impartial Systems Arbiter", "role": "Evidence Reconciliation Specialist"},
+        "scorecard": {"name": "Deterministic Decision Scorer", "role": "100-Point Feasibility Scorecard Engine"},
+        "prd": {"name": "Lead Product Manager", "role": "PRD & Product Requirements Specialist"},
+        "roadmap": {"name": "Roadmap & Delivery Planner", "role": "Milestone & Sprint Architect"},
+        "architect": {"name": "Lead Systems Architect", "role": "Production Stack & Infrastructure Architect"},
+        "risk": {"name": "Risk & Security Auditor", "role": "Change Impact & Blast Radius Analyzer"},
+        "code": {"name": "Code Review & AST Specialist", "role": "Fault Localization & Call Graph Analyzer"},
+    }
+
+    @classmethod
+    def _extract_direct_agent(cls, query: str) -> Optional[str]:
+        """Detects '@agent <question>' mentions (e.g. '@kill why will this fail?')."""
+        match = re.match(r"\s*@([a-zA-Z_-]+)\b", query)
+        if not match:
+            return None
+        return cls.DIRECT_AGENT_ALIASES.get(match.group(1).lower())
+
+    @classmethod
+    def get_direct_agent_catalog(cls) -> List[Dict[str, str]]:
+        """Public catalog used by the UI to render agent chips."""
+        return [
+            {"key": key, "agent_name": profile["name"], "mention": f"@{key}"}
+            for key, profile in cls.DIRECT_AGENT_PROFILES.items()
+        ]
+
+    def _answer_as_direct_agent(
+        self,
+        agent_key: str,
+        raw_query: str,
+        resolved_query: str,
+        session: ConversationSession,
+        ctx: Dict[str, Any],
+        codebase_index: Optional[CodebaseIndex],
+    ) -> Dict[str, Any]:
+        """Answers as the explicitly addressed specialist agent, deterministically from stored evidence."""
+        profile = self.DIRECT_AGENT_PROFILES.get(agent_key, self.DIRECT_AGENT_PROFILES["architect"])
+        agent_name = profile["name"]
+        agent_role = profile["role"]
+        question = re.sub(r"^\s*@[a-zA-Z_-]+\b", "", resolved_query).strip() or "Direct agent interrogation"
+
+        sections: List[str] = []
+        if agent_key == "kill":
+            kill = ctx.get("kill_report", {})
+            if kill:
+                sections.append(f"**Bear Case**: {kill.get('bear_case_summary', 'Adversarial stress-test complete.')}")
+                for f in kill.get("fatal_flaws", []):
+                    if isinstance(f, dict):
+                        sections.append(
+                            f"- **{f.get('title', 'Flaw')} ({f.get('severity', 'HIGH')})**: {f.get('argument', '')}"
+                        )
+                        if f.get("mitigation_test") or f.get("counter_evidence"):
+                            sections.append(f"  * Validation test: {f.get('mitigation_test') or f.get('counter_evidence')}")
+                for t in kill.get("incumbent_threats", [])[:3]:
+                    sections.append(f"- Incumbent threat: {t}")
+        elif agent_key == "scorecard":
+            sc = ctx.get("scorecard", {})
+            if sc:
+                sections.append(
+                    f"**Score**: {sc.get('total_score', ctx.get('feasibility_score', 0))}/100 - `{sc.get('verdict', ctx.get('feasibility_verdict', ''))}`"
+                )
+                sections.append(f"> *{sc.get('rubric_disclaimer', 'Feasibility score based on the defined project rubric.')}*")
+                for cat in sc.get("categories", []):
+                    if isinstance(cat, dict):
+                        sections.append(
+                            f"- **{cat.get('category_name')}: {cat.get('score')}/{cat.get('max_score')}** - {cat.get('rationale', '')}"
+                        )
+        elif agent_key == "prd":
+            prd = ctx.get("prd", {})
+            if prd:
+                sections.append(f"**Product Vision**: {prd.get('product_vision', '')}")
+                for s in prd.get("user_stories", []):
+                    if isinstance(s, dict):
+                        sections.append(
+                            f"- **{s.get('story_id', 'US')} ({s.get('persona', 'User')})**: I want to {s.get('want', '')} so that {s.get('so_that', '')}."
+                        )
+                for fr in prd.get("functional_requirements", [])[:5]:
+                    if isinstance(fr, dict):
+                        sections.append(f"- **{fr.get('req_id', 'FR')} ({fr.get('priority', '')})**: {fr.get('title', '')}")
+        elif agent_key == "roadmap":
+            for p in ctx.get("phases", []):
+                if isinstance(p, dict):
+                    deliverables = ", ".join(p.get("deliverables", [])[:3])
+                    sections.append(
+                        f"- **Phase {p.get('phase_number')}: {p.get('phase_name')}** ({p.get('duration_weeks', '')}) - Deliverables: {deliverables or 'N/A'}. Exit: {p.get('exit_criteria', '')}"
+                    )
+            for r in ctx.get("risks", [])[:4]:
+                if isinstance(r, dict):
+                    sections.append(f"- Risk [{r.get('category')} / {r.get('severity')}]: {r.get('risk', '')} → *Mitigation*: {r.get('mitigation', '')}")
+        elif agent_key == "market":
+            for c in ctx.get("competitors", []):
+                if isinstance(c, dict):
+                    sections.append(f"- **{c.get('name', 'Competitor')}**: {c.get('summary', '')} (Our gap advantage: {c.get('gaps', c.get('weaknesses', ''))})")
+            for d in ctx.get("key_differentiators", [])[:3]:
+                sections.append(f"- Differentiator: {d}")
+        elif agent_key == "arbiter":
+            rec = ctx.get("reconciliation", {})
+            if rec:
+                sections.append(f"**Synthesis Verdict**: `{rec.get('verdict', '')}` - {rec.get('synthesis_rationale', '')}")
+                for m in rec.get("must_have_mitigations", []):
+                    sections.append(f"- Non-negotiable precondition: {m}")
+                for t in rec.get("key_tradeoffs", []):
+                    sections.append(f"- Tradeoff: {t}")
+        elif agent_key == "architect":
+            for cat, item in (ctx.get("tech_stack", {}) or {}).items():
+                if isinstance(item, dict):
+                    sections.append(f"- **{cat.title()}**: `{item.get('choice', '')}` - {item.get('rationale', '')} (Tradeoffs: {item.get('tradeoffs', '')})")
+        elif agent_key == "decomposer":
+            if ctx:
+                sections.append(f"**Project**: {ctx.get('project_title', 'Active project')}")
+                sections.append(f"**Problem**: {ctx.get('problem_statement', '')}")
+                sections.append(f"**Core Value Prop**: {ctx.get('core_value_prop', '')}")
+                for f in ctx.get("mvp_features", [])[:5]:
+                    sections.append(f"- MVP feature: {f}")
+        elif agent_key == "risk":
+            if codebase_index is not None:
+                target = session.active_entities.get("last_symbol")
+                if target:
+                    impact_agent = ChangeImpactAgent(codebase_index=codebase_index)
+                    impact_res = impact_agent.analyze_impact(target_symbol=target)
+                    sections.append(
+                        f"**Blast radius for `{target}`**: {impact_res.risk_level} ({impact_res.blast_radius_score}/100) with {len(impact_res.direct_callers)} direct callers."
+                    )
+                    for r in impact_res.recommendations:
+                        sections.append(f"- {r}")
+            if not sections:
+                for flaw in (ctx.get("kill_report", {}) or {}).get("fatal_flaws", [])[:3]:
+                    if isinstance(flaw, dict):
+                        sections.append(f"- **{flaw.get('title', 'Risk')} ({flaw.get('severity', 'HIGH')})**: {flaw.get('argument', '')}")
+        elif agent_key == "code":
+            for c in ctx.get("candidates", [])[:3]:
+                if isinstance(c, dict):
+                    sections.append(
+                        f"- **#{c.get('rank', 1)} `{c.get('symbol_name')}`** ({c.get('file_path', '')}:{c.get('line_start')}-{c.get('line_end')}) - {c.get('why_problematic', c.get('root_cause_hypothesis', ''))}"
+                    )
+                    if c.get("recommended_pattern") or c.get("correct_code"):
+                        sections.append(f"\n**Recommended pattern**:\n```python\n{c.get('recommended_pattern') or c.get('correct_code')}\n```")
+
+        if sections:
+            answer = (
+                f"### {agent_name} (direct interrogation)\n\n"
+                + "\n".join(sections)
+                + f"\n\n*Answering your question: “{question}” from the persisted session evidence above.*"
+            )
+        else:
+            answer = (
+                f"### {agent_name} (direct interrogation)\n\n"
+                f"I don't have persisted evidence for this domain in the current session yet. "
+                f"Run the full multi-agent pipeline first, then ask me again.\n\n"
+                f"*Question received: “{question}”*"
+            )
+
+        turn = session.add_turn(
+            user_query=raw_query,
+            agent_name=agent_name,
+            agent_role=agent_role,
+            answer=answer,
+            action_taken=f"Directly interrogated {agent_name} on '{question[:60]}'",
+            thinking=f"User explicitly addressed @{agent_key}; responding deterministically from persisted session evidence with zero LLM quota.",
+        )
+        return {
+            "status": "ok",
+            "answer": answer,
+            "agent_name": agent_name,
+            "agent_role": agent_role,
+            "action_taken": turn.action_taken,
+            "thinking": turn.thinking,
+            "session_id": session.session_id,
+            "referenced_symbols": turn.referenced_symbols,
+            "active_entities": session.active_entities,
+            "direct_agent": agent_key,
+        }
+
     def process_followup(
         self,
         query: str,
@@ -261,6 +451,9 @@ class ConversationalFollowupEngine:
         # 1. Anaphora Resolution ('that function', 'modify it')
         resolved_query = session.resolve_anaphora(query)
         q_lower = resolved_query.lower()
+
+        # Validated pipeline output (used by deterministic specialist routers)
+        ctx = context_override if isinstance(context_override, dict) else {}
 
         # 2. Check if repo index is available
         codebase_index = None
@@ -276,6 +469,12 @@ class ConversationalFollowupEngine:
                 if clean_w in codebase_index.symbol_table:
                     target_symbol = clean_w
                     break
+
+        # 2.5 Direct Agent Interrogation ('@kill why will this fail?')
+        # Novelty: users can interrogate a specific specialist agent instead of a generic chatbot.
+        direct_agent = self._extract_direct_agent(query)
+        if direct_agent:
+            return self._answer_as_direct_agent(direct_agent, query, resolved_query, session, ctx, codebase_index)
 
         # 3. Intent Detection: Specialized Tool Routing
         # A. Change Impact Query ('What breaks if I modify it?', 'What could break?')
@@ -404,7 +603,6 @@ class ConversationalFollowupEngine:
             }
 
         # D. Idea Track: Competitors & Market Landscape
-        ctx = context_override if isinstance(context_override, dict) else {}
         if ctx.get("competitors") and any(
             k in q_lower for k in ["competitor", "closest market", "alternative", "market landscape", "competition", "competing solutions"]
         ):
@@ -497,29 +695,37 @@ class ConversationalFollowupEngine:
             prd_data = ctx.get("prd", {})
             stories = prd_data.get("user_stories", [])
             target_story = None
+            q_clean = q_lower.replace("-", "")
             for s in stories:
-                s_id = s.get("id", "").lower().replace("-", "")
-                q_clean = q_lower.replace("-", "")
-                if s_id in q_clean or s.get("id", "").lower() in q_lower:
+                # PRD documents serialize stories with story_id / want / so_that.
+                s_id = str(s.get("story_id", s.get("id", ""))).lower().replace("-", "")
+                if s_id and (s_id in q_clean or str(s.get("story_id", s.get("id", ""))).lower() in q_lower):
                     target_story = s
                     break
 
             ans_lines = []
             if target_story:
-                s_id = target_story.get("id", "US-01")
+                s_id = target_story.get("story_id", target_story.get("id", "US-01"))
+                want = target_story.get("want", target_story.get("action", "perform action"))
+                so_that = target_story.get("so_that", target_story.get("benefit", "I receive value"))
                 ans_lines.append(f"### User Story {s_id}: Detailed Specification")
                 ans_lines.append(f"- **Persona**: *As a {target_story.get('persona', 'User')}*")
-                ans_lines.append(f"- **Action / Need**: *I want to {target_story.get('action', 'perform action')}*")
-                ans_lines.append(f"- **Expected Benefit**: *So that {target_story.get('benefit', 'I receive value')}*\n")
+                ans_lines.append(f"- **Action / Need**: *I want to {want}*")
+                ans_lines.append(f"- **Expected Benefit**: *So that {so_that}*\n")
                 ans_lines.append("**Acceptance Criteria:**")
                 for ac in target_story.get("acceptance_criteria", []):
                     ans_lines.append(f"- [ ] {ac}")
             elif stories:
                 ans_lines.append(f"### Formal PRD User Stories ({len(stories)} Stories)")
                 for s in stories:
-                    ans_lines.append(f"#### {s.get('id', 'Story')}: As a {s.get('persona', 'User')}")
-                    ans_lines.append(f"- **Want**: {s.get('action', '')}")
-                    ans_lines.append(f"- **Benefit**: {s.get('benefit', '')}")
+                    s_id = s.get("story_id", s.get("id", "Story"))
+                    want = s.get("want", s.get("action", ""))
+                    so_that = s.get("so_that", s.get("benefit", ""))
+                    ans_lines.append(f"#### {s_id}: As a {s.get('persona', 'User')}")
+                    if want:
+                        ans_lines.append(f"- **Want**: {want}")
+                    if so_that:
+                        ans_lines.append(f"- **Benefit**: {so_that}")
                     ans_lines.append("- **Acceptance Criteria**:")
                     for ac in s.get("acceptance_criteria", [])[:3]:
                         ans_lines.append(f"  * [ ] {ac}")
@@ -527,7 +733,10 @@ class ConversationalFollowupEngine:
             else:
                 ans_lines.append("### Formal PRD Specifications")
                 for fr in prd_data.get("functional_requirements", []):
-                    ans_lines.append(f"- {fr}")
+                    if isinstance(fr, dict):
+                        ans_lines.append(f"- **{fr.get('req_id', 'FR')} ({fr.get('priority', '')})**: {fr.get('title', '')} - {fr.get('description', '')}")
+                    else:
+                        ans_lines.append(f"- {fr}")
             answer = "\n".join(ans_lines)
             turn = session.add_turn(
                 user_query=query,
@@ -609,7 +818,8 @@ class ConversationalFollowupEngine:
             total_score = sc.get("total_score", ctx.get("feasibility_score", 0))
             verdict = sc.get("verdict", ctx.get("feasibility_verdict", "CONDITIONAL_PURSUIT"))
             disclaimer = sc.get("rubric_disclaimer", ctx.get("rubric_disclaimer", "Feasibility score based on defined project rubric."))
-            categories = sc.get("category_breakdown", {})
+            # Scorecard serializes categories as a list of {category_name, score, max_score, criteria_met, gaps, rationale}.
+            categories = sc.get("categories", [])
             strengths = sc.get("key_strengths", [])
             risks = sc.get("key_risks", [])
             actions = sc.get("recommended_actions", [])
@@ -619,10 +829,25 @@ class ConversationalFollowupEngine:
                 f"> *{disclaimer}*\n",
             ]
             if categories:
-                ans_lines.append("| Category | Score | Weight | Rationale |")
+                ans_lines.append("| Category | Score | Max | Status |")
                 ans_lines.append("|---|---|---|---|")
-                for cat_name, cat_data in categories.items():
-                    ans_lines.append(f"| {cat_name.replace('_', ' ').title()} | {cat_data.get('score', 0)}/{cat_data.get('max_points', 0)} | {cat_data.get('weight', 0)}% | {cat_data.get('rationale', '')} |")
+                for cat_data in categories:
+                    if not isinstance(cat_data, dict):
+                        continue
+                    cat_name = cat_data.get("category_name", "Category")
+                    cat_score = cat_data.get("score", 0)
+                    cat_max = cat_data.get("max_score", 0) or 0
+                    pct = (cat_score / cat_max * 100) if cat_max else 0
+                    status = "Strong" if pct >= 75 else ("Moderate" if pct >= 50 else "Weak")
+                    ans_lines.append(f"| {cat_name} | {cat_score} | {cat_max} | {status} |")
+                ans_lines.append("")
+                for cat_data in categories:
+                    if isinstance(cat_data, dict) and (cat_data.get("criteria_met") or cat_data.get("gaps")):
+                        ans_lines.append(f"**{cat_data.get('category_name', 'Category')}**")
+                        for cr in cat_data.get("criteria_met", [])[:2]:
+                            ans_lines.append(f"- ✓ {cr}")
+                        for g in cat_data.get("gaps", [])[:2]:
+                            ans_lines.append(f"- ⚠ Gap: {g}")
                 ans_lines.append("")
             if strengths:
                 ans_lines.append(f"**Key Strengths**: {', '.join(strengths)}")

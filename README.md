@@ -124,6 +124,29 @@ Generates structured Agile specifications:
 
 ---
 
+## 🧬 Differentiating Novelty Features (vs. ChatGPT / Claude)
+
+Generic chatbots emit a static, unverifiable opinion. This co-pilot is built to be **poke-able, transparent, and evidence-grounded**:
+
+### 1. Decision Simulator: Interactive What-If Verdict Re-Scoring
+Every idea report ships with a live simulator bound to the deterministic 7-category rubric. Drag any category slider to model your fixes (e.g. "interview 5 users" closes the Problem Validation gap) and the projected verdict recomputes instantly - client-side, on the exact same thresholds the backend engine used (75+ GO, 50+ PIVOT, below NO-GO). One click of **Auto-apply top gap fixes** models closing every detected gap and shows the verdict flip (e.g. `PIVOT -> GO`). ChatGPT gives you one static score; this gives you a decision model you can stress-test.
+
+### 2. Direct Agent Interrogation (`@agent` Mentions)
+Instead of one blended chatbot persona, users address a specific specialist directly: `@kill why will this fail?`, `@scorecard`, `@roadmap`, `@prd`, `@market`, `@arbiter`, `@architect` (idea track) and `@code`, `@risk` (code track). Each reply is assembled **deterministically from that agent's persisted session evidence with zero LLM quota**, so specialist interrogation works even while the free tier is rate-limited. Unaddressed questions still flow through the keyword routers and bounded-context LLM pass as before.
+
+### 3. Rate-Limit-Resilient Model Rotation & Completion Cache
+Groq free-tier 429s are absorbed rather than surfaced:
+* An ordered **model chain** (`MODEL_CHAIN`: gpt-oss-120b -> gpt-oss-20b -> llama-3.3-70b -> llama-3.1-8b-instant) pools the per-model RPM/TPM budgets.
+* 429 payloads are parsed for the exact **retry-after** hint, placing models on precise cooldowns instead of a fixed 60s penalty.
+* Exponential backoff with jitter, jittered inter-call pacing (`PACE_SECONDS`), and a short-TTL **completion cache** (`LLM_CACHE_TTL_SECONDS`) make repeated follow-ups cost zero quota.
+* Intent classification is deterministic-first: the LLM classifier is only invoked for genuinely ambiguous queries (the dashboard's pillar buttons force intent anyway).
+* The header health chip polls `/api/health` and shows live per-model cooldown state; follow-up errors render as in-thread guidance cards instead of silent failures.
+
+### 4. Diagrams Render Inside Chat Replies
+Mermaid models emitted by the Change Impact and Flow Trace routers are rendered as real diagrams inside the follow-up thread (with a graceful definition fallback), not dumped as raw code fences.
+
+---
+
 ## 🚀 Quick Start Guide
 
 ### 1. Installation
@@ -144,8 +167,13 @@ Ensure your free Groq API key is configured in `.env`:
 GROQ_API_KEY=your_groq_api_key_here
 PRIMARY_MODEL=openai/gpt-oss-120b
 FAST_MODEL=openai/gpt-oss-20b
+MODEL_CHAIN=openai/gpt-oss-120b,openai/gpt-oss-20b,llama-3.3-70b-versatile,llama-3.1-8b-instant
 CONTEXT_TOKEN_BUDGET=4000
+LLM_CACHE_TTL_SECONDS=600
+PACE_SECONDS=0.15
 ```
+
+The app starts (and serves the dashboard) even without `GROQ_API_KEY`: AST indexing, deterministic follow-up routers, and the Decision Simulator all work offline, and LLM-backed agents fall back to grounded structured responses with a clear warning.
 
 ### 3. Launch the Interactive Dashboard
 Start the FastAPI server:

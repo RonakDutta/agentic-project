@@ -4,7 +4,9 @@ Classifies user intent, generates dynamic execution plans, delegates tasks to sp
 manages deterministic verification loops, and records complete execution traces for visual observability.
 """
 
+import logging
 import os
+import re
 import uuid
 from typing import Any, Dict, List, Optional
 from core.llm import llm_client
@@ -43,6 +45,37 @@ Classify the intent and output strict JSON matching this exact schema:
   ]
 }
 """
+
+logger = logging.getLogger(__name__)
+
+# Deterministic keyword signals for zero-cost intent classification.
+_CODE_INTENT_SIGNALS = re.compile(
+    r"traceback|exception|valueerror|typeerror|keyerror|attributeerror|indexerror|zerodivisionerror|"
+    r"stack trace|\bdef \b|\bclass \b|\.py\b|line \d+|bug|debug|call graph|callers|callees|blast radius|"
+    r"cyclomatic|\bast\b|refactor this function|code review|where is .*(defined|implemented)",
+    re.IGNORECASE,
+)
+_IDEA_INTENT_SIGNALS = re.compile(
+    r"startup|business idea|project idea|validate (my|this|an) idea|feasibility|market research|"
+    r"competitor|roadmap|\bprd\b|product requirements|monetiz|go-to-market|pitch|mvp for|new (app|product|platform|service)",
+    re.IGNORECASE,
+)
+
+
+def _classify_intent_deterministically(query: str, repo_path: Optional[str]) -> Optional[str]:
+    """
+    Zero-cost keyword classifier. Returns a confident intent or None when ambiguous,
+    so the LLM classifier is only spent on genuinely ambiguous queries.
+    """
+    code_hits = bool(_CODE_INTENT_SIGNALS.search(query))
+    idea_hits = bool(_IDEA_INTENT_SIGNALS.search(query))
+    if repo_path and not idea_hits:
+        return "codebase_analysis"
+    if code_hits and not idea_hits:
+        return "codebase_analysis"
+    if idea_hits and not code_hits:
+        return "idea_validation"
+    return None
 
 
 class OrchestratorAgent:
@@ -95,33 +128,16 @@ class OrchestratorAgent:
             state.add_trace("Orchestrator", f"Intent explicitly specified as '{intent}'.")
         else:
             state.add_trace("Orchestrator", "Classifying user intent and planning execution steps...")
-            intent_context = f"Query: {query}\n"
-            if repo_path:
-                intent_context += f"Context: Repository path provided ({repo_path})\n"
+            deterministic_intent = _classify_intent_deterministically(query, repo_path)
 
-            try:
-                intent_json = self.llm.generate_json(
-                    messages=[
-                        {"role": "system", "content": ORCHESTRATOR_INTENT_PROMPT},
-                        {"role": "user", "content": intent_context},
-                    ],
-                    temperature=0.1,
-                )
-                intent = intent_json.get("intent", "idea_validation")
-                confidence = float(intent_json.get("confidence", 0.9))
-                plan_steps = intent_json.get("plan_steps", [])
-            except Exception as err:
-                state.add_trace("Orchestrator", f"LLM intent note ({err}). Using deterministic intent classifier.")
-                code_signals = ["traceback", "error", "exception", "def ", "class ", "valueerror", "function", "bug", "line ", "fail", "token"]
-                q_low = query.lower()
-                if repo_path or any(s in q_low for s in code_signals):
-                    intent = "codebase_analysis"
-                    confidence = 0.95
-                    plan_steps = ["Parse AST & Index", "Navigate Code Chunks", "Diagnose Root Cause", "Deterministic Critic Verification"]
-                else:
-                    intent = "idea_validation"
-                    confidence = 0.95
-                    plan_steps = [
+            if deterministic_intent:
+                # Zero-cost path: skip the LLM entirely for confident classifications.
+                intent = deterministic_intent
+                confidence = 0.92
+                plan_steps = (
+                    ["Parse AST & Index", "Navigate Code Chunks", "Diagnose Root Cause", "Deterministic Critic Verification"]
+                    if intent == "codebase_analysis"
+                    else [
                         "Decompose Idea",
                         "Conduct Market & Competitor Research",
                         "Adversarial Kill Critique",
@@ -130,6 +146,41 @@ class OrchestratorAgent:
                         "Generate PRD & Architecture Models",
                         "Generate 3-Phase Roadmap & Risk Matrix",
                     ]
+                )
+            else:
+                try:
+                    intent_context = f"Query: {query}\n"
+                    if repo_path:
+                        intent_context += f"Context: Repository path provided ({repo_path})\n"
+                    intent_json = self.llm.generate_json(
+                        messages=[
+                            {"role": "system", "content": ORCHESTRATOR_INTENT_PROMPT},
+                            {"role": "user", "content": intent_context},
+                        ],
+                        temperature=0.1,
+                    )
+                    intent = intent_json.get("intent", "idea_validation")
+                    confidence = float(intent_json.get("confidence", 0.9))
+                    plan_steps = intent_json.get("plan_steps", [])
+                except Exception as err:
+                    state.add_trace("Orchestrator", f"LLM intent note ({err}). Using deterministic intent classifier.")
+                    fallback_intent = _classify_intent_deterministically(query, repo_path)
+                    if fallback_intent == "codebase_analysis" or repo_path:
+                        intent = "codebase_analysis"
+                        confidence = 0.95
+                        plan_steps = ["Parse AST & Index", "Navigate Code Chunks", "Diagnose Root Cause", "Deterministic Critic Verification"]
+                    else:
+                        intent = "idea_validation"
+                        confidence = 0.95
+                        plan_steps = [
+                            "Decompose Idea",
+                            "Conduct Market & Competitor Research",
+                            "Adversarial Kill Critique",
+                            "Weigh Evidence & Reconcile",
+                            "Score Feasibility Rubric",
+                            "Generate PRD & Architecture Models",
+                            "Generate 3-Phase Roadmap & Risk Matrix",
+                        ]
 
         state.intent = intent
         state.intent_confidence = confidence
@@ -177,7 +228,7 @@ class OrchestratorAgent:
                         answer=state.final_output.get("problem_statement", "") or "Idea validation processed.",
                     )
         except Exception as sess_err:
-            print(f"[Orchestrator] Session registration note: {sess_err}")
+            logger.warning(f"[Orchestrator] Session registration note: {sess_err}")
 
         return state
 

@@ -159,27 +159,97 @@
       max-width: 100%;
       height: auto;
     }
+
+    /* Engineering-console backdrop grid */
+    .console-grid {
+      background-image:
+        linear-gradient(rgba(59, 130, 246, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(59, 130, 246, 0.05) 1px, transparent 1px);
+      background-size: 36px 36px;
+    }
+
+    /* Decision Simulator sliders */
+    input[type="range"].sim-range {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 6px;
+      border-radius: 9999px;
+      background: #1b2438;
+      outline: none;
+      cursor: pointer;
+    }
+    input[type="range"].sim-range::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 9999px;
+      background: #3b82f6;
+      border: 2px solid #0b1120;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+      transition: transform 0.15s ease;
+    }
+    input[type="range"].sim-range::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+    }
+    input[type="range"].sim-range::-moz-range-thumb {
+      width: 14px;
+      height: 14px;
+      border-radius: 9999px;
+      background: #3b82f6;
+      border: 2px solid #0b1120;
+      cursor: pointer;
+    }
+
+    /* Chat agent avatar */
+    .agent-avatar {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      font-size: 11px;
+      border: 1px solid;
+      flex-shrink: 0;
+    }
+
+    @keyframes scorePulse {
+      0% { transform: scale(1); }
+      40% { transform: scale(1.07); }
+      100% { transform: scale(1); }
+    }
+    .score-pulse { animation: scorePulse 0.45s ease-out; }
   </style>
 </head>
-<body class="min-h-screen flex flex-col font-sans selection:bg-blue-900 selection:text-white">
+<body class="min-h-screen flex flex-col font-sans selection:bg-blue-900 selection:text-white console-grid">
 
   <!-- Top Navigation Header -->
-  <header class="border-b border-borderSubtle bg-canvas/80 backdrop-blur-md sticky top-0 z-50">
-    <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+  <header class="border-b border-borderSubtle bg-canvas/85 backdrop-blur-md sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
       
       <!-- Brand & Project Identity -->
-      <div class="flex items-center space-x-3">
-        <div class="font-extrabold tracking-tight text-white text-base">Agentic Co-Pilot</div>
-        <span class="text-xs font-mono text-zinc-500 uppercase tracking-widest border-l border-borderSubtle pl-3 hidden sm:inline">
-          Autonomous Team
-        </span>
-        <span class="text-xs text-zinc-400 hidden md:inline">Idea Validation & Codebase Intelligence</span>
+      <div class="flex items-center space-x-3 min-w-0">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 via-blue-600 to-cyan-500 flex items-center justify-center shadow-lg shadow-blue-950/50 shrink-0">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+          </svg>
+        </div>
+        <div class="min-w-0">
+          <div class="font-extrabold tracking-tight text-white text-base leading-tight">Agentic Co-Pilot</div>
+          <div class="text-[10px] font-mono text-zinc-500 uppercase tracking-widest hidden sm:block">Supervisory Multi-Agent Team</div>
+        </div>
+        <span class="text-xs text-zinc-400 hidden lg:inline border-l border-borderSubtle pl-3">Idea Validation & Codebase Intelligence</span>
       </div>
 
       <!-- Actions & Engine Indicator -->
-      <div class="flex items-center space-x-3 text-xs font-mono">
-        <span class="text-zinc-400 border border-borderSubtle bg-surface px-3 py-1.5 rounded-xl">
-          Engine: Groq LLM
+      <div class="flex items-center space-x-2.5 text-xs font-mono shrink-0">
+        <span id="rateLimitChip" class="hidden sm:flex items-center space-x-1.5 text-zinc-400 border border-borderSubtle bg-surface px-3 py-1.5 rounded-xl">
+          <span id="rateLimitDot" class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+          <span id="rateLimitText">Groq LLM</span>
         </span>
         <button id="btnExportTop" onclick="exportReport()" class="hidden text-white bg-blue-600 hover:bg-blue-500 px-3.5 py-1.5 rounded-xl transition font-medium shadow-sm">
           Export Brief (.md)
@@ -332,19 +402,23 @@
 
       <!-- Metrics Strip -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div class="bg-surface/50 border border-borderSubtle p-5 rounded-2xl space-y-1">
+        <div class="bg-surface/50 border border-borderSubtle p-5 rounded-2xl space-y-1 relative overflow-hidden">
+          <div class="absolute left-0 top-0 bottom-0 w-0.5 bg-emerald-500/70"></div>
           <div class="text-[11px] font-mono text-zinc-500 uppercase">Fact Verification</div>
           <div id="kpiGrounding" class="text-base font-bold text-emerald-400">100% Grounded</div>
         </div>
-        <div class="bg-surface/50 border border-borderSubtle p-5 rounded-2xl space-y-1">
+        <div class="bg-surface/50 border border-borderSubtle p-5 rounded-2xl space-y-1 relative overflow-hidden">
+          <div class="absolute left-0 top-0 bottom-0 w-0.5 bg-blue-500/70"></div>
           <div class="text-[11px] font-mono text-zinc-500 uppercase">Response Time</div>
           <div id="kpiLatency" class="text-base font-bold text-white">0ms</div>
         </div>
-        <div class="bg-surface/50 border border-borderSubtle p-5 rounded-2xl space-y-1">
+        <div class="bg-surface/50 border border-borderSubtle p-5 rounded-2xl space-y-1 relative overflow-hidden">
+          <div class="absolute left-0 top-0 bottom-0 w-0.5 bg-cyan-500/70"></div>
           <div class="text-[11px] font-mono text-zinc-500 uppercase">Feasibility Rating</div>
-          <div id="kpiTrack" class="text-base font-bold text-blue-400">Idea Track</div>
+          <div id="kpiTrack" class="text-base font-bold text-cyan-300">Idea Track</div>
         </div>
-        <div class="bg-surface/50 border border-borderSubtle p-5 rounded-2xl space-y-1">
+        <div class="bg-surface/50 border border-borderSubtle p-5 rounded-2xl space-y-1 relative overflow-hidden">
+          <div class="absolute left-0 top-0 bottom-0 w-0.5 bg-violet-500/70"></div>
           <div class="text-[11px] font-mono text-zinc-500 uppercase">Self-Correction</div>
           <div id="kpiRevisions" class="text-base font-bold text-white">0 Retries Needed</div>
         </div>
@@ -416,6 +490,49 @@
             <div class="space-y-2">
               <span class="text-xs font-mono uppercase text-amber-400 font-semibold">Key Risks to Mitigate:</span>
               <div id="scRisksContainer" class="flex flex-wrap gap-2"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- NOVELTY #1: INTERACTIVE DECISION SIMULATOR (deterministic what-if re-scoring) -->
+        <div id="decisionSimulator" class="bg-surface/60 border border-borderSubtle p-8 sm:p-10 rounded-3xl space-y-6 shadow-md relative overflow-hidden">
+          <div class="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400/70 to-transparent"></div>
+          <div class="flex flex-wrap items-start justify-between gap-3 border-b border-borderSubtle pb-4">
+            <div>
+              <div class="flex items-center space-x-2">
+                <span class="text-xs font-mono text-cyan-300 uppercase tracking-wider font-semibold">Interactive What-If Engine</span>
+                <span class="text-[10px] font-mono px-2 py-0.5 rounded-lg bg-cyan-950/60 border border-cyan-800 text-cyan-300 uppercase font-bold">Novelty</span>
+              </div>
+              <h3 class="text-xl font-bold text-white mt-1">Decision Simulator: Stress-Test the Verdict</h3>
+              <p class="text-xs text-zinc-400 mt-0.5 max-w-2xl">Unlike a chatbot's static opinion, this rubric is a live deterministic model. Drag any category to model your fixes: the projected verdict recomputes instantly on the exact same rubric the agents used. Nothing here calls the LLM.</p>
+            </div>
+            <div class="flex items-center space-x-3">
+              <div class="text-right">
+                <div class="text-[10px] font-mono text-zinc-500 uppercase">Projected</div>
+                <div id="simScoreNum" class="text-2xl font-extrabold font-mono text-white">0<span class="text-sm text-zinc-500">/100</span></div>
+              </div>
+              <span id="simVerdictBadge" class="px-3 py-1 rounded-xl text-xs font-mono font-bold uppercase bg-zinc-900 border border-zinc-700 text-zinc-300">
+                ...
+              </span>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div id="simSlidersContainer" class="lg:col-span-2 space-y-4"></div>
+            <div class="space-y-4">
+              <div class="rounded-2xl border border-borderSubtle bg-canvas/80 p-5 space-y-3">
+                <div class="text-[11px] font-mono text-zinc-500 uppercase font-semibold">Verdict Delta</div>
+                <div id="simDeltaBox" class="text-xs text-zinc-300 leading-relaxed">Move a slider to model a change.</div>
+              </div>
+              <div class="flex flex-col space-y-2">
+                <button onclick="simulateApplyGapFixes()" class="w-full text-xs font-semibold text-white bg-cyan-600/80 hover:bg-cyan-500 border border-cyan-500/40 px-4 py-2.5 rounded-xl transition shadow-sm">
+                  Auto-apply top gap fixes
+                </button>
+                <button onclick="resetSimulator()" class="w-full text-xs font-semibold text-zinc-300 hover:text-white border border-borderSubtle bg-surface px-4 py-2.5 rounded-xl transition">
+                  Reset to agent baseline
+                </button>
+              </div>
+              <p class="text-[11px] font-mono text-zinc-600 leading-relaxed">Projected verdicts use the same thresholds as the backend engine: 75+ GO, 50+ PIVOT, below NO-GO. Rubric disclaimer applies.</p>
             </div>
           </div>
         </div>
@@ -631,18 +748,25 @@
           </div>
           <div id="codeCandidatesContainer" class="space-y-6"></div>
         </div>
-      </div>
-
-      <!-- CONVERSATIONAL FOLLOW-UP (Persistent Session Memory with Specialist Routing) -->
-      <div class="bg-surface/60 border border-borderSubtle p-8 sm:p-10 rounded-3xl space-y-6 shadow-lg">
-        <div class="flex flex-wrap items-center justify-between gap-4 border-b border-borderSubtle pb-4">
-          <div>
-            <h3 class="text-base sm:text-lg font-bold text-white">Interactive Co-Pilot Chat</h3>
-            <p class="text-xs text-zinc-400 mt-0.5">Ask questions on architecture, market competitors, milestones, security, or code. Domain specialist agents reply dynamically.</p>
+      </div>        <!-- CONVERSATIONAL FOLLOW-UP (Persistent Session Memory with Specialist Routing) -->
+        <div class="bg-surface/60 border border-borderSubtle p-8 sm:p-10 rounded-3xl space-y-6 shadow-lg">
+          <div class="flex flex-wrap items-center justify-between gap-4 border-b border-borderSubtle pb-4">
+            <div>
+              <div class="flex items-center space-x-2">
+                <h3 class="text-base sm:text-lg font-bold text-white">Interactive Co-Pilot Chat</h3>
+                <span class="text-[10px] font-mono px-2 py-0.5 rounded-lg bg-blue-950/60 border border-blue-800 text-blue-300 uppercase font-bold">Direct Agent Interrogation</span>
+              </div>
+              <p class="text-xs text-zinc-400 mt-0.5">Address a specific specialist with <span class="font-mono text-blue-300">@agent</span>, or just ask naturally. Domain agents answer from persisted session evidence.</p>
+            </div>
+            <span class="text-xs font-mono text-blue-400 border border-borderSubtle px-3 py-1.5 rounded-xl bg-canvas">
+              Session Memory Active
+            </span>
           </div>
-          <span class="text-xs font-mono text-blue-400 border border-borderSubtle px-3 py-1.5 rounded-xl bg-canvas">
-            Session Memory Active
-          </span>
+
+        <!-- Direct Agent Interrogation Chips -->
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-xs text-zinc-500 font-medium shrink-0">Interrogate:</span>
+          <div id="directAgentChips" class="flex flex-wrap items-center gap-2"></div>
         </div>
 
         <!-- Conversation Stream -->
@@ -882,6 +1006,7 @@
       }
 
       updateFollowupPromptChips(mode);
+      renderDirectAgentChips(mode);
     }
 
     function setPrompt(type) {
@@ -1041,6 +1166,14 @@
         return;
       }
 
+      // Lock the run button while agents are working
+      const btnRun = document.getElementById('btnRun');
+      const btnRunTextEl = document.getElementById('btnRunText');
+      const originalRunLabel = btnRunTextEl.innerText;
+      btnRun.disabled = true;
+      btnRun.classList.add('opacity-70', 'cursor-not-allowed');
+      btnRunTextEl.innerText = 'Agents Working...';
+
       const runId = ++pillarStates[thisPillar].runId;
       pillarStates[thisPillar].isRunning = true;
       pillarStates[thisPillar].hasOutput = false;
@@ -1072,8 +1205,8 @@
 
       const abortController = new AbortController();
       const timeoutId = setTimeout(() => {
-        abortController.abort(new Error("Request timed out after 60 seconds"));
-      }, 60000);
+        abortController.abort(new Error("Request timed out after 150 seconds. The free-tier engine may be rate-limited; please retry."));
+      }, 150000);
 
       try {
         const intent = thisPillar === 'idea' ? 'idea_validation' : 'codebase_analysis';
@@ -1184,6 +1317,10 @@
           document.getElementById('outputArea').scrollIntoView({ behavior: 'smooth' });
         }
 
+        btnRun.disabled = false;
+        btnRun.classList.remove('opacity-70', 'cursor-not-allowed');
+        btnRunTextEl.innerText = originalRunLabel;
+
       } catch (err) {
         clearTimeout(timeoutId);
         clearInterval(timerInterval);
@@ -1243,6 +1380,10 @@
           detailContainer.appendChild(errorCard);
           pillarStates[thisPillar].storyboardHtml = detailContainer.innerHTML;
         }
+
+        btnRun.disabled = false;
+        btnRun.classList.remove('opacity-70', 'cursor-not-allowed');
+        btnRunTextEl.innerText = originalRunLabel;
       }
     }
 
@@ -1387,6 +1528,9 @@
       }
       document.getElementById('scDisclaimerText').innerText = disclaimerVal;
       document.getElementById('scVerdictSummary').innerText = sc.verdict_summary || 'Evaluated against the 7-category project rubric.';
+
+      // NOVELTY: interactive what-if Decision Simulator (deterministic, no LLM calls)
+      renderDecisionSimulator(sc);
 
       // 7-category rubric table
       const catTableBody = document.getElementById('scCategoriesContainer');
@@ -1820,6 +1964,43 @@
       return 'text-blue-300 bg-blue-950/60 border-blue-800';
     }
 
+    function getAgentAvatarClass(agentName) {
+      const n = (agentName || '').toLowerCase();
+      if (n.includes('kill') || n.includes('devil')) return 'border-rose-700 bg-rose-950/70 text-rose-300';
+      if (n.includes('market')) return 'border-purple-700 bg-purple-950/70 text-purple-300';
+      if (n.includes('scorecard') || n.includes('scorer')) return 'border-amber-700 bg-amber-950/70 text-amber-300';
+      if (n.includes('prd') || n.includes('product')) return 'border-cyan-700 bg-cyan-950/70 text-cyan-300';
+      if (n.includes('roadmap') || n.includes('planner')) return 'border-emerald-700 bg-emerald-950/70 text-emerald-300';
+      if (n.includes('architect')) return 'border-blue-700 bg-blue-950/70 text-blue-300';
+      return 'border-zinc-700 bg-zinc-900 text-zinc-300';
+    }
+
+    function getAgentInitials(agentName) {
+      return (agentName || 'AI').split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+    }
+
+    // Renders ```mermaid code blocks that marked.js emitted as plain <pre> code.
+    async function renderMermaidBlocksIn(rootEl) {
+      if (!window.mermaid || !rootEl) return;
+      const codeBlocks = rootEl.querySelectorAll('pre code.language-mermaid, pre code[class*="language-mermaid"]');
+      for (const codeEl of codeBlocks) {
+        const definition = codeEl.textContent || '';
+        const wrapper = codeEl.closest('pre');
+        if (!wrapper || !definition.trim()) continue;
+        const holder = document.createElement('div');
+        holder.className = 'my-3 p-3 bg-black/40 rounded-xl border border-borderSubtle overflow-x-auto';
+        try {
+          const uniqueId = 'mermaid_reply_' + Math.random().toString(36).substring(2, 10);
+          const { svg } = await mermaid.render(uniqueId, definition.trim());
+          holder.innerHTML = svg;
+        } catch (e) {
+          console.warn('Mermaid reply render failed, showing source instead:', e);
+          return; // keep the original code block on failure
+        }
+        wrapper.replaceWith(holder);
+      }
+    }
+
     async function sendFollowup() {
       const input = document.getElementById('followupInput');
       const query = input.value.trim();
@@ -1829,15 +2010,27 @@
       const btnText = document.getElementById('btnFollowupText');
       const thread = document.getElementById('followupThread');
 
+      // Prevent double-send while a request is in flight
+      if (btn.disabled) return;
+
+      const isDirect = sendFollowup._directAgent ? true : false;
+      const agentMention = isDirect ? `@${sendFollowup._directAgent} ` : '';
+
       const userCard = document.createElement('div');
       userCard.className = 'bg-blue-950/30 border border-blue-900/50 p-4 rounded-2xl space-y-1 ml-auto max-w-2xl animate-step-reveal';
       userCard.innerHTML = `
-        <span class="text-[11px] font-mono uppercase text-blue-400 font-semibold">You:</span>
+        <div class="flex items-center justify-between gap-3">
+          <span class="text-[11px] font-mono uppercase text-blue-400 font-semibold">You${isDirect ? ` → @${escapeHtml(sendFollowup._directAgent)}` : ''}</span>
+        </div>
         <p class="text-sm text-zinc-100 font-medium">${escapeHtml(query)}</p>
       `;
       thread.appendChild(userCard);
       pillarStates[activePillar].chatHtml = thread.innerHTML;
       input.value = '';
+      if (isDirect) {
+        sendFollowup._directAgent = null;
+        updateDirectAgentChipStyles();
+      }
 
       btn.disabled = true;
       btnText.innerText = 'Thinking...';
@@ -1887,7 +2080,7 @@
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({
-            query: query,
+            query: agentMention + query,
             context: currentSessionState ? currentSessionState.final_output : null,
             session_id: sessionId,
             repo_path: repoPath
@@ -1899,14 +2092,25 @@
           new Promise(r => setTimeout(r, 1200))
         ]);
 
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || `Server responded with status ${res.status}`);
+        }
+
         const data = await res.json();
+        if (data.status === 'failed' || data.error) {
+          throw new Error(data.error || 'Follow-up pipeline failed on the server.');
+        }
+
         clearInterval(thinkingInterval);
 
         const existingThinking = document.getElementById('followupThinkingCard');
         if (existingThinking) existingThinking.remove();
 
         const totalThinkingSec = ((Date.now() - thinkingStartTime) / 1000).toFixed(1);
-        const badgeClass = getSpecialistBadgeClass(data.agent_name || '');
+        const agentName = data.agent_name || 'Technical Co-Pilot';
+        const badgeClass = getSpecialistBadgeClass(agentName);
+        const avatarClass = getAgentAvatarClass(agentName);
         const parsedMarkdown = marked.parse(data.answer || '');
 
         const agentCard = document.createElement('div');
@@ -1915,12 +2119,15 @@
         agentCard.innerHTML = `
           <div class="flex flex-wrap items-center justify-between gap-2 border-b border-borderSubtle pb-3">
             <div class="flex items-center space-x-2.5">
-              <span class="text-xs font-mono font-bold px-2.5 py-0.5 rounded-lg border ${badgeClass}">
-                ${escapeHtml(data.agent_name || 'Technical Co-Pilot')}
-              </span>
-              <span class="text-xs text-zinc-400">${escapeHtml(data.action_taken || 'Response')}</span>
+              <div class="agent-avatar ${avatarClass}">${escapeHtml(getAgentInitials(agentName))}</div>
+              <div>
+                <span class="text-xs font-mono font-bold px-2.5 py-0.5 rounded-lg border ${badgeClass}">
+                  ${escapeHtml(agentName)}
+                </span>
+                <div class="text-[11px] text-zinc-500 mt-0.5">${escapeHtml(data.action_taken || 'Response')}</div>
+              </div>
             </div>
-            <span class="text-[11px] font-mono text-zinc-500">Domain Specialist</span>
+            <span class="text-[11px] font-mono text-zinc-500">${data.direct_agent ? 'Direct Interrogation' : 'Domain Specialist'}</span>
           </div>
 
           <details class="bg-canvas/70 border border-borderSubtle rounded-xl p-3 text-xs text-zinc-400 group">
@@ -1938,7 +2145,7 @@
             </div>
           </details>
 
-          <div class="prose-chat">${parsedMarkdown}</div>
+          <div class="prose-chat reply-body">${parsedMarkdown}</div>
 
           ${(data.referenced_symbols && data.referenced_symbols.length > 0) ? `
             <div class="pt-2 border-t border-borderSubtle/60 flex flex-wrap items-center gap-1.5 text-xs">
@@ -1959,6 +2166,7 @@
           ` : ''}
         `;
         thread.appendChild(agentCard);
+        await renderMermaidBlocksIn(agentCard.querySelector('.reply-body'));
         pillarStates[activePillar].chatHtml = thread.innerHTML;
         agentCard.scrollIntoView({ behavior: 'smooth' });
 
@@ -1966,16 +2174,258 @@
         clearInterval(thinkingInterval);
         const existingThinking = document.getElementById('followupThinkingCard');
         if (existingThinking) existingThinking.remove();
-        alert('Error sending follow-up: ' + err);
+
+        const msg = err && err.message ? err.message : String(err);
+        const isRateLimit = /rate.?limit|429|cooldown|exhausted/i.test(msg);
+        const errorCard = document.createElement('div');
+        errorCard.className = 'border border-rose-900/60 bg-rose-950/20 p-5 rounded-2xl space-y-2 max-w-2xl animate-step-reveal';
+        errorCard.innerHTML = `
+          <div class="flex items-center space-x-2 text-xs font-mono text-rose-300 font-bold uppercase tracking-wide">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+            <span>${isRateLimit ? 'Groq Rate Limit Hit' : 'Follow-Up Failed'}</span>
+          </div>
+          <p class="text-xs text-zinc-300 leading-relaxed">${escapeHtml(msg)}</p>
+          ${isRateLimit ? '<p class="text-[11px] font-mono text-zinc-400">The engine auto-rotates across models and caches answers. Try again in a few seconds, or address a specialist directly (e.g. <span class="text-blue-300">@scorecard</span>) which answers deterministically without using LLM quota.</p>' : ''}
+        `;
+        thread.appendChild(errorCard);
+        pillarStates[activePillar].chatHtml = thread.innerHTML;
+        errorCard.scrollIntoView({ behavior: 'smooth' });
       } finally {
         btn.disabled = false;
         btnText.innerText = 'Send';
       }
     }
 
+    // ------------------------------------------------------------------
+    // NOVELTY #2: Direct Agent Interrogation chips
+    // ------------------------------------------------------------------
+    const IDEA_DIRECT_AGENTS = [
+      { key: 'decomposer', name: 'Idea Decomposer', blurb: 'Problem brief & MVP scope' },
+      { key: 'market', name: 'Market Research', blurb: 'Competitors & positioning' },
+      { key: 'kill', name: 'Kill Agent', blurb: "Devil's advocate critique" },
+      { key: 'arbiter', name: 'Arbiter', blurb: 'Thesis vs antithesis synthesis' },
+      { key: 'scorecard', name: 'Scorecard', blurb: 'Deterministic rubric score' },
+      { key: 'prd', name: 'PRD Writer', blurb: 'User stories & requirements' },
+      { key: 'roadmap', name: 'Roadmap', blurb: 'Phases, risks & milestones' },
+      { key: 'architect', name: 'Architect', blurb: 'Tech stack & tradeoffs' }
+    ];
+
+    const CODE_DIRECT_AGENTS = [
+      { key: 'code', name: 'AST Specialist', blurb: 'Symbols, faults & fix patterns' },
+      { key: 'risk', name: 'Risk Auditor', blurb: 'Blast radius & callers' },
+      { key: 'architect', name: 'Architect', blurb: 'Flow & architecture guidance' }
+    ];
+
+    function renderDirectAgentChips(mode) {
+      const container = document.getElementById('directAgentChips');
+      if (!container) return;
+      container.innerHTML = '';
+      const list = (mode || activePillar) === 'code' ? CODE_DIRECT_AGENTS : IDEA_DIRECT_AGENTS;
+      sendFollowup._directAgent = null;
+      list.forEach(a => {
+        const btn = document.createElement('button');
+        btn.dataset.agentKey = a.key;
+        btn.title = a.blurb;
+        btn.className = 'group text-[11px] font-mono text-zinc-400 hover:text-white border border-borderSubtle hover:border-blue-600 bg-canvas px-2.5 py-1.5 rounded-xl transition flex items-center space-x-1.5';
+        btn.innerHTML = `<span class="text-blue-400 font-bold">@</span><span>${escapeHtml(a.name)}</span>`;
+        btn.onclick = () => {
+          sendFollowup._directAgent = sendFollowup._directAgent === a.key ? null : a.key;
+          updateDirectAgentChipStyles();
+          const inputEl = document.getElementById('followupInput');
+          if (inputEl) inputEl.focus();
+        };
+        container.appendChild(btn);
+      });
+      updateDirectAgentChipStyles();
+    }
+
+    function updateDirectAgentChipStyles() {
+      const container = document.getElementById('directAgentChips');
+      if (!container) return;
+      const selected = sendFollowup._directAgent;
+      container.querySelectorAll('button[data-agent-key]').forEach(btn => {
+        const active = btn.dataset.agentKey === selected;
+        btn.className = active
+          ? 'text-white bg-blue-600 border border-blue-500 text-[11px] font-mono px-2.5 py-1.5 rounded-xl transition flex items-center space-x-1.5 shadow-md shadow-blue-950/40'
+          : 'group text-[11px] font-mono text-zinc-400 hover:text-white border border-borderSubtle hover:border-blue-600 bg-canvas px-2.5 py-1.5 rounded-xl transition flex items-center space-x-1.5';
+      });
+      const placeholderEl = document.getElementById('followupInput');
+      if (placeholderEl) {
+        placeholderEl.placeholder = selected
+          ? `You are addressing @${selected}. Ask your question...`
+          : 'Ask any question about architecture, risks, code, or milestones...';
+      }
+    }
+
+    // ------------------------------------------------------------------
+    // NOVELTY #1: Decision Simulator (deterministic what-if re-scoring)
+    // ------------------------------------------------------------------
+    function projectVerdict(score) {
+      if (score >= 75) return 'GO';
+      if (score >= 50) return 'PIVOT';
+      return 'NO-GO';
+    }
+
+    function verdictBadgeClass(verdict) {
+      if (verdict === 'GO') return 'px-3 py-1 rounded-xl text-xs font-mono font-bold uppercase bg-emerald-950/60 border border-emerald-800 text-emerald-300';
+      if (verdict === 'PIVOT') return 'px-3 py-1 rounded-xl text-xs font-mono font-bold uppercase bg-amber-950/60 border border-amber-800 text-amber-300';
+      return 'px-3 py-1 rounded-xl text-xs font-mono font-bold uppercase bg-rose-950/60 border border-rose-800 text-rose-300';
+    }
+
+    function renderDecisionSimulator(sc) {
+      const wrap = document.getElementById('decisionSimulator');
+      const container = document.getElementById('simSlidersContainer');
+      if (!wrap || !container) return;
+      const categories = (sc && sc.categories) || [];
+      if (!categories.length) {
+        wrap.classList.add('hidden');
+        return;
+      }
+      wrap.classList.remove('hidden');
+      wrap.dataset.baseline = JSON.stringify(categories);
+      container.innerHTML = '';
+
+      categories.forEach((cat, idx) => {
+        const row = document.createElement('div');
+        row.className = 'bg-canvas/70 border border-borderSubtle rounded-2xl p-4 space-y-2';
+        row.innerHTML = `
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex items-center space-x-2">
+              <span class="text-xs font-bold text-white font-mono">${escapeHtml(cat.category_name)}</span>
+              ${((cat.gaps || []).length) ? `<span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-950/50 border border-amber-800/70 text-amber-300">${(cat.gaps || []).length} gap${(cat.gaps || []).length > 1 ? 's' : ''}</span>` : ''}
+            </div>
+            <div class="flex items-center space-x-2">
+              <span id="simVal_${idx}" class="text-xs font-mono font-bold text-cyan-300">${cat.score}</span>
+              <span class="text-[11px] font-mono text-zinc-500">/ ${cat.max_score}</span>
+            </div>
+          </div>
+          <input type="range" class="sim-range" id="simRange_${idx}" min="0" max="${cat.max_score}" value="${cat.score}" step="1"
+            oninput="updateSimScore()">
+          <div class="flex items-center justify-between text-[10px] font-mono text-zinc-600">
+            <span>Agent-basis: ${cat.score}/${cat.max_score}</span>
+            <span>${escapeHtml((cat.rationale || '').slice(0, 70))}${(cat.rationale || '').length > 70 ? '...' : ''}</span>
+          </div>
+        `;
+        container.appendChild(row);
+      });
+
+      updateSimScore();
+    }
+
+    function updateSimScore() {
+      const wrap = document.getElementById('decisionSimulator');
+      if (!wrap || !wrap.dataset.baseline) return;
+      const categories = JSON.parse(wrap.dataset.baseline);
+
+      let total = 0;
+      let baselineTotal = 0;
+      categories.forEach((cat, idx) => {
+        const range = document.getElementById(`simRange_${idx}`);
+        const current = range ? (parseInt(range.value, 10) || cat.score) : cat.score;
+        total += current;
+        baselineTotal += cat.score;
+        const valEl = document.getElementById(`simVal_${idx}`);
+        if (valEl) {
+          valEl.innerText = current;
+          valEl.className = `text-xs font-mono font-bold ${current > cat.score ? 'text-emerald-300' : current < cat.score ? 'text-rose-300' : 'text-cyan-300'}`;
+        }
+      });
+
+      const scoreEl = document.getElementById('simScoreNum');
+      const verdictEl = document.getElementById('simVerdictBadge');
+      const deltaEl = document.getElementById('simDeltaBox');
+      if (!scoreEl || !verdictEl || !deltaEl) return;
+
+      const projectedVerdict = projectVerdict(total);
+      const baselineVerdict = projectVerdict(baselineTotal);
+      const delta = total - baselineTotal;
+
+      scoreEl.innerHTML = `${total}<span class="text-sm text-zinc-500">/100</span>`;
+      scoreEl.classList.remove('score-pulse');
+      void scoreEl.offsetWidth; // restart animation
+      scoreEl.classList.add('score-pulse');
+
+      verdictEl.innerText = projectedVerdict;
+      verdictEl.className = verdictBadgeClass(projectedVerdict);
+
+      let deltaText;
+      if (delta === 0) {
+        deltaText = `Matches the agent baseline (${baselineTotal}/100, ${baselineVerdict}). Drag a slider to model your fixes.`;
+      } else if (delta > 0) {
+        deltaText = `<span class="text-emerald-300 font-bold">+${delta} points</span> versus agent baseline (${baselineTotal}/100).`;
+      } else {
+        deltaText = `<span class="text-rose-300 font-bold">${delta} points</span> versus agent baseline (${baselineTotal}/100).`;
+      }
+      if (projectedVerdict !== baselineVerdict) {
+        deltaText += `<br><span class="mt-1.5 inline-block text-[11px] font-mono px-2 py-0.5 rounded-lg bg-blue-950/60 border border-blue-800 text-blue-300">Verdict flip: ${baselineVerdict} → ${projectedVerdict}</span>`;
+      } else if (delta !== 0) {
+        deltaText += `<br><span class="text-[11px] text-zinc-500">Verdict unchanged at ${projectedVerdict}.</span>`;
+      }
+      deltaEl.innerHTML = deltaText;
+    }
+
+    function simulateApplyGapFixes() {
+      const wrap = document.getElementById('decisionSimulator');
+      if (!wrap || !wrap.dataset.baseline) return;
+      const categories = JSON.parse(wrap.dataset.baseline);
+      categories.forEach((cat, idx) => {
+        const range = document.getElementById(`simRange_${idx}`);
+        if (!range) return;
+        const gaps = cat.gaps || [];
+        const target = gaps.length ? Math.max(parseInt(range.value, 10) || cat.score, Math.round(cat.max_score * 0.8)) : cat.score;
+        range.value = Math.min(target, cat.max_score);
+      });
+      updateSimScore();
+    }
+
+    function resetSimulator() {
+      const wrap = document.getElementById('decisionSimulator');
+      if (!wrap || !wrap.dataset.baseline) return;
+      const categories = JSON.parse(wrap.dataset.baseline);
+      categories.forEach((cat, idx) => {
+        const range = document.getElementById(`simRange_${idx}`);
+        if (range) range.value = cat.score;
+      });
+      updateSimScore();
+    }
+
+    // ------------------------------------------------------------------
+    // Engine health / rate-limit status chip
+    // ------------------------------------------------------------------
+    async function refreshEngineHealth() {
+      try {
+        const res = await fetch('/api/health');
+        if (!res.ok) return;
+        const data = await res.json();
+        const chip = document.getElementById('rateLimitChip');
+        const dot = document.getElementById('rateLimitDot');
+        const text = document.getElementById('rateLimitText');
+        if (!chip || !dot || !text) return;
+        chip.classList.remove('hidden');
+        const rl = data.rate_limits || {};
+        if (rl.all_rate_limited) {
+          dot.className = 'w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse';
+          text.innerText = 'Groq: rate-limited, using fallbacks';
+        } else if (Object.keys(rl.cooldowns || {}).length > 0) {
+          dot.className = 'w-1.5 h-1.5 rounded-full bg-amber-400';
+          text.innerText = `Groq: ${Object.keys(rl.cooldowns).length} model(s) cooling down`;
+        } else {
+          dot.className = 'w-1.5 h-1.5 rounded-full bg-emerald-400';
+          text.innerText = 'Groq LLM Online';
+        }
+      } catch (e) {
+        /* health chip is best-effort */
+      }
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
       renderProgressStrip('idea');
       updateFollowupPromptChips('idea');
+      renderDirectAgentChips('idea');
+      refreshEngineHealth();
+      setInterval(refreshEngineHealth, 30000);
 
       const inputEl = document.getElementById('followupInput');
       if (inputEl) {

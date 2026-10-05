@@ -148,14 +148,23 @@ async def get_sample_repo_path():
 
 @app.get("/api/health")
 async def health_check():
-    """Returns active model settings and runtime metrics."""
+    """Returns active model settings, runtime metrics, and rate-limit cooldown state."""
     return JSONResponse(
         content={
             "status": "online",
             "model": settings.primary_model,
+            "model_chain": settings.model_chain,
             "metrics": llm_client.get_metrics(),
+            "rate_limits": llm_client.get_rate_limit_status(),
         }
     )
+
+
+@app.get("/api/agents")
+async def list_specialist_agents():
+    """Returns the direct-interrogation agent catalog used by the UI chat chips."""
+    from agents.conversation_session import ConversationalFollowupEngine
+    return JSONResponse(content={"status": "ok", "agents": ConversationalFollowupEngine.get_direct_agent_catalog()})
 
 
 @app.get("/api/session/{session_id}")
@@ -169,4 +178,8 @@ async def get_session_info(session_id: str):
 
 
 if __name__ == "__main__":
-    uvicorn.run("app:app", host="127.0.0.1", port=8000, reload=True)
+    # HOST/PORT env vars allow containerized or managed-preview runs; local dev defaults stay unchanged.
+    host = os.getenv("HOST", "0.0.0.0")
+    port = int(os.getenv("PORT", "8000"))
+    reload_enabled = os.getenv("RELOAD", "0") not in ("0", "false", "False")
+    uvicorn.run("app:app", host=host, port=port, reload=reload_enabled)
