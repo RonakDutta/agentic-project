@@ -137,7 +137,7 @@ python evaluation/compare_baseline.py
 
 ---
 
-## 🎓 Academic Viva Cheat Sheet
+## 💡 Architecture & Technical FAQ
 
 ### Q1: How is this system "Agentic" rather than a standard chatbot?
 > *"A chatbot performs single-turn text completion. Our system is agentic because it performs goal decomposition, selects tools dynamically (AST indexer vs web search), executes iterative retrieval with confidence scoring, and features a deterministic Critic loop that rejects ungrounded claims."*

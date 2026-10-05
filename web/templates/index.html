@@ -281,13 +281,13 @@
 
     </section>
 
-    <!-- BEHIND THE SCENES: HOW THE AGENTS WORKED (Sequential Timeline) -->
+    <!-- BEHIND THE SCENES: HOW THE AGENTS WORKED (Sequential Timeline with Shimmer Loader) -->
     <section class="bg-surface/40 border border-borderSubtle/80 rounded-3xl p-6 sm:p-8 space-y-6">
       
       <div class="flex flex-wrap items-center justify-between gap-4 border-b border-borderSubtle/60 pb-4">
         <div>
           <h2 class="text-base sm:text-lg font-bold text-white tracking-tight">Behind the Scenes: How the Agents Worked</h2>
-          <p class="text-xs text-zinc-400 mt-0.5">Watch each specialist agent analyze the input sequentially and pass discoveries to the next agent.</p>
+          <p class="text-xs text-zinc-400 mt-0.5">Watch each specialist agent analyze the input sequentially, pause to record discoveries, and pass context forward.</p>
         </div>
         <div class="text-xs font-mono text-zinc-400 bg-canvas px-3 py-1.5 rounded-xl border border-borderSubtle">
           Status: <span id="pipelineStatusText" class="text-zinc-200 font-semibold">Ready</span>
@@ -350,7 +350,7 @@
 
       </div>
 
-      <!-- Detailed Agent Storyboard (Revealed sequentially step-by-step) -->
+      <!-- Detailed Agent Storyboard (Revealed sequentially with pause and loader) -->
       <div id="agentStepsDetail" class="space-y-4 pt-2"></div>
 
       <!-- Expandable Raw Logs Toggle -->
@@ -400,7 +400,7 @@
               <h2 id="ideaProjectTitle" class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight"></h2>
             </div>
             <span class="text-xs font-mono text-zinc-400 border border-borderSubtle px-3 py-1.5 rounded-xl bg-canvas">
-              Minor Project Scope
+              Project Specification
             </span>
           </div>
 
@@ -474,11 +474,11 @@
           </div>
         </div>
 
-        <!-- 5. Presentation Tips -->
+        <!-- 5. Strategic Implementation Takeaways -->
         <div class="bg-surface/60 border border-borderSubtle p-8 rounded-3xl space-y-3">
           <div class="flex items-center justify-between border-b border-borderSubtle pb-3">
-            <h3 class="text-sm font-bold text-white uppercase tracking-wider font-mono">Tips for Your Presentation & Viva</h3>
-            <span class="text-xs font-mono text-zinc-500">To impress your evaluators</span>
+            <h3 class="text-sm font-bold text-white uppercase tracking-wider font-mono">Strategic Implementation Takeaways</h3>
+            <span class="text-xs font-mono text-zinc-500">Key guidelines for deployment and technical evaluation</span>
           </div>
           <ul id="evalTipsContainer" class="list-disc list-inside text-sm text-zinc-200 space-y-2 leading-relaxed pt-1"></ul>
         </div>
@@ -506,12 +506,12 @@
         </div>
       </div>
 
-      <!-- CONVERSATIONAL FOLLOW-UP (ChatGPT Style, Markdown Rendered, Shared) -->
+      <!-- CONVERSATIONAL FOLLOW-UP (ChatGPT Style with Simulated Thinking Process) -->
       <div class="bg-surface/60 border border-borderSubtle p-8 sm:p-10 rounded-3xl space-y-6 shadow-lg">
         <div class="flex flex-wrap items-center justify-between gap-4 border-b border-borderSubtle pb-4">
           <div>
-            <h3 class="text-base sm:text-lg font-bold text-white">Ask a Follow-Up Question</h3>
-            <p class="text-xs text-zinc-400 mt-0.5">Keep the conversation going: ask for architecture adjustments, scaling advice, or deeper code explanations.</p>
+            <h3 class="text-base sm:text-lg font-bold text-white">Interactive Co-Pilot Chat</h3>
+            <p class="text-xs text-zinc-400 mt-0.5">Ask questions on architecture, market competitors, milestones, security, or code. Domain specialist agents reply dynamically.</p>
           </div>
           <span class="text-xs font-mono text-blue-400 border border-borderSubtle px-3 py-1.5 rounded-xl bg-canvas">
             Session Memory Active
@@ -521,23 +521,26 @@
         <!-- Conversation Stream -->
         <div id="followupThread" class="space-y-4"></div>
 
-        <!-- Quick Prompts -->
+        <!-- Quick Prompts with Dynamic Specialist Routing -->
         <div class="flex flex-wrap items-center gap-2 pt-1">
           <span class="text-xs text-zinc-500 font-medium">Quick ask:</span>
           <button onclick="setFollowupPrompt('Can we replace the backend with FastAPI or Go?')" class="text-xs text-zinc-400 hover:text-white border border-borderSubtle hover:border-zinc-600 bg-canvas px-3 py-1.5 rounded-xl transition">
             Switch backend to FastAPI / Go
           </button>
-          <button onclick="setFollowupPrompt('How do we scale this architecture to 10,000 active users?')" class="text-xs text-zinc-400 hover:text-white border border-borderSubtle hover:border-zinc-600 bg-canvas px-3 py-1.5 rounded-xl transition">
-            Scale to 10k users
+          <button onclick="setFollowupPrompt('Who are the closest market competitors to this idea?')" class="text-xs text-zinc-400 hover:text-white border border-borderSubtle hover:border-zinc-600 bg-canvas px-3 py-1.5 rounded-xl transition">
+            Analyze competitors
           </button>
-          <button onclick="setFollowupPrompt('What tricky questions could the viva examiner ask about this?')" class="text-xs text-zinc-400 hover:text-white border border-borderSubtle hover:border-zinc-600 bg-canvas px-3 py-1.5 rounded-xl transition">
-            Anticipate viva questions
+          <button onclick="setFollowupPrompt('What are the top 3 architectural bottlenecks in this design?')" class="text-xs text-zinc-400 hover:text-white border border-borderSubtle hover:border-zinc-600 bg-canvas px-3 py-1.5 rounded-xl transition">
+            Analyze bottlenecks
+          </button>
+          <button onclick="setFollowupPrompt('What are the exact deliverables for Phase 1 MVP?')" class="text-xs text-zinc-400 hover:text-white border border-borderSubtle hover:border-zinc-600 bg-canvas px-3 py-1.5 rounded-xl transition">
+            MVP phase deliverables
           </button>
         </div>
 
-        <!-- Input Bar -->
+        <!-- Input Bar with Enter-to-Submit support -->
         <div class="flex items-end gap-3 pt-2">
-          <textarea id="followupInput" rows="2" placeholder="Type your follow-up question here (e.g. 'How do we handle real-time alerts?')..." class="flex-1 bg-canvas border border-borderSubtle focus:border-blue-500 rounded-2xl p-3.5 text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none resize-none leading-relaxed transition"></textarea>
+          <textarea id="followupInput" rows="2" placeholder="Ask any question... (Press Enter to send, Shift+Enter for new line)" class="flex-1 bg-canvas border border-borderSubtle focus:border-blue-500 rounded-2xl p-3.5 text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none resize-none leading-relaxed transition"></textarea>
           <button id="btnSendFollowup" onclick="sendFollowup()" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs px-6 py-3.5 rounded-2xl transition flex items-center space-x-2 shadow-md">
             <span id="btnFollowupText">Send</span>
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -724,6 +727,14 @@
       container.appendChild(card);
     }
 
+    function getAgentActionDescription(agentName, idx) {
+      if (idx === 0) return "Decomposing requirements and orchestrating team execution...";
+      if (idx === 1) return "Searching live competitor references and indexing code structure...";
+      if (idx === 2) return "Evaluating system architecture tradeoffs and auditing dependencies...";
+      if (idx === 3) return "Formulating milestone timelines and failure stress-tests...";
+      return "Executing deterministic Python AST syntax and citation checks...";
+    }
+
     async function executeWorkflow() {
       const query = document.getElementById('mainPrompt').value.trim();
       const repoPath = document.getElementById('repoPathInput').value.trim();
@@ -770,7 +781,7 @@
         currentSessionState = state;
         clearInterval(timerInterval);
 
-        // Progressive sequential reveal of steps 1 through 5
+        // Progressive sequential reveal of steps 1 through 5 with active loading indicators and pauses
         const traces = state.execution_trace || [];
         const agentSteps = traces.filter(t => t.details && (t.details.thinking || t.details.findings));
         const nodeIds = ['nodeOrchestrator', 'nodeResearch', 'nodeArch', 'nodeRoadmap', 'nodeCritic'];
@@ -779,19 +790,39 @@
           const step = agentSteps[i];
           const currentNodeId = nodeIds[i] || nodeIds[nodeIds.length - 1];
 
+          // 1. Mark top node as working
           setAgentNodeState(currentNodeId, 'Working...', true, false);
-          document.getElementById('pipelineStatusText').innerText = `${step.agent_name} is processing...`;
+          document.getElementById('pipelineStatusText').innerText = `Agent 0${i + 1} (${step.agent_name}) is working...`;
 
-          // Small delay for smooth visual cadence
-          await new Promise(r => setTimeout(r, 650));
+          // 2. Append active loader card into storyboard
+          const loaderCard = document.createElement('div');
+          loaderCard.id = 'activeAgentStepLoader';
+          loaderCard.className = 'border border-blue-500/50 bg-blue-950/20 p-5 rounded-2xl flex items-center space-x-3.5 animate-pulse';
+          loaderCard.innerHTML = `
+            <div class="w-8 h-8 rounded-xl bg-blue-600/30 border border-blue-500 flex items-center justify-center shrink-0">
+              <svg class="w-4 h-4 text-blue-400 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+              </svg>
+            </div>
+            <div class="space-y-0.5">
+              <div class="text-xs font-mono font-bold text-blue-400 uppercase tracking-wide">Agent 0${i + 1} (${step.agent_name}) in progress</div>
+              <div class="text-xs text-zinc-300">${getAgentActionDescription(step.agent_name, i)}</div>
+            </div>
+          `;
+          stepsContainer.appendChild(loaderCard);
+          loaderCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
+          // 3. Pause for 1 second while loading
+          await new Promise(r => setTimeout(r, 950));
+
+          // 4. Remove loader and display completed rich agent card
+          loaderCard.remove();
           renderSingleAgentCard(step, i);
           setAgentNodeState(currentNodeId, 'Done', false, true);
 
-          // Pre-activate next node
-          if (i + 1 < nodeIds.length) {
-            setAgentNodeState(nodeIds[i + 1], 'Working...', true, false);
-          }
+          // 5. Pause for a full second so the user can easily read what this agent finished
+          await new Promise(r => setTimeout(r, 900));
         }
 
         setAgentNodeState('nodeCritic', 'Verified', false, true);
@@ -1011,7 +1042,7 @@
         risksContainer.appendChild(div);
       });
 
-      // Viva Tips
+      // Strategic Implementation Takeaways
       const tipsContainer = document.getElementById('evalTipsContainer');
       tipsContainer.innerHTML = '';
       (out.evaluation_tips || []).forEach(tip => {
@@ -1023,6 +1054,7 @@
 
     function setFollowupPrompt(text) {
       document.getElementById('followupInput').value = text;
+      document.getElementById('followupInput').focus();
     }
 
     function escapeHtml(str) {
@@ -1033,6 +1065,15 @@
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
+    }
+
+    function getSpecialistBadgeClass(agentName) {
+      if (!agentName) return 'text-blue-300 bg-blue-950/60 border-blue-800';
+      if (agentName.includes('Market')) return 'text-purple-300 bg-purple-950/60 border-purple-800';
+      if (agentName.includes('Roadmap') || agentName.includes('Delivery')) return 'text-cyan-300 bg-cyan-950/60 border-cyan-800';
+      if (agentName.includes('Risk') || agentName.includes('Security')) return 'text-amber-300 bg-amber-950/60 border-amber-800';
+      if (agentName.includes('Code') || agentName.includes('AST')) return 'text-emerald-300 bg-emerald-950/60 border-emerald-800';
+      return 'text-blue-300 bg-blue-950/60 border-blue-800';
     }
 
     async function sendFollowup() {
@@ -1046,7 +1087,7 @@
 
       // User Message Bubble (Neat and right-accented)
       const userCard = document.createElement('div');
-      userCard.className = 'bg-blue-950/30 border border-blue-900/50 p-4 rounded-2xl space-y-1 ml-auto max-w-2xl';
+      userCard.className = 'bg-blue-950/30 border border-blue-900/50 p-4 rounded-2xl space-y-1 ml-auto max-w-2xl animate-step-reveal';
       userCard.innerHTML = `
         <span class="text-[11px] font-mono uppercase text-blue-400 font-semibold">You:</span>
         <p class="text-sm text-zinc-100 font-medium">${escapeHtml(query)}</p>
@@ -1057,14 +1098,46 @@
       btn.disabled = true;
       btnText.innerText = 'Thinking...';
 
-      const loadingCard = document.createElement('div');
-      loadingCard.id = 'followupLoadingCard';
-      loadingCard.className = 'border border-borderSubtle bg-canvas p-4 rounded-2xl text-xs font-mono text-zinc-400';
-      loadingCard.innerText = 'Analyzing project context and preparing answer...';
-      thread.appendChild(loadingCard);
+      // Animated Simulated Thinking Process Block
+      const thinkingCard = document.createElement('div');
+      thinkingCard.id = 'followupThinkingCard';
+      thinkingCard.className = 'bg-surface/50 border border-blue-900/40 p-5 rounded-2xl space-y-2.5 animate-pulse max-w-2xl';
+      thinkingCard.innerHTML = `
+        <div class="flex items-center space-x-2 text-xs font-mono text-blue-400">
+          <svg class="w-4 h-4 animate-spin text-blue-400" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+          </svg>
+          <span class="font-bold uppercase tracking-wider">Multi-Agent Reasoning in Progress...</span>
+          <span id="followupThinkingTimer" class="text-zinc-500 text-[11px] font-mono">(0.4s)</span>
+        </div>
+        <div id="followupThinkingStep" class="text-xs text-zinc-300 font-mono pl-3 border-l-2 border-blue-500/50">
+          Retrieving project context and active architecture state...
+        </div>
+      `;
+      thread.appendChild(thinkingCard);
+      thinkingCard.scrollIntoView({ behavior: 'smooth' });
+
+      const thinkingStartTime = Date.now();
+      let thinkingStepIdx = 0;
+      const thinkingSteps = [
+        "Retrieving project context and active architecture state...",
+        "Selecting domain specialist agent and formulating hypotheses...",
+        "Synthesizing recommendations, code snippets, and tradeoffs..."
+      ];
+
+      const thinkingInterval = setInterval(() => {
+        const sec = ((Date.now() - thinkingStartTime) / 1000).toFixed(1);
+        const timerEl = document.getElementById('followupThinkingTimer');
+        if (timerEl) timerEl.innerText = `(${sec}s)`;
+
+        thinkingStepIdx = (thinkingStepIdx + 1) % thinkingSteps.length;
+        const stepEl = document.getElementById('followupThinkingStep');
+        if (stepEl) stepEl.innerText = thinkingSteps[thinkingStepIdx];
+      }, 700);
 
       try {
-        const res = await fetch('/api/followup', {
+        const fetchPromise = fetch('/api/followup', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({
@@ -1073,38 +1146,81 @@
           })
         });
 
-        const data = await res.json();
-        const existingLoading = document.getElementById('followupLoadingCard');
-        if (existingLoading) existingLoading.remove();
+        // Ensure user sees at least 1.4 seconds of reasoning animation
+        const [res] = await Promise.all([
+          fetchPromise,
+          new Promise(r => setTimeout(r, 1400))
+        ]);
 
-        // Assistant Message Bubble (Parsed Markdown HTML)
-        const agentCard = document.createElement('div');
-        agentCard.className = 'border border-borderSubtle bg-surface/70 p-6 sm:p-7 rounded-2xl space-y-3';
-        
+        const data = await res.json();
+        clearInterval(thinkingInterval);
+
+        const existingThinking = document.getElementById('followupThinkingCard');
+        if (existingThinking) existingThinking.remove();
+
+        const totalThinkingSec = ((Date.now() - thinkingStartTime) / 1000).toFixed(1);
+        const badgeClass = getSpecialistBadgeClass(data.agent_name || '');
         const parsedMarkdown = marked.parse(data.answer || '');
+
+        // Assistant Message Bubble (Parsed Markdown HTML + Expandable Thinking)
+        const agentCard = document.createElement('div');
+        agentCard.className = 'border border-borderSubtle bg-surface/70 p-6 sm:p-7 rounded-2xl space-y-4 animate-step-reveal';
         
         agentCard.innerHTML = `
-          <div class="flex items-center justify-between border-b border-borderSubtle pb-3">
-            <div class="flex items-center space-x-2">
-              <span class="text-xs font-mono font-bold text-emerald-400 bg-emerald-950/50 border border-emerald-800/80 px-2.5 py-0.5 rounded-lg">${data.agent_name || 'Technical Co-Pilot'}</span>
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-borderSubtle pb-3">
+            <div class="flex items-center space-x-2.5">
+              <span class="text-xs font-mono font-bold px-2.5 py-0.5 rounded-lg border ${badgeClass}">
+                ${data.agent_name || 'Technical Co-Pilot'}
+              </span>
               <span class="text-xs text-zinc-400">${data.action_taken || 'Response'}</span>
             </div>
-            <span class="text-[11px] font-mono text-zinc-500">Live Context</span>
+            <span class="text-[11px] font-mono text-zinc-500">Domain Specialist</span>
           </div>
+
+          <!-- Expandable Reasoning Process Details (ChatGPT/DeepSeek style) -->
+          <details class="bg-canvas/70 border border-borderSubtle rounded-xl p-3 text-xs text-zinc-400 group">
+            <summary class="cursor-pointer font-mono font-medium flex items-center justify-between select-none hover:text-zinc-200">
+              <span class="flex items-center space-x-2">
+                <svg class="w-3.5 h-3.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                </svg>
+                <span>Reasoning Process (${totalThinkingSec}s)</span>
+              </span>
+              <span class="text-[10px] text-zinc-500 group-open:rotate-180 transition-transform">▼</span>
+            </summary>
+            <div class="mt-2.5 pt-2 border-t border-borderSubtle/50 text-zinc-300 leading-relaxed italic">
+              "${escapeHtml(data.thinking || 'Evaluated query context against system architecture constraints.')}"
+            </div>
+          </details>
+
           <div class="prose-chat">${parsedMarkdown}</div>
         `;
         thread.appendChild(agentCard);
         agentCard.scrollIntoView({ behavior: 'smooth' });
 
       } catch (err) {
-        const existingLoading = document.getElementById('followupLoadingCard');
-        if (existingLoading) existingLoading.remove();
+        clearInterval(thinkingInterval);
+        const existingThinking = document.getElementById('followupThinkingCard');
+        if (existingThinking) existingThinking.remove();
         alert('Error sending follow-up: ' + err);
       } finally {
         btn.disabled = false;
         btnText.innerText = 'Send';
       }
     }
+
+    // Enter to Send (Shift+Enter for newline)
+    document.addEventListener('DOMContentLoaded', () => {
+      const inputEl = document.getElementById('followupInput');
+      if (inputEl) {
+        inputEl.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendFollowup();
+          }
+        });
+      }
+    });
 
     function renderCodeResults(state) {
       const out = state.final_output || {};

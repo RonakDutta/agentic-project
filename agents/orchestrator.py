@@ -312,7 +312,7 @@ class OrchestratorAgent:
                     f"Feasibility Score: {roadmap.feasibility_score}/100 ({roadmap.feasibility_verdict})",
                     f"Bear Case Risk: {roadmap.bear_case_critic[:120]}...",
                     f"Planned {len(roadmap.phases)} chronological development phases",
-                    f"Prepared {len(roadmap.evaluation_tips)} evaluation defense tips for viva",
+                    f"Prepared {len(roadmap.evaluation_tips)} strategic implementation takeaways",
                 ],
                 "handoff": "Passed complete analysis to Fact & Code Verifier.",
             },
@@ -360,6 +360,7 @@ class OrchestratorAgent:
         """
         Answers conversational follow-up questions (ChatGPT style)
         using previous workflow output as grounding context.
+        Dynamically delegates the answer to the most appropriate specialized agent persona.
         """
         context_summary = ""
         if context:
@@ -369,21 +370,29 @@ class OrchestratorAgent:
                     f"Problem: {context.get('problem_statement', '')}\n"
                     f"Backend: {context.get('tech_stack', {}).get('backend', {}).get('choice', '')}\n"
                     f"Frontend: {context.get('tech_stack', {}).get('frontend', {}).get('choice', '')}\n"
+                    f"Database: {context.get('tech_stack', {}).get('database', {}).get('choice', '')}\n"
                 )
             elif context.get("type") == "codebase_analysis":
                 context_summary = f"Code Diagnosis Summary: {context.get('summary', '')}\n"
 
         system_prompt = (
-            "You are a helpful, direct pair-programming technical co-pilot. "
-            "The user is asking a follow-up question regarding a previously analyzed project or codebase. "
-            "Write a clean, easy-to-read response in GitHub-flavored Markdown. "
-            "Keep paragraphs concise and focused. Do NOT use horizontal rule separators (---). "
-            "Use clear bold headers, bullet points, and syntax-highlighted code blocks where appropriate. "
+            "You are an autonomous team of specialized engineering and product co-pilot agents.\n"
+            "Depending on what the user asks, the most relevant domain specialist MUST answer:\n"
+            "- 'Market Research Specialist': Responds when questions relate to competitors, target personas, business viability, product positioning, pricing, or user adoption.\n"
+            "- 'Lead Systems Architect': Responds when questions relate to system design, tech stack choices, backend/frontend frameworks, databases, APIs, caching, or scaling.\n"
+            "- 'Roadmap & Delivery Planner': Responds when questions relate to milestones, MVP development, project phases, sprint planning, or time estimation.\n"
+            "- 'Risk & Security Auditor': Responds when questions relate to security vulnerabilities, system bottlenecks, failure modes, data privacy, or stress testing.\n"
+            "- 'Code Review & AST Specialist': Responds when questions relate to code syntax, AST symbols, function logic, bug fixes, tracebacks, or implementation patches.\n\n"
+            "CRITICAL RULES:\n"
+            "1. DYNAMICALLY CHOOSE the single best specialist persona for this question. Do NOT default to Lead Systems Architect unless the query specifically asks about core architecture or tech stack.\n"
+            "2. Provide 1-2 sentences of specialist internal thinking in 'thinking' explaining how the persona analyzed the problem.\n"
+            "3. Write a clean, high-value, direct response in GitHub-flavored Markdown. Do NOT use horizontal rule separators (---). Use bold headers, bullet lists, and syntax-highlighted code blocks where helpful.\n\n"
             "Output strict JSON with this schema:\n"
             "{\n"
-            '  "answer": "Clean, nicely formatted markdown answer",\n'
-            '  "agent_name": "Specialist persona responding (e.g. Lead Architect, Systems Engineer, or Code Reviewer)",\n'
-            '  "action_taken": "One short sentence describing the analysis"\n'
+            '  "agent_name": "Selected specialist persona (e.g. Market Research Specialist, Lead Systems Architect, Roadmap & Delivery Planner, Risk & Security Auditor, or Code Review & AST Specialist)",\n'
+            '  "action_taken": "One short sentence describing what this specialist investigated",\n'
+            '  "thinking": "1-2 sentences explaining internal specialist reasoning before formulating the answer",\n'
+            '  "answer": "Clean, nicely formatted markdown answer"\n'
             "}"
         )
 
@@ -396,10 +405,28 @@ class OrchestratorAgent:
             temperature=0.3,
         )
 
+        # Dynamic fallback for persona if generic
+        agent_name = res.get("agent_name", "")
+        q_lower = query.lower()
+        if not agent_name or agent_name in ["Technical Co-Pilot", "AI Assistant"]:
+            if any(k in q_lower for k in ["market", "competitor", "user", "customer", "price", "business", "monetiz", "sales"]):
+                agent_name = "Market Research Specialist"
+            elif any(k in q_lower for k in ["roadmap", "phase", "timeline", "week", "milestone", "mvp", "deliverable", "schedule"]):
+                agent_name = "Roadmap & Delivery Planner"
+            elif any(k in q_lower for k in ["risk", "security", "fail", "stress", "vulnerability", "bottleneck", "ddos", "auth"]):
+                agent_name = "Risk & Security Auditor"
+            elif any(k in q_lower for k in ["code", "bug", "traceback", "ast", "patch", "error", "exception", "function", "syntax"]):
+                agent_name = "Code Review & AST Specialist"
+            else:
+                agent_name = "Lead Systems Architect"
+
+        default_thinking = f"{agent_name} analyzed the question in relation to the active system context and synthesized recommendations."
+
         return {
             "answer": res.get("answer", "Here is the guidance for your question."),
-            "agent_name": res.get("agent_name", "Technical Co-Pilot"),
-            "action_taken": res.get("action_taken", "Answered follow-up question"),
+            "agent_name": agent_name,
+            "action_taken": res.get("action_taken", "Provided specialist recommendations"),
+            "thinking": res.get("thinking", default_thinking),
         }
 
 

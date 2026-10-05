@@ -55,7 +55,7 @@ class RoadmapAndRiskReport:
 
 ROADMAP_SYSTEM_PROMPT = """You are a Technical Project Manager and Systems Engineering Specialist.
 Your role is to formulate a realistic 3-phase development roadmap and a risk mitigation matrix
-tailored for a university engineering evaluation.
+tailored for professional engineering standards.
 
 CRITICAL INSTRUCTIONS:
 1. Divide work into 3 distinct chronological phases:
@@ -63,7 +63,7 @@ CRITICAL INSTRUCTIONS:
    - Phase 2: System Integration & Alpha Validation (Weeks 5-8)
    - Phase 3: Hardening, Evaluation Benchmarks & Demo Preparation (Weeks 9-12)
 2. Detail 3-4 concrete technical and scope risks with mitigations.
-3. Provide 2-3 specific tips on how students should defend this project during academic evaluation.
+3. Provide 2-3 specific strategic implementation takeaways and key technical recommendations.
 4. Output strict JSON matching this exact schema:
 {
   "phases": [
