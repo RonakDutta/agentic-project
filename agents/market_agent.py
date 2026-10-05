@@ -5,7 +5,7 @@ identifies existing solutions with citations, and recommends a tailored technica
 """
 
 from dataclasses import dataclass, asdict
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 from core.llm import llm_client
 from tools.search_tool import web_search_tool, SearchResultItem
 from agents.idea_agent import DecomposedIdea
@@ -18,6 +18,7 @@ class MarketAnalysis:
     key_differentiators: List[str]
     citations: List[Dict[str, str]]
     trace: List[str]
+    implementation_pitfall: Optional[Dict[str, str]] = None
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -66,7 +67,13 @@ CRITICAL INSTRUCTIONS:
   "key_differentiators": [
     "Differentiator 1: e.g. Open-source, low-cost edge processing",
     "Differentiator 2: e.g. Zero-vendor lock-in"
-  ]
+  ],
+  "implementation_pitfall": {
+    "title": "Short title of common technical mistake or architectural trap",
+    "explanation": "Clear 1-2 sentence explanation of why developers make this mistake",
+    "wrong_code": "# Common Mistake / Wrong Approach (5-10 lines of realistic Python)",
+    "correct_code": "# Recommended Fix / Correct Approach (5-10 lines of production Python)"
+  }
 }
 """
 
@@ -106,7 +113,7 @@ class MarketTechStackAgent:
             f"Problem Statement: {idea.problem_statement}\n"
             f"MVP Features: {', '.join(idea.mvp_features)}\n\n"
             f"Market Search Evidence:\n{evidence_text}\n\n"
-            f"Analyze existing competitors and recommend the optimal technology stack in required JSON format."
+            f"Analyze existing competitors, recommend technology stack, and identify one high-risk code implementation pitfall (wrong code vs correct code) in required JSON format."
         )
 
         json_output = self.llm.generate_json(
@@ -119,10 +126,21 @@ class MarketTechStackAgent:
 
         trace.append("Market & Tech Stack analysis completed.")
 
+        default_pitfall = {
+            "title": "Synchronous Blocking Calls vs Async Pipeline",
+            "explanation": "Many early implementations use synchronous network calls that freeze the server worker when handling concurrent user requests.",
+            "wrong_code": "# Common Mistake: Synchronous blocking call\nimport requests\n\ndef fetch_data(endpoints):\n    data = []\n    for url in endpoints:\n        # Blocks worker thread, fails under concurrent traffic\n        resp = requests.get(url, timeout=5)\n        data.append(resp.json())\n    return data",
+            "correct_code": "# Recommended Fix: Async non-blocking with connection pool\nimport httpx\nimport asyncio\n\nasync def fetch_data(endpoints: list[str]) -> list[dict]:\n    limits = httpx.Limits(max_keepalive_connections=5, max_connections=10)\n    async with httpx.AsyncClient(limits=limits, timeout=5.0) as client:\n        tasks = [client.get(url) for url in endpoints]\n        responses = await asyncio.gather(*tasks, return_exceptions=True)\n        return [r.json() for r in responses if isinstance(r, httpx.Response) and r.status_code == 200]",
+        }
+
+        pitfall = json_output.get("implementation_pitfall") or default_pitfall
+
         return MarketAnalysis(
             competitors=json_output.get("competitors", []),
             tech_stack=json_output.get("tech_stack", {}),
             key_differentiators=json_output.get("key_differentiators", []),
             citations=citations,
             trace=trace,
+            implementation_pitfall=pitfall,
         )
+

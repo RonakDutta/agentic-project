@@ -49,5 +49,23 @@ def test_app_endpoints():
     print("\nAll Phase 7 Web Application tests passed successfully!")
 
 
+def test_followup_endpoint():
+    print("Testing POST /api/followup...")
+    res = client.post(
+        "/api/followup",
+        json={
+            "query": "Can we switch the database to PostgreSQL?",
+            "context": {"type": "idea_validation", "project_title": "IoT Energy Meter"},
+        },
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert "answer" in data
+    assert "agent_name" in data
+    print(f"Follow-up answered by: {data['agent_name']}")
+
+
 if __name__ == "__main__":
     test_app_endpoints()
+    test_followup_endpoint()
+

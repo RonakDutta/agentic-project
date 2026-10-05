@@ -37,6 +37,11 @@ class InspectRepoRequest(BaseModel):
     repo_path: str
 
 
+class FollowupRequest(BaseModel):
+    query: str
+    context: Optional[dict] = None
+
+
 @app.get("/", response_class=HTMLResponse)
 async def serve_dashboard():
     """Serves the main interactive dashboard."""
@@ -57,6 +62,19 @@ async def execute_query(req: QueryRequest):
             force_intent=req.force_intent,
         )
         return JSONResponse(content=state.to_dict())
+    except Exception as err:
+        return JSONResponse(
+            status_code=500,
+            content={"error": str(err), "status": "failed"},
+        )
+
+
+@app.post("/api/followup")
+async def execute_followup(req: FollowupRequest):
+    """Answers conversational follow-up questions with previous context."""
+    try:
+        result = orchestrator.answer_followup(query=req.query, context=req.context)
+        return JSONResponse(content=result)
     except Exception as err:
         return JSONResponse(
             status_code=500,

@@ -184,31 +184,31 @@
 
     </section>
 
-    <!-- LIVE BEHIND-THE-SCENES AGENT PIPELINE MONITOR (Crucial for Evaluation) -->
-    <section class="border border-app-border bg-app-surface rounded-2xl p-6 space-y-4">
+    <!-- BEHIND THE SCENES: HOW THE AGENTS WORKED -->
+    <section class="border border-app-border bg-app-surface rounded-2xl p-6 sm:p-8 space-y-6">
       
-      <div class="flex items-center justify-between">
+      <div class="flex flex-wrap items-center justify-between gap-4 border-b border-app-border pb-4">
         <div>
-          <span class="text-xs font-mono font-bold text-zinc-300 uppercase tracking-wider block">Live Multi-Agent Pipeline & State Machine</span>
-          <p class="text-xs text-zinc-500 mt-0.5">Real-time status of specialized agents cooperating on your request</p>
+          <h2 class="text-base sm:text-lg font-bold text-white tracking-tight">Behind the Scenes: How the Agents Worked</h2>
+          <p class="text-xs text-zinc-400 mt-1">Each specialized agent handles one part of the problem and passes its discoveries to the next agent.</p>
         </div>
-        <div class="text-xs font-mono text-zinc-400">
-          Status: <span id="pipelineStatusText" class="text-zinc-300 font-semibold">Idle</span>
+        <div class="text-xs font-mono text-zinc-400 bg-app-bg px-3 py-1.5 rounded-lg border border-app-border">
+          Status: <span id="pipelineStatusText" class="text-zinc-200 font-semibold">Ready</span>
           <span id="pipelineTimer" class="ml-2 text-zinc-500"></span>
         </div>
       </div>
 
-      <!-- Agent Step Cards (5 Collaborative Stages) -->
-      <div class="grid grid-cols-1 sm:grid-cols-5 gap-3 pt-1">
+      <!-- Quick Agent Progress Strip -->
+      <div class="grid grid-cols-1 sm:grid-cols-5 gap-3">
         
-        <!-- Agent 1: Orchestrator -->
+        <!-- Agent 1: Orchestrator / Planner -->
         <div id="nodeOrchestrator" class="border border-app-border bg-app-bg p-3.5 rounded-xl space-y-1 transition-all">
           <div class="flex items-center justify-between text-[11px] font-mono text-zinc-500">
             <span>Agent 01</span>
             <span id="statusOrch" class="text-zinc-600 uppercase font-semibold">Idle</span>
           </div>
-          <div class="font-bold text-xs text-zinc-200">Orchestrator</div>
-          <p class="text-[11px] text-zinc-400 leading-snug">Intent routing & task decomposition</p>
+          <div class="font-bold text-xs text-zinc-200">Task Planner</div>
+          <p class="text-[11px] text-zinc-400 leading-snug">Breaks down the input</p>
         </div>
 
         <!-- Agent 2: Research / AST -->
@@ -217,8 +217,8 @@
             <span>Agent 02</span>
             <span id="statusResearch" class="text-zinc-600 uppercase font-semibold">Idle</span>
           </div>
-          <div class="font-bold text-xs text-zinc-200" id="nameAgent2">Market Research</div>
-          <p class="text-[11px] text-zinc-400 leading-snug" id="descAgent2">Web search & competitor extraction</p>
+          <div class="font-bold text-xs text-zinc-200" id="nameAgent2">Market Researcher</div>
+          <p class="text-[11px] text-zinc-400 leading-snug" id="descAgent2">Searches existing solutions</p>
         </div>
 
         <!-- Agent 3: Architecture / Navigation -->
@@ -227,8 +227,8 @@
             <span>Agent 03</span>
             <span id="statusArch" class="text-zinc-600 uppercase font-semibold">Idle</span>
           </div>
-          <div class="font-bold text-xs text-zinc-200" id="nameAgent3">Architect Agent</div>
-          <p class="text-[11px] text-zinc-400 leading-snug" id="descAgent3">Tech stack tradeoff evaluation</p>
+          <div class="font-bold text-xs text-zinc-200" id="nameAgent3">System Architect</div>
+          <p class="text-[11px] text-zinc-400 leading-snug" id="descAgent3">Audits code & architecture</p>
         </div>
 
         <!-- Agent 4: Roadmap / Diagnosis -->
@@ -238,7 +238,7 @@
             <span id="statusRoadmap" class="text-zinc-600 uppercase font-semibold">Idle</span>
           </div>
           <div class="font-bold text-xs text-zinc-200" id="nameAgent4">Roadmap & Risk</div>
-          <p class="text-[11px] text-zinc-400 leading-snug" id="descAgent4">3-phase milestones & risk matrix</p>
+          <p class="text-[11px] text-zinc-400 leading-snug" id="descAgent4">Milestones & failure stress-test</p>
         </div>
 
         <!-- Agent 5: Deterministic Critic -->
@@ -247,16 +247,19 @@
             <span>Agent 05</span>
             <span id="statusCritic" class="text-zinc-600 uppercase font-semibold">Idle</span>
           </div>
-          <div class="font-bold text-xs text-zinc-200">Critic Agent</div>
-          <p class="text-[11px] text-zinc-400 leading-snug">Deterministic grounding check</p>
+          <div class="font-bold text-xs text-zinc-200">Fact & Code Verifier</div>
+          <p class="text-[11px] text-zinc-400 leading-snug">Checks code syntax & facts</p>
         </div>
 
       </div>
 
-      <!-- Expandable Live Execution Trace -->
+      <!-- Detailed Agent Storyboard (What each agent thought, used, and found) -->
+      <div id="agentStepsDetail" class="space-y-4 pt-2"></div>
+
+      <!-- Expandable Raw Logs Toggle -->
       <div id="traceAccordion" class="hidden pt-2 border-t border-app-border">
         <button onclick="toggleTraceLog()" class="text-xs font-mono text-zinc-400 hover:text-white flex items-center space-x-1">
-          <span id="traceLogCount">View 0 trace log records</span>
+          <span id="traceLogCount">View raw timestamp records</span>
           <svg id="traceChevron" class="w-3.5 h-3.5 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
           </svg>
@@ -315,61 +318,149 @@
           </div>
         </div>
 
-        <!-- 1. Target User Personas & Empathy Map -->
+        <!-- 1. Target Users -->
         <div class="space-y-4">
           <div class="border-b border-app-border pb-3 flex items-baseline justify-between">
-            <h3 class="text-base sm:text-lg font-bold text-white">1. Target User Personas & Empathy Breakdown</h3>
+            <h3 class="text-base sm:text-lg font-bold text-white">1. Target Users</h3>
             <span class="text-xs text-zinc-500">Who experiences this problem</span>
           </div>
           <div id="personasContainer" class="grid grid-cols-1 md:grid-cols-3 gap-5"></div>
         </div>
 
-        <!-- 2. Existing Competitors & Live Search Intelligence -->
+        <!-- 2. Competitors & Market Research -->
         <div class="space-y-4">
           <div class="border-b border-app-border pb-3 flex items-baseline justify-between">
-            <h3 class="text-base sm:text-lg font-bold text-white">2. Market Intelligence & Competitor Analysis</h3>
-            <span class="text-xs text-zinc-500">Live Search Sources</span>
+            <h3 class="text-base sm:text-lg font-bold text-white">2. Competitors & Market Research</h3>
+            <span class="text-xs text-zinc-500">Live search references</span>
           </div>
           <div id="competitorsContainer" class="grid grid-cols-1 md:grid-cols-3 gap-5"></div>
         </div>
 
-        <!-- 3. Recommended Technology Stack & Tradeoffs -->
+        <!-- 3. Recommended Tech Stack -->
         <div class="space-y-4">
           <div class="border-b border-app-border pb-3 flex items-baseline justify-between">
-            <h3 class="text-base sm:text-lg font-bold text-white">3. Recommended Architecture & Engineering Tradeoffs</h3>
-            <span class="text-xs text-zinc-500">Technical Rationale & Tradeoffs</span>
+            <h3 class="text-base sm:text-lg font-bold text-white">3. Recommended Tech Stack</h3>
+            <span class="text-xs text-zinc-500">Production choices & engineering tradeoffs</span>
           </div>
           <div id="techStackContainer" class="grid grid-cols-1 md:grid-cols-2 gap-5"></div>
         </div>
 
-        <!-- 4. 3-Phase Milestone Roadmap -->
+        <!-- 4. Implementation Trap: Wrong Code vs Correct Code -->
         <div class="space-y-4">
           <div class="border-b border-app-border pb-3 flex items-baseline justify-between">
-            <h3 class="text-base sm:text-lg font-bold text-white">4. Phased Milestone Roadmap</h3>
-            <span class="text-xs text-zinc-500">Chronological Development Plan</span>
+            <div>
+              <h3 class="text-base sm:text-lg font-bold text-white">4. Implementation Trap: Wrong Code vs Correct Code</h3>
+              <p class="text-xs text-zinc-400 mt-0.5">The #1 technical mistake developers make when building this project, and how to fix it.</p>
+            </div>
+            <span class="text-xs font-mono text-amber-300 border border-amber-900/60 bg-amber-950/20 px-2.5 py-1 rounded-lg">
+              Architecture Audit
+            </span>
           </div>
-          <div id="roadmapContainer" class="space-y-5"></div>
+          
+          <div class="border border-app-border bg-app-surface p-7 rounded-2xl space-y-5">
+            <div class="space-y-1">
+              <span class="text-xs font-mono text-zinc-500 uppercase font-semibold">Identified Technical Trap:</span>
+              <h4 id="pitfallTitle" class="text-base font-bold text-white"></h4>
+              <p id="pitfallExplanation" class="text-sm text-zinc-300 leading-relaxed"></p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 pt-2">
+              <!-- Wrong Code Box -->
+              <div class="rounded-xl border border-red-900/60 bg-red-950/20 p-5 space-y-3">
+                <div class="flex items-center justify-between border-b border-red-900/40 pb-2.5">
+                  <span class="text-xs font-mono font-bold text-red-400 uppercase tracking-wider">Common Mistake (Wrong Approach)</span>
+                  <span class="text-[11px] font-mono text-red-300/80">Fails under load</span>
+                </div>
+                <pre id="pitfallWrongCode" class="text-xs font-mono text-red-200 overflow-x-auto leading-relaxed p-3 rounded-lg bg-black/40 border border-red-900/30 whitespace-pre"></pre>
+              </div>
+
+              <!-- Correct Code Box -->
+              <div class="rounded-xl border border-emerald-900/60 bg-emerald-950/20 p-5 space-y-3">
+                <div class="flex items-center justify-between border-b border-emerald-900/40 pb-2.5">
+                  <span class="text-xs font-mono font-bold text-emerald-400 uppercase tracking-wider">Recommended Fix (Correct Approach)</span>
+                  <span class="text-[11px] font-mono text-emerald-300/80">Production standard</span>
+                </div>
+                <pre id="pitfallCorrectCode" class="text-xs font-mono text-emerald-200 overflow-x-auto leading-relaxed p-3 rounded-lg bg-black/40 border border-emerald-900/30 whitespace-pre"></pre>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <!-- 5. Technical Risk Mitigation Matrix -->
-        <div class="space-y-4">
+        <!-- 5. Development Roadmap & Major Risks -->
+        <div class="space-y-5">
           <div class="border-b border-app-border pb-3 flex items-baseline justify-between">
-            <h3 class="text-base sm:text-lg font-bold text-white">5. Technical Risk Mitigation Matrix</h3>
-            <span class="text-xs text-zinc-500">Failure Modes & Solutions</span>
+            <h3 class="text-base sm:text-lg font-bold text-white">5. Development Roadmap & Major Risks</h3>
+            <span class="text-xs text-zinc-500">Timeline & failure stress-test</span>
           </div>
-          <div id="risksContainer" class="space-y-4"></div>
+
+          <!-- Bear Case Failure Warning Alert -->
+          <div id="bearCaseAlert" class="p-6 rounded-2xl bg-red-950/20 border border-red-900/50 space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-mono font-bold text-red-400 uppercase tracking-wider">Critical Failure Stress-Test (Bear Case)</span>
+              <span class="text-xs font-mono text-zinc-400">What could break this project</span>
+            </div>
+            <p id="bearCaseText" class="text-sm text-zinc-200 leading-relaxed"></p>
+          </div>
+
+          <!-- 3-Phase Roadmap -->
+          <div id="roadmapContainer" class="space-y-5"></div>
+
+          <!-- Technical Risks -->
+          <div id="risksContainer" class="space-y-4 pt-2"></div>
         </div>
 
         <!-- 6. Evaluation Defense Tips -->
         <div class="border border-app-border bg-app-surface p-8 rounded-2xl space-y-3">
           <div class="flex items-center justify-between border-b border-app-border pb-3">
-            <h3 class="text-sm font-bold text-white uppercase tracking-wider font-mono">Academic Viva & Evaluation Defense Tips</h3>
-            <span class="text-xs font-mono text-zinc-500">For presentation day</span>
+            <h3 class="text-sm font-bold text-white uppercase tracking-wider font-mono">Tips for Your Presentation & Viva</h3>
+            <span class="text-xs font-mono text-zinc-500">To impress your evaluators</span>
           </div>
           <ul id="evalTipsContainer" class="list-disc list-inside text-sm text-zinc-200 space-y-2 leading-relaxed pt-1"></ul>
         </div>
 
+        <!-- 7. CONVERSATIONAL FOLLOW-UP (ChatGPT Style) -->
+        <div class="border border-app-border bg-app-surface p-8 sm:p-10 rounded-2xl space-y-6">
+          <div class="flex flex-wrap items-center justify-between gap-4 border-b border-app-border pb-4">
+            <div>
+              <h3 class="text-base sm:text-lg font-bold text-white">Ask a Follow-Up Question</h3>
+              <p class="text-xs text-zinc-400 mt-1">Keep the conversation going: ask for architecture changes, scaling advice, or deeper code explanations.</p>
+            </div>
+            <span class="text-xs font-mono text-blue-400 border border-app-border px-3 py-1.5 rounded-lg bg-app-bg">
+              Session Memory Active
+            </span>
+          </div>
+
+          <!-- Conversation Stream -->
+          <div id="followupThread" class="space-y-4"></div>
+
+          <!-- Quick Prompts -->
+          <div class="flex flex-wrap items-center gap-2 pt-1">
+            <span class="text-xs text-zinc-500 font-medium">Quick ask:</span>
+            <button onclick="setFollowupPrompt('Can we replace the backend with FastAPI or Go?')" class="text-xs text-app-muted hover:text-white border border-app-border hover:border-zinc-600 bg-app-bg px-3 py-1.5 rounded-lg transition">
+              Switch backend to FastAPI / Go
+            </button>
+            <button onclick="setFollowupPrompt('How do we scale this architecture to 10,000 active users?')" class="text-xs text-app-muted hover:text-white border border-app-border hover:border-zinc-600 bg-app-bg px-3 py-1.5 rounded-lg transition">
+              Scale to 10k users
+            </button>
+            <button onclick="setFollowupPrompt('Explain the common code mistake in simpler words.')" class="text-xs text-app-muted hover:text-white border border-app-border hover:border-zinc-600 bg-app-bg px-3 py-1.5 rounded-lg transition">
+              Explain code mistake simply
+            </button>
+          </div>
+
+          <!-- Input Bar -->
+          <div class="flex items-end gap-3 pt-2">
+            <textarea id="followupInput" rows="2" placeholder="Type your follow-up question here (e.g. 'How do we handle real-time alerts?')..." class="flex-1 bg-app-bg border border-app-border focus:border-blue-500 rounded-xl p-3.5 text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none resize-none leading-relaxed transition"></textarea>
+            <button id="btnSendFollowup" onclick="sendFollowup()" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs px-6 py-3.5 rounded-xl transition flex items-center space-x-2 shadow-md">
+              <span id="btnFollowupText">Send</span>
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
       </div>
+
 
       <!-- CODEBASE ANALYSIS VIEW (Pillar 2) -->
       <div id="codeView" class="space-y-8 hidden">
@@ -591,6 +682,7 @@
         document.getElementById('outputArea').classList.remove('hidden');
         renderMetrics(state);
         renderTraceLog(state);
+        renderAgentSteps(state);
 
         if (intent === 'idea_validation') {
           document.getElementById('ideaView').classList.remove('hidden');
@@ -620,10 +712,64 @@
       chevron.classList.toggle('rotate-180');
     }
 
+    function renderAgentSteps(state) {
+      const traces = state.execution_trace || [];
+      const container = document.getElementById('agentStepsDetail');
+      container.innerHTML = '';
+
+      const agentSteps = traces.filter(t => t.details && (t.details.thinking || t.details.findings));
+
+      agentSteps.forEach((step, idx) => {
+        const d = step.details || {};
+        const findingsList = Array.isArray(d.findings) ? d.findings : [];
+        
+        const card = document.createElement('div');
+        card.className = 'border border-app-border bg-app-bg p-5 sm:p-6 rounded-2xl space-y-3 transition-all hover:border-zinc-700';
+        
+        card.innerHTML = `
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-app-border/70 pb-3">
+            <div class="flex items-center space-x-2.5">
+              <span class="text-xs font-mono font-bold text-blue-400 bg-blue-950/70 border border-blue-800/80 px-2.5 py-0.5 rounded-lg">Step 0${idx + 1}</span>
+              <h4 class="text-sm sm:text-base font-bold text-white">${step.agent_name}</h4>
+            </div>
+            <div class="flex items-center space-x-3 text-xs font-mono">
+              <span class="text-zinc-400 border border-app-border bg-app-surface px-2.5 py-1 rounded-md">${d.tool ? d.tool : 'Reasoning Engine'}</span>
+              <span class="text-emerald-400 font-semibold">+${step.elapsed_ms}ms</span>
+            </div>
+          </div>
+
+          <div class="space-y-1">
+            <span class="text-[11px] font-mono uppercase text-zinc-500 font-semibold">Goal & Thinking:</span>
+            <p class="text-xs sm:text-sm text-zinc-300 leading-relaxed italic bg-app-surface/60 p-3 rounded-xl border border-app-border/50">
+              "${d.thinking || step.action}"
+            </p>
+          </div>
+
+          ${findingsList.length > 0 ? `
+            <div class="space-y-1.5 pt-1">
+              <span class="text-[11px] font-mono uppercase text-emerald-400 font-semibold">What It Found:</span>
+              <ul class="space-y-1 text-xs sm:text-sm text-zinc-200 pl-4 list-disc marker:text-emerald-500 leading-relaxed">
+                ${findingsList.map(f => `<li>${f}</li>`).join('')}
+              </ul>
+            </div>
+          ` : ''}
+
+          ${d.handoff ? `
+            <div class="pt-2 border-t border-app-border/60 flex items-center space-x-2 text-xs">
+              <span class="font-mono text-[11px] uppercase text-zinc-500 font-semibold">Passed Forward:</span>
+              <span class="text-zinc-300 font-medium">${d.handoff}</span>
+            </div>
+          ` : ''}
+        `;
+
+        container.appendChild(card);
+      });
+    }
+
     function renderTraceLog(state) {
       const traces = state.execution_trace || [];
       document.getElementById('traceAccordion').classList.remove('hidden');
-      document.getElementById('traceLogCount').innerText = `View ${traces.length} execution trace records (+ms timestamps)`;
+      document.getElementById('traceLogCount').innerText = `View raw timestamp log (${traces.length} steps)`;
 
       const container = document.getElementById('traceLogContainer');
       container.innerHTML = '';
@@ -644,10 +790,16 @@
 
     function renderMetrics(state) {
       document.getElementById('kpiLatency').innerText = `${state.total_latency_ms}ms`;
-      document.getElementById('kpiTrack').innerText = state.intent === 'idea_validation' ? 'Idea Track' : 'Codebase Track';
       document.getElementById('kpiRevisions').innerText = `${state.revision_count} Cycles`;
       
-      const critic = state.final_output?.critic || {};
+      const out = state.final_output || {};
+      if (out.feasibility_score) {
+        document.getElementById('kpiTrack').innerText = `${out.feasibility_score}/100 Score`;
+      } else {
+        document.getElementById('kpiTrack').innerText = state.intent === 'idea_validation' ? 'Idea Track' : 'Codebase Track';
+      }
+
+      const critic = out.critic || {};
       if (state.intent === 'codebase_analysis') {
         const score = critic.grounding_score !== undefined ? `${Math.round(critic.grounding_score * 100)}% Grounded` : 'Verified';
         document.getElementById('kpiGrounding').innerText = score;
@@ -726,7 +878,25 @@
         techContainer.appendChild(div);
       }
 
-      // 4. Roadmap
+      // 4. Implementation Trap (Wrong Code vs Correct Code)
+      const pitfall = out.implementation_pitfall || {};
+      document.getElementById('pitfallTitle').innerText = pitfall.title || "Synchronous Blocking I/O vs Async Pipeline";
+      document.getElementById('pitfallExplanation').innerText = pitfall.explanation || "Developers frequently make mistakes when architecting this component under concurrent load.";
+      document.getElementById('pitfallWrongCode').innerText = pitfall.wrong_code || "# Common Mistake: Blocking synchronous requests\nimport requests\n\ndef fetch_data(urls):\n    return [requests.get(u).json() for u in urls]";
+      document.getElementById('pitfallCorrectCode').innerText = pitfall.correct_code || "# Recommended Fix: Async non-blocking with connection pool\nimport httpx\nimport asyncio\n\nasync def fetch_data(urls: list[str]) -> list[dict]:\n    async with httpx.AsyncClient(timeout=5.0) as client:\n        tasks = [client.get(u) for u in urls]\n        return [r.json() for r in await asyncio.gather(*tasks)]";
+
+      // 5. Bear Case Stress-Test Alert
+      const bearAlert = document.getElementById('bearCaseAlert');
+      const bearText = document.getElementById('bearCaseText');
+      if (out.bear_case_critic) {
+        bearText.innerText = out.bear_case_critic;
+        bearAlert.classList.remove('hidden');
+      } else {
+        bearText.innerText = "High initial hardware or API integration friction could slow down user onboarding.";
+        bearAlert.classList.remove('hidden');
+      }
+
+      // Roadmap Phases
       const roadmapContainer = document.getElementById('roadmapContainer');
       roadmapContainer.innerHTML = '';
       (out.phases || []).forEach(ph => {
@@ -758,7 +928,7 @@
         roadmapContainer.appendChild(div);
       });
 
-      // 5. Risks
+      // Risks
       const risksContainer = document.getElementById('risksContainer');
       risksContainer.innerHTML = '';
       (out.risks || []).forEach(r => {
@@ -783,7 +953,7 @@
         risksContainer.appendChild(div);
       });
 
-      // 6. Tips
+      // Viva Tips
       const tipsContainer = document.getElementById('evalTipsContainer');
       tipsContainer.innerHTML = '';
       (out.evaluation_tips || []).forEach(tip => {
@@ -792,6 +962,77 @@
         tipsContainer.appendChild(li);
       });
     }
+
+    function setFollowupPrompt(text) {
+      document.getElementById('followupInput').value = text;
+    }
+
+    async function sendFollowup() {
+      const input = document.getElementById('followupInput');
+      const query = input.value.trim();
+      if (!query) return;
+
+      const btn = document.getElementById('btnSendFollowup');
+      const btnText = document.getElementById('btnFollowupText');
+      const thread = document.getElementById('followupThread');
+
+      const userCard = document.createElement('div');
+      userCard.className = 'border border-blue-900/60 bg-blue-950/20 p-5 rounded-2xl space-y-1';
+      userCard.innerHTML = `
+        <span class="text-[11px] font-mono uppercase text-blue-400 font-semibold">You asked:</span>
+        <p class="text-sm text-zinc-100 font-medium">${query}</p>
+      `;
+      thread.appendChild(userCard);
+      input.value = '';
+
+      btn.disabled = true;
+      btnText.innerText = 'Thinking...';
+
+      const loadingCard = document.createElement('div');
+      loadingCard.id = 'followupLoadingCard';
+      loadingCard.className = 'border border-app-border bg-app-bg p-4 rounded-xl space-y-1 text-xs font-mono text-zinc-400';
+      loadingCard.innerText = 'Co-Pilot agents are reviewing context and preparing answer...';
+      thread.appendChild(loadingCard);
+
+      try {
+        const res = await fetch('/api/followup', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            query: query,
+            context: currentSessionState ? currentSessionState.final_output : null
+          })
+        });
+
+        const data = await res.json();
+        const existingLoading = document.getElementById('followupLoadingCard');
+        if (existingLoading) existingLoading.remove();
+
+        const agentCard = document.createElement('div');
+        agentCard.className = 'border border-app-border bg-app-surface p-6 sm:p-7 rounded-2xl space-y-3';
+        agentCard.innerHTML = `
+          <div class="flex items-center justify-between border-b border-app-border pb-3">
+            <div class="flex items-center space-x-2">
+              <span class="text-xs font-mono font-bold text-emerald-400 bg-emerald-950/50 border border-emerald-800/80 px-2.5 py-0.5 rounded-lg">${data.agent_name || 'Technical Co-Pilot'}</span>
+              <span class="text-xs text-zinc-400">${data.action_taken || 'Follow-up Response'}</span>
+            </div>
+            <span class="text-[11px] font-mono text-zinc-500">Live Context</span>
+          </div>
+          <div class="text-sm text-zinc-200 leading-relaxed whitespace-pre-line">${data.answer || ''}</div>
+        `;
+        thread.appendChild(agentCard);
+        agentCard.scrollIntoView({ behavior: 'smooth' });
+
+      } catch (err) {
+        const existingLoading = document.getElementById('followupLoadingCard');
+        if (existingLoading) existingLoading.remove();
+        alert('Error sending follow-up: ' + err);
+      } finally {
+        btn.disabled = false;
+        btnText.innerText = 'Send';
+      }
+    }
+
 
     function renderCodeResults(state) {
       const out = state.final_output || {};
