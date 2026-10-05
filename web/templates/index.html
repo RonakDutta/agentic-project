@@ -33,12 +33,32 @@
     }
   </script>
   <style>
+    html {
+      scroll-behavior: smooth;
+    }
     body {
       background-color: #080a10;
-      background-image: radial-gradient(circle at 50% 0%, #151e36 0%, #080a10 60%);
       color: #f1f4fb;
       font-family: 'Plus Jakarta Sans', sans-serif;
       line-height: 1.6;
+    }
+    :focus-visible {
+      outline: 2px solid #3b82f6;
+      outline-offset: 2px;
+      border-radius: 2px;
+    }
+    button, a, input, textarea {
+      transition-property: color, background-color, border-color, opacity, transform;
+      transition-duration: 150ms;
+      transition-timing-function: ease-out;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
     }
     pre, code {
       font-family: 'JetBrains Mono', monospace;
@@ -143,7 +163,7 @@
     @keyframes fadeInSlide {
       from {
         opacity: 0;
-        transform: translateY(8px);
+        transform: translateY(4px);
       }
       to {
         opacity: 1;
@@ -151,7 +171,50 @@
       }
     }
     .animate-step-reveal {
-      animation: fadeInSlide 0.4s ease-out forwards;
+      animation: fadeInSlide 0.25s ease-out forwards;
+    }
+    @keyframes fadeSoft {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .fade-soft { animation: fadeSoft 0.3s ease-out forwards; }
+
+    /* Scorecard bars animate to their target width on render */
+    .score-bar {
+      transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    /* @ mention suggestion menu */
+    .mention-menu {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: calc(100% + 8px);
+      z-index: 40;
+      background: #0d1220;
+      border: 1px solid #26334f;
+      border-radius: 6px;
+      overflow: hidden;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+    }
+    .mention-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      text-align: left;
+      padding: 8px 12px;
+      border-left: 2px solid transparent;
+      cursor: pointer;
+      background: transparent;
+      border-top: 0;
+      border-right: 0;
+      border-bottom: 0;
+    }
+    .mention-item:hover,
+    .mention-item.is-active {
+      background: #121828;
+      border-left-color: #3b82f6;
     }
 
     /* Mermaid Container Tweaks */
@@ -250,7 +313,7 @@
           <span id="rateLimitBar" class="w-0.5 h-3 bg-emerald-400"></span>
           <span id="rateLimitText" class="uppercase tracking-wide">Groq LLM</span>
         </span>
-        <button id="btnExportTop" onclick="exportReport()" class="hidden text-white bg-blue-600 hover:bg-blue-500 px-3.5 py-1.5 rounded-md transition font-medium shadow-sm">
+        <button id="btnExportTop" onclick="exportReport()" class="hidden text-white bg-blue-600 hover:bg-blue-500 px-3.5 py-1.5 rounded-md font-medium">
           Export Brief (.md)
         </button>
       </div>
@@ -262,13 +325,13 @@
   <main class="flex-1 max-w-6xl w-full mx-auto px-6 py-10 space-y-12">
 
     <!-- WORKBENCH INPUT PANEL -->
-    <section class="bg-surface/60 backdrop-blur-sm border border-borderSubtle rounded-lg p-6 sm:p-8 space-y-6 shadow-xl">
+    <section class="bg-surface/60 backdrop-blur-sm border border-borderSubtle rounded-lg p-6 sm:p-8 space-y-6">
       
       <!-- Mode Switcher -->
       <div class="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-borderSubtle/60">
         
         <div class="flex items-center space-x-2 bg-canvas/90 p-1.5 rounded-lg border border-borderSubtle">
-          <button id="btnModeIdea" onclick="selectPillar('idea')" class="px-5 py-2.5 rounded-md text-xs font-semibold transition bg-blue-600 text-white shadow-sm">
+          <button id="btnModeIdea" onclick="selectPillar('idea')" class="px-5 py-2.5 rounded-md text-xs font-semibold transition bg-blue-600 text-white">
             Validate an Idea
           </button>
           <button id="btnModeCode" onclick="selectPillar('code')" class="px-5 py-2.5 rounded-md text-xs font-semibold transition text-zinc-400 hover:text-white">
@@ -316,7 +379,8 @@
           <label id="inputLabel" class="font-semibold text-zinc-200">Describe your startup or project idea:</label>
           <span class="text-zinc-500 text-[11px]">Type freely or pick a sample below</span>
         </div>
-        <textarea id="mainPrompt" rows="4" placeholder="What problem are you solving? Who is it for? What is your solution..." class="w-full bg-canvas/90 border border-borderSubtle focus:border-blue-500 rounded-lg p-4 text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none resize-none leading-relaxed transition shadow-inner"></textarea>
+        <textarea id="mainPrompt" rows="4" placeholder="What problem are you solving? Who is it for? What is your solution..." class="w-full bg-canvas/90 border border-borderSubtle focus:border-blue-500 rounded-lg p-4 text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none resize-none leading-relaxed"></textarea>
+        <p id="inputErrorHint" class="hidden text-xs font-mono text-rose-300"></p>
       </div>
 
       <!-- Action Row: Starter Presets + Run Button -->
@@ -352,7 +416,7 @@
         </div>
 
         <!-- Submit Button -->
-        <button id="btnRun" onclick="executeWorkflow()" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs px-6 py-3 rounded-lg transition flex items-center space-x-2 shadow-lg shadow-blue-900/30">
+        <button id="btnRun" onclick="executeWorkflow()" aria-label="Run the multi-agent pipeline" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs px-6 py-3 rounded-lg flex items-center space-x-2">
           <span id="btnRunText">Run Multi-Agent Pipeline (4 Agents)</span>
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
@@ -427,7 +491,7 @@
       <div id="ideaView" class="space-y-12">
         
         <!-- Executive Briefing Header -->
-        <div class="bg-surface/60 border border-borderSubtle p-8 sm:p-10 rounded-lg space-y-6 shadow-md">
+        <div class="bg-surface/60 border border-borderSubtle p-8 sm:p-10 rounded-lg space-y-6">
           <div class="flex flex-wrap items-start justify-between gap-4 border-b border-borderSubtle pb-6">
             <div class="space-y-1">
               <span class="text-xs font-mono text-blue-400 uppercase tracking-wider font-semibold">Validated Engineering Concept</span>
@@ -450,7 +514,7 @@
         </div>
 
         <!-- 1. DETERMINISTIC FEASIBILITY SCORECARD (Task 9.5) -->
-        <div class="bg-surface/60 border border-borderSubtle p-8 sm:p-10 rounded-lg space-y-6 shadow-md">
+        <div class="bg-surface/60 border border-borderSubtle p-8 sm:p-10 rounded-lg space-y-6">
           <div class="flex flex-wrap items-start justify-between gap-4 border-b border-borderSubtle pb-4">
             <div>
               <span class="text-xs font-mono text-blue-400 uppercase tracking-wider font-semibold">Deterministic Decision Engine</span>
@@ -494,7 +558,7 @@
         </div>
 
         <!-- NOVELTY #1: INTERACTIVE DECISION SIMULATOR (deterministic what-if re-scoring) -->
-        <div id="decisionSimulator" class="bg-surface/60 border border-borderSubtle p-8 sm:p-10 rounded-lg space-y-6 shadow-md relative overflow-hidden">
+        <div id="decisionSimulator" class="bg-surface/60 border border-borderSubtle p-8 sm:p-10 rounded-lg space-y-6 relative overflow-hidden">
           <div class="absolute inset-x-0 top-0 h-px bg-cyan-500/40"></div>
           <div class="flex flex-wrap items-start justify-between gap-3 border-b border-borderSubtle pb-4">
             <div>
@@ -524,7 +588,7 @@
                 <div id="simDeltaBox" class="text-xs text-zinc-300 leading-relaxed">Move a slider to model a change.</div>
               </div>
               <div class="flex flex-col space-y-2">
-                <button onclick="simulateApplyGapFixes()" class="w-full text-xs font-semibold text-white bg-cyan-600/80 hover:bg-cyan-500 border border-cyan-500/40 px-4 py-2.5 rounded-md transition shadow-sm">
+                <button onclick="simulateApplyGapFixes()" class="w-full text-xs font-semibold text-white bg-cyan-600/80 hover:bg-cyan-500 border border-cyan-500/40 px-4 py-2.5 rounded-md">
                   Auto-apply top gap fixes
                 </button>
                 <button onclick="resetSimulator()" class="w-full text-xs font-semibold text-zinc-300 hover:text-white border border-borderSubtle bg-surface px-4 py-2.5 rounded-md transition">
@@ -537,7 +601,7 @@
         </div>
 
         <!-- 2. ADVERSARIAL KILL AGENT & EVIDENCE RECONCILER (Task 9.3) -->
-        <div class="bg-surface/60 border border-borderSubtle p-8 sm:p-10 rounded-lg space-y-6 shadow-md">
+        <div class="bg-surface/60 border border-borderSubtle p-8 sm:p-10 rounded-lg space-y-6">
           <div class="border-b border-borderSubtle pb-4 flex flex-wrap items-center justify-between gap-2">
             <div>
               <span class="text-xs font-mono text-red-400 uppercase tracking-wider font-semibold">Adversarial Stress-Testing</span>
@@ -591,7 +655,7 @@
         </div>
 
         <!-- 3. METAGPT-STYLE PRODUCT REQUIREMENTS DOCUMENT & MERMAID MODELS (Task 9.4) -->
-        <div class="bg-surface/60 border border-borderSubtle p-8 sm:p-10 rounded-lg space-y-6 shadow-md">
+        <div class="bg-surface/60 border border-borderSubtle p-8 sm:p-10 rounded-lg space-y-6">
           <div class="border-b border-borderSubtle pb-4 flex flex-wrap items-center justify-between gap-2">
             <div>
               <span class="text-xs font-mono text-blue-400 uppercase tracking-wider font-semibold">MetaGPT Product Specification</span>
@@ -639,14 +703,14 @@
           <div class="space-y-3 pt-4 border-t border-borderSubtle/60">
             <div class="flex flex-wrap items-center justify-between gap-3">
               <span class="text-xs font-mono text-zinc-300 uppercase font-semibold">Architectural Models (Mermaid.js):</span>
-              <div class="flex items-center space-x-2 bg-canvas p-1 rounded-md border border-borderSubtle">
-                <button id="tabMermaid_architecture" onclick="switchMermaidTab('architecture')" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white transition">
+              <div class="flex items-center border-b border-borderSubtle w-full sm:w-auto">
+                <button id="tabMermaid_architecture" onclick="switchMermaidTab('architecture')" class="px-3.5 py-2 text-xs font-semibold text-white border-b-2 border-blue-500 -mb-px">
                   System Architecture
                 </button>
-                <button id="tabMermaid_component" onclick="switchMermaidTab('component')" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold text-zinc-400 hover:text-white transition">
+                <button id="tabMermaid_component" onclick="switchMermaidTab('component')" class="px-3.5 py-2 text-xs font-semibold text-zinc-400 hover:text-white border-b-2 border-transparent -mb-px">
                   Component Topology
                 </button>
-                <button id="tabMermaid_dataflow" onclick="switchMermaidTab('dataflow')" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold text-zinc-400 hover:text-white transition">
+                <button id="tabMermaid_dataflow" onclick="switchMermaidTab('dataflow')" class="px-3.5 py-2 text-xs font-semibold text-zinc-400 hover:text-white border-b-2 border-transparent -mb-px">
                   Dataflow Sequence
                 </button>
               </div>
@@ -748,7 +812,7 @@
           <div id="codeCandidatesContainer" class="space-y-6"></div>
         </div>
       </div>        <!-- CONVERSATIONAL FOLLOW-UP (Persistent Session Memory with Specialist Routing) -->
-        <div class="bg-surface/60 border border-borderSubtle p-8 sm:p-10 rounded-lg space-y-6 shadow-lg">
+        <div class="bg-surface/60 border border-borderSubtle p-8 sm:p-10 rounded-lg space-y-6">
           <div class="flex flex-wrap items-center justify-between gap-4 border-b border-borderSubtle pb-4">
             <div>
               <div class="flex items-center space-x-2">
@@ -770,6 +834,9 @@
 
         <!-- Conversation Stream -->
         <div id="followupThread" class="space-y-4"></div>
+        <div id="followupEmptyState" class="fade-soft border border-dashed border-borderSubtle rounded-lg p-6 text-center">
+          <p class="text-xs text-zinc-500 leading-relaxed">No questions yet. Ask anything about the validated idea, or address a specialist directly by typing <span class="font-mono text-blue-300">@</span> in the input below.</p>
+        </div>
 
         <!-- Quick Prompts with Dynamic Specialist Routing -->
         <div class="flex flex-wrap items-center gap-2 pt-1">
@@ -778,8 +845,9 @@
         </div>
 
         <!-- Unified Modern Chat Input Box with Bottom Action Bar -->
-        <div class="bg-canvas border border-borderSubtle focus-within:border-blue-500 rounded-lg p-3.5 transition shadow-inner">
-          <textarea id="followupInput" rows="2" placeholder="Ask any question about architecture, risks, code, or milestones..." class="w-full bg-transparent text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none resize-none leading-relaxed"></textarea>
+        <div class="relative bg-canvas border border-borderSubtle focus-within:border-blue-500 rounded-lg p-3.5">
+          <div id="mentionMenu" class="mention-menu hidden" role="listbox" aria-label="Agent suggestions"></div>
+          <textarea id="followupInput" rows="2" aria-label="Follow-up question" placeholder="Ask any question about architecture, risks, code, or milestones..." class="w-full bg-transparent text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none resize-none leading-relaxed max-h-40"></textarea>
           <div class="flex items-center justify-between pt-2.5 border-t border-borderSubtle/50 mt-1">
             <span class="text-[11px] font-mono text-zinc-500 flex items-center space-x-1">
               <span>Press</span>
@@ -788,7 +856,7 @@
               <kbd class="px-1.5 py-0.5 rounded bg-surface border border-borderSubtle text-zinc-400 text-[10px]">Shift + Enter</kbd>
               <span>for new line</span>
             </span>
-            <button id="btnSendFollowup" onclick="sendFollowup()" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs px-5 py-2.5 rounded-md transition flex items-center space-x-2 shadow-md">
+            <button id="btnSendFollowup" onclick="sendFollowup()" aria-label="Send follow-up question" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs px-5 py-2.5 rounded-md flex items-center space-x-2">
               <span id="btnFollowupText">Send</span>
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
@@ -801,6 +869,13 @@
     </section>
 
   </main>
+
+  <footer class="border-t border-borderSubtle/70">
+    <div class="max-w-6xl mx-auto px-6 py-6 flex flex-wrap items-center justify-between gap-3 text-[11px] font-mono text-zinc-600">
+      <span>Agentic AI Co-Pilot / AST-RAG Multi-Agent System</span>
+      <span>Deterministic layer: AST parser, call graph, rubric engine, programmatic critic</span>
+    </div>
+  </footer>
 
   <script>
     let activePillar = 'idea';
@@ -943,7 +1018,7 @@
       const btnRunText = document.getElementById('btnRunText');
 
       if (mode === 'idea') {
-        btnIdea.className = 'px-5 py-2.5 rounded-md text-xs font-semibold transition bg-blue-600 text-white shadow-sm';
+        btnIdea.className = 'px-5 py-2.5 rounded-md text-xs font-semibold transition bg-blue-600 text-white';
         btnCode.className = 'px-5 py-2.5 rounded-md text-xs font-semibold transition text-zinc-400 hover:text-white';
         codeTargetSection.classList.add('hidden');
         modeDescription.innerText = "Startup idea feasibility, market research & architecture";
@@ -953,7 +1028,7 @@
         mainPrompt.placeholder = "What problem are you solving? Who is it for? What is your solution...";
         btnRunText.innerText = "Run Multi-Agent Pipeline (4 Agents)";
       } else {
-        btnCode.className = 'px-5 py-2.5 rounded-md text-xs font-semibold transition bg-blue-600 text-white shadow-sm';
+        btnCode.className = 'px-5 py-2.5 rounded-md text-xs font-semibold transition bg-blue-600 text-white';
         btnIdea.className = 'px-5 py-2.5 rounded-md text-xs font-semibold transition text-zinc-400 hover:text-white';
         codeTargetSection.classList.remove('hidden');
         modeDescription.innerText = "AST code parser, fault localization & root-cause diagnosis";
@@ -969,6 +1044,7 @@
       currentSessionState = target.sessionState;
       mainPrompt.value = target.prompt;
       document.getElementById('followupThread').innerHTML = target.chatHtml;
+      syncFollowupEmptyState();
       document.getElementById('agentStepsDetail').innerHTML = target.storyboardHtml;
       document.getElementById('pipelineStatusText').innerText = target.statusText;
       document.getElementById('pipelineStatusText').className = target.statusClass;
@@ -1083,10 +1159,10 @@
       if (statusSpan) statusSpan.innerText = statusText;
 
       if (isError) {
-        node.className = "border border-rose-500 bg-rose-950/40 p-3.5 rounded-lg space-y-1 transition-all shadow-md shadow-rose-950/40";
+        node.className = "border border-rose-500 bg-rose-950/40 p-3.5 rounded-lg space-y-1 transition-all";
         if (statusSpan) statusSpan.className = "status-badge text-rose-400 uppercase font-bold text-[11px]";
       } else if (isActive) {
-        node.className = "border border-blue-500 bg-blue-950/40 p-3.5 rounded-lg space-y-1 transition-all shadow-md shadow-blue-950/40";
+        node.className = "border border-blue-500 bg-blue-950/40 p-3.5 rounded-lg space-y-1 transition-all";
         if (statusSpan) statusSpan.className = "status-badge text-blue-400 uppercase font-bold text-[11px]";
       } else if (isDone) {
         node.className = "border border-emerald-900 bg-emerald-950/20 p-3.5 rounded-lg space-y-1 transition-all";
@@ -1161,7 +1237,13 @@
       const repoPath = document.getElementById('repoPathInput').value.trim();
 
       if (!query) {
-        alert("Please enter a description or query.");
+        const hint = document.getElementById('inputErrorHint');
+        if (hint) {
+          hint.innerText = 'Describe your idea or paste an error first, then run the pipeline.';
+          hint.classList.remove('hidden');
+          setTimeout(() => hint.classList.add('hidden'), 3200);
+        }
+        document.getElementById('mainPrompt').focus();
         return;
       }
 
@@ -1371,7 +1453,7 @@
             </div>
             <div class="flex flex-wrap items-center justify-between gap-2 pt-1 text-xs text-zinc-400">
               <span>Please wait a moment if rate-limited on free tier, then retry.</span>
-              <button onclick="executeWorkflow()" class="px-3.5 py-1.5 rounded-md text-xs font-semibold bg-rose-600/40 hover:bg-rose-600 text-white border border-rose-500/60 transition shadow-sm">
+              <button onclick="executeWorkflow()" class="px-3.5 py-1.5 rounded-md text-xs font-semibold bg-rose-600/40 hover:bg-rose-600 text-white border border-rose-500/60">
                 Retry Query
               </button>
             </div>
@@ -1442,9 +1524,9 @@
         const btn = document.getElementById(`tabMermaid_${t}`);
         if (btn) {
           if (t === tab) {
-            btn.className = 'px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white shadow-sm transition';
+            btn.className = 'px-3.5 py-2 text-xs font-semibold text-white border-b-2 border-blue-500 -mb-px';
           } else {
-            btn.className = 'px-3.5 py-1.5 rounded-lg text-xs font-semibold text-zinc-400 hover:text-white transition';
+            btn.className = 'px-3.5 py-2 text-xs font-semibold text-zinc-400 hover:text-white border-b-2 border-transparent -mb-px';
           }
         }
       });
@@ -1545,12 +1627,21 @@
               <span class="text-[11px] font-mono text-zinc-400">(${cat.score} / ${cat.max_score} pts)</span>
             </div>
             <div class="w-32 bg-canvas h-1.5 border border-borderSubtle overflow-hidden">
-              <div class="bg-blue-500 h-1.5" style="width: ${pct}%"></div>
+              <div class="bg-blue-500 h-1.5 score-bar" data-w="${pct}" style="width: 0%"></div>
             </div>
           </div>
           <p class="text-xs text-zinc-300 leading-relaxed">${escapeHtml(cat.rationale || '')}</p>
         `;
         catTableBody.appendChild(row);
+      });
+
+      // Animate score bars to their target width
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          catTableBody.querySelectorAll('.score-bar').forEach(el => {
+            el.style.width = (el.dataset.w || 0) + '%';
+          });
+        });
       });
 
       // Strengths & Risks tags
@@ -1857,7 +1948,7 @@
 
       (out.candidates || []).forEach(c => {
         const card = document.createElement('div');
-        card.className = 'border border-borderSubtle bg-surface/50 p-6 sm:p-8 rounded-lg space-y-5 shadow-sm';
+        card.className = 'border border-borderSubtle bg-surface/50 p-6 sm:p-8 rounded-lg space-y-5';
         
         const citationsList = Array.isArray(c.citations) && c.citations.length > 0
           ? c.citations
@@ -1938,8 +2029,11 @@
     }
 
     function setFollowupPrompt(text) {
-      document.getElementById('followupInput').value = text;
-      document.getElementById('followupInput').focus();
+      const el = document.getElementById('followupInput');
+      el.value = text;
+      el.focus();
+      autoGrowFollowupInput();
+      updateDirectAgentChipStyles();
     }
 
     function escapeHtml(str) {
@@ -2012,24 +2106,25 @@
       // Prevent double-send while a request is in flight
       if (btn.disabled) return;
 
-      const isDirect = sendFollowup._directAgent ? true : false;
-      const agentMention = isDirect ? `@${sendFollowup._directAgent} ` : '';
+      // The mention itself lives in the text ("@kill why..."); the backend parses it.
+      const mentionMatch = query.match(/^@([a-zA-Z_-]+)\b/);
+      const mentionLabel = mentionMatch ? mentionMatch[1] : null;
 
       const userCard = document.createElement('div');
       userCard.className = 'bg-blue-950/30 border border-blue-900/50 p-4 rounded-lg space-y-1 ml-auto max-w-2xl animate-step-reveal';
       userCard.innerHTML = `
         <div class="flex items-center justify-between gap-3">
-          <span class="text-[11px] font-mono uppercase text-blue-400 font-semibold">You${isDirect ? ` → @${escapeHtml(sendFollowup._directAgent)}` : ''}</span>
+          <span class="text-[11px] font-mono uppercase text-blue-400 font-semibold">You${mentionLabel ? ` / to @${escapeHtml(mentionLabel)}` : ''}</span>
         </div>
         <p class="text-sm text-zinc-100 font-medium">${escapeHtml(query)}</p>
       `;
       thread.appendChild(userCard);
       pillarStates[activePillar].chatHtml = thread.innerHTML;
       input.value = '';
-      if (isDirect) {
-        sendFollowup._directAgent = null;
-        updateDirectAgentChipStyles();
-      }
+      input.style.height = 'auto';
+      hideMentionMenu();
+      syncFollowupEmptyState();
+      updateDirectAgentChipStyles();
 
       btn.disabled = true;
       btnText.innerText = 'Thinking...';
@@ -2079,7 +2174,7 @@
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({
-            query: agentMention + query,
+            query: query,
             context: currentSessionState ? currentSessionState.final_output : null,
             session_id: sessionId,
             repo_path: repoPath
@@ -2217,45 +2312,163 @@
       { key: 'architect', name: 'Architect', blurb: 'Flow & architecture guidance' }
     ];
 
+    function getActiveAgentList() {
+      return activePillar === 'code' ? CODE_DIRECT_AGENTS : IDEA_DIRECT_AGENTS;
+    }
+
     function renderDirectAgentChips(mode) {
       const container = document.getElementById('directAgentChips');
       if (!container) return;
       container.innerHTML = '';
       const list = (mode || activePillar) === 'code' ? CODE_DIRECT_AGENTS : IDEA_DIRECT_AGENTS;
-      sendFollowup._directAgent = null;
       list.forEach(a => {
         const btn = document.createElement('button');
         btn.dataset.agentKey = a.key;
         btn.title = a.blurb;
-        btn.className = 'group text-[11px] font-mono text-zinc-400 hover:text-white border border-borderSubtle hover:border-blue-600 bg-canvas px-2.5 py-1.5 rounded-md transition flex items-center space-x-1.5';
+        btn.className = 'group text-[11px] font-mono text-zinc-400 hover:text-white border border-borderSubtle hover:border-blue-600 bg-canvas px-2.5 py-1.5 rounded-md flex items-center space-x-1.5';
         btn.innerHTML = `<span class="text-blue-400 font-bold">@</span><span>${escapeHtml(a.name)}</span>`;
-        btn.onclick = () => {
-          sendFollowup._directAgent = sendFollowup._directAgent === a.key ? null : a.key;
-          updateDirectAgentChipStyles();
-          const inputEl = document.getElementById('followupInput');
-          if (inputEl) inputEl.focus();
-        };
+        btn.onclick = () => applyMention(a.key);
         container.appendChild(btn);
       });
       updateDirectAgentChipStyles();
     }
 
+    // Highlights the chip matching the leading @mention currently typed in the input.
     function updateDirectAgentChipStyles() {
       const container = document.getElementById('directAgentChips');
-      if (!container) return;
-      const selected = sendFollowup._directAgent;
+      const inputEl = document.getElementById('followupInput');
+      if (!container || !inputEl) return;
+      const match = inputEl.value.match(/^\s*@([a-zA-Z_-]+)\b/);
+      const selected = match ? match[1].toLowerCase() : null;
       container.querySelectorAll('button[data-agent-key]').forEach(btn => {
         const active = btn.dataset.agentKey === selected;
         btn.className = active
-          ? 'text-white bg-blue-600 border border-blue-500 text-[11px] font-mono px-2.5 py-1.5 rounded-md transition flex items-center space-x-1.5 shadow-md shadow-blue-950/40'
-          : 'group text-[11px] font-mono text-zinc-400 hover:text-white border border-borderSubtle hover:border-blue-600 bg-canvas px-2.5 py-1.5 rounded-md transition flex items-center space-x-1.5';
+          ? 'text-white bg-blue-600 border border-blue-500 text-[11px] font-mono px-2.5 py-1.5 rounded-md flex items-center space-x-1.5'
+          : 'group text-[11px] font-mono text-zinc-400 hover:text-white border border-borderSubtle hover:border-blue-600 bg-canvas px-2.5 py-1.5 rounded-md flex items-center space-x-1.5';
       });
-      const placeholderEl = document.getElementById('followupInput');
-      if (placeholderEl) {
-        placeholderEl.placeholder = selected
-          ? `You are addressing @${selected}. Ask your question...`
-          : 'Ask any question about architecture, risks, code, or milestones...';
+    }
+
+    // Inserts "@key " at the start of the input (or replaces an existing leading mention).
+    function applyMention(key) {
+      const inputEl = document.getElementById('followupInput');
+      if (!inputEl) return;
+      const rest = inputEl.value.replace(/^\s*@[a-zA-Z_-]*\s*/, '');
+      inputEl.value = `@${key} ${rest}`;
+      inputEl.focus();
+      inputEl.setSelectionRange(inputEl.value.length, inputEl.value.length);
+      autoGrowFollowupInput();
+      hideMentionMenu();
+      updateDirectAgentChipStyles();
+    }
+
+    // ------------------------------------------------------------------
+    // @ mention autocomplete
+    // ------------------------------------------------------------------
+    let mentionMenuItems = [];
+    let mentionMenuIndex = 0;
+
+    function hideMentionMenu() {
+      const menu = document.getElementById('mentionMenu');
+      if (menu) menu.classList.add('hidden');
+      mentionMenuItems = [];
+      mentionMenuIndex = 0;
+    }
+
+    function isMentionMenuOpen() {
+      const menu = document.getElementById('mentionMenu');
+      return !!menu && !menu.classList.contains('hidden');
+    }
+
+    function handleFollowupInput() {
+      autoGrowFollowupInput();
+      updateDirectAgentChipStyles();
+
+      const inputEl = document.getElementById('followupInput');
+      if (!inputEl) return;
+      const caret = inputEl.selectionStart;
+      const beforeCaret = inputEl.value.slice(0, caret);
+      // Trigger only while typing an @token at a word boundary
+      const trigger = beforeCaret.match(/(?:^|\s)@([a-zA-Z_-]*)$/);
+      if (!trigger) {
+        hideMentionMenu();
+        return;
       }
+      const prefix = trigger[1].toLowerCase();
+      const matches = getActiveAgentList().filter(a => a.key.startsWith(prefix) || a.name.toLowerCase().startsWith(prefix));
+      if (!matches.length) {
+        hideMentionMenu();
+        return;
+      }
+      mentionMenuItems = matches;
+      mentionMenuIndex = 0;
+      renderMentionMenu();
+    }
+
+    function renderMentionMenu() {
+      const menu = document.getElementById('mentionMenu');
+      if (!menu) return;
+      menu.classList.remove('hidden');
+      menu.innerHTML = '';
+      mentionMenuItems.forEach((a, idx) => {
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.setAttribute('role', 'option');
+        item.setAttribute('aria-selected', idx === mentionMenuIndex ? 'true' : 'false');
+        item.className = `mention-item ${idx === mentionMenuIndex ? 'is-active' : ''}`;
+        item.innerHTML = `
+          <span class="font-mono text-[11px] text-blue-300 w-24 shrink-0">@${escapeHtml(a.key)}</span>
+          <span class="text-xs text-zinc-200 font-semibold">${escapeHtml(a.name)}</span>
+          <span class="text-[11px] text-zinc-500 truncate">${escapeHtml(a.blurb)}</span>
+        `;
+        item.onmouseenter = () => { mentionMenuIndex = idx; renderMentionMenu(); };
+        item.onmousedown = (e) => { e.preventDefault(); selectMentionItem(); };
+        menu.appendChild(item);
+      });
+    }
+
+    function moveMentionSelection(delta) {
+      if (!mentionMenuItems.length) return;
+      mentionMenuIndex = (mentionMenuIndex + delta + mentionMenuItems.length) % mentionMenuItems.length;
+      renderMentionMenu();
+    }
+
+    // Replaces the partially typed @token with the chosen agent key.
+    function selectMentionItem() {
+      const item = mentionMenuItems[mentionMenuIndex];
+      if (!item) return;
+      const inputEl = document.getElementById('followupInput');
+      const caret = inputEl.selectionStart;
+      const beforeCaret = inputEl.value.slice(0, caret);
+      const token = beforeCaret.match(/(?:^|\s)@([a-zA-Z_-]*)$/);
+      if (!token) { hideMentionMenu(); return; }
+      const start = caret - token[0].length;
+      let replacement = (start === 0 ? '' : ' ') + `@${item.key} `;
+      // Avoid a double space when text already follows the caret
+      if (inputEl.value.slice(caret).startsWith(' ')) {
+        replacement = replacement.replace(/ $/, '');
+      }
+      inputEl.value = inputEl.value.slice(0, start) + replacement + inputEl.value.slice(caret);
+      const newCaret = start + replacement.length;
+      inputEl.focus();
+      inputEl.setSelectionRange(newCaret, newCaret);
+      hideMentionMenu();
+      autoGrowFollowupInput();
+      updateDirectAgentChipStyles();
+    }
+
+    function autoGrowFollowupInput() {
+      const el = document.getElementById('followupInput');
+      if (!el) return;
+      el.style.height = 'auto';
+      el.style.height = Math.min(el.scrollHeight, 160) + 'px';
+    }
+
+    function syncFollowupEmptyState() {
+      const thread = document.getElementById('followupThread');
+      const empty = document.getElementById('followupEmptyState');
+      if (!thread || !empty) return;
+      const hasMessages = thread.children.length > 0;
+      empty.classList.toggle('hidden', hasMessages);
     }
 
     // ------------------------------------------------------------------
@@ -2423,12 +2636,21 @@
       renderProgressStrip('idea');
       updateFollowupPromptChips('idea');
       renderDirectAgentChips('idea');
+      syncFollowupEmptyState();
       refreshEngineHealth();
       setInterval(refreshEngineHealth, 30000);
 
       const inputEl = document.getElementById('followupInput');
       if (inputEl) {
+        inputEl.addEventListener('input', handleFollowupInput);
+        inputEl.addEventListener('blur', () => setTimeout(hideMentionMenu, 120));
         inputEl.addEventListener('keydown', (e) => {
+          if (isMentionMenuOpen()) {
+            if (e.key === 'ArrowDown') { e.preventDefault(); moveMentionSelection(1); return; }
+            if (e.key === 'ArrowUp') { e.preventDefault(); moveMentionSelection(-1); return; }
+            if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); selectMentionItem(); return; }
+            if (e.key === 'Escape') { e.preventDefault(); hideMentionMenu(); return; }
+          }
           if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             sendFollowup();
