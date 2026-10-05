@@ -1,7 +1,6 @@
 # Agentic AI Co-Pilot: Multi-Agent RAG System for Idea Validation & Codebase Analysis
 
 > **Academic Project:** B.Tech (IIoT), 7th Semester Minor Project  
-> **Student:** Ronak Dutta | Roll No: 01419051723  
 > **Institution:** Guru Gobind Singh Indraprastha University (USAR, GGSIPU)  
 > **Repository:** [https://github.com/RonakDutta/agentic-project](https://github.com/RonakDutta/agentic-project)
 
