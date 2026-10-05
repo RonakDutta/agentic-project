@@ -45,7 +45,7 @@ class DiagnosisResult:
     query: str
     summary: str
     ranked_candidates: List[FaultCandidate]
-    raw_response: Dict[str, Any]
+    raw_response: Dict[str, Any] = field(default_factory=dict)
     trace: List[str] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:
