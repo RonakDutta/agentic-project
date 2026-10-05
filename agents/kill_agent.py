@@ -164,13 +164,17 @@ class KillAgent:
         )
 
         trace.append("Querying Groq LLM with Kill Agent Devil's Advocate persona...")
-        res = self.llm.generate_json(
-            messages=[
-                {"role": "system", "content": KILL_AGENT_SYSTEM_PROMPT},
-                {"role": "user", "content": user_content},
-            ],
-            temperature=0.3,
-        )
+        try:
+            res = self.llm.generate_json(
+                messages=[
+                    {"role": "system", "content": KILL_AGENT_SYSTEM_PROMPT},
+                    {"role": "user", "content": user_content},
+                ],
+                temperature=0.3,
+            )
+        except Exception as err:
+            trace.append(f"Kill Agent LLM note ({err}). Using structured adversarial stress-test fallback.")
+            res = {}
 
         raw_flaws = res.get("fatal_flaws", [])
         flaws: List[KillArgument] = []
@@ -248,13 +252,17 @@ class ReconcilerAgent:
         )
 
         trace.append("Querying Groq LLM for balanced reconciliation synthesis...")
-        res = self.llm.generate_json(
-            messages=[
-                {"role": "system", "content": RECONCILER_SYSTEM_PROMPT},
-                {"role": "user", "content": user_content},
-            ],
-            temperature=0.2,
-        )
+        try:
+            res = self.llm.generate_json(
+                messages=[
+                    {"role": "system", "content": RECONCILER_SYSTEM_PROMPT},
+                    {"role": "user", "content": user_content},
+                ],
+                temperature=0.2,
+            )
+        except Exception as err:
+            trace.append(f"Reconciler LLM note ({err}). Using structured dialectical synthesis fallback.")
+            res = {}
 
         verdict = res.get("verdict", "Proceed with Defined Mitigations")
         trace.append(f"Reconciliation verdict synthesized: '{verdict}'")

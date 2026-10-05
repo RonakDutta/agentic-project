@@ -9,6 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
   <script>
     tailwind.config = {
       darkMode: 'class',
@@ -152,6 +153,12 @@
     .animate-step-reveal {
       animation: fadeInSlide 0.4s ease-out forwards;
     }
+
+    /* Mermaid Container Tweaks */
+    .mermaid svg {
+      max-width: 100%;
+      height: auto;
+    }
   </style>
 </head>
 <body class="min-h-screen flex flex-col font-sans selection:bg-blue-900 selection:text-white">
@@ -185,7 +192,7 @@
   <!-- Main Container -->
   <main class="flex-1 max-w-6xl w-full mx-auto px-6 py-10 space-y-12">
 
-    <!-- COZY UN-BOXY INPUT WORKBENCH -->
+    <!-- WORKBENCH INPUT PANEL -->
     <section class="bg-surface/60 backdrop-blur-sm border border-borderSubtle rounded-3xl p-6 sm:p-8 space-y-6 shadow-xl">
       
       <!-- Mode Switcher -->
@@ -209,7 +216,10 @@
       <!-- Codebase Analysis Target Row (Visible in Code Mode Only) -->
       <div id="codeTargetSection" class="hidden space-y-3 bg-canvas/80 p-4 rounded-2xl border border-borderSubtle">
         <div class="flex flex-wrap items-center justify-between gap-2">
-          <span class="text-xs font-mono text-zinc-400 uppercase font-semibold">Repository Target (Local Folder or GitHub URL):</span>
+          <div class="flex items-center space-x-2">
+            <span class="text-xs font-mono text-zinc-400 uppercase font-semibold">Repository Target:</span>
+            <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-blue-950/60 border border-blue-900 text-blue-300">Read-Only AST Mode</span>
+          </div>
           <div class="flex items-center space-x-2 text-xs font-mono">
             <button onclick="loadSampleRepo()" class="text-blue-400 hover:text-blue-300 border border-borderSubtle bg-surface px-3 py-1.5 rounded-xl transition">
               Load Demo Repo
@@ -266,12 +276,15 @@
             <button onclick="setPrompt('auth_flow')" class="text-xs text-zinc-400 hover:text-white border border-borderSubtle hover:border-zinc-600 bg-canvas/80 px-3 py-1.5 rounded-xl transition">
               Order Auth Flow
             </button>
+            <button onclick="setPrompt('blast')" class="text-xs text-zinc-400 hover:text-white border border-borderSubtle hover:border-zinc-600 bg-canvas/80 px-3 py-1.5 rounded-xl transition">
+              Blast Radius Check
+            </button>
           </div>
         </div>
 
         <!-- Submit Button -->
         <button id="btnRun" onclick="executeWorkflow()" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs px-6 py-3 rounded-2xl transition flex items-center space-x-2 shadow-lg shadow-blue-900/30">
-          <span id="btnRunText">Run Multi-Agent Pipeline</span>
+          <span id="btnRunText">Run Multi-Agent Pipeline (4 Agents)</span>
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
           </svg>
@@ -295,60 +308,8 @@
         </div>
       </div>
 
-      <!-- Quick Progress Strip -->
-      <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
-        
-        <!-- Agent 1 -->
-        <div id="nodeOrchestrator" class="border border-borderSubtle bg-canvas/70 p-3.5 rounded-2xl space-y-1 transition-all">
-          <div class="flex items-center justify-between text-[11px] font-mono text-zinc-500">
-            <span>Agent 01</span>
-            <span id="statusOrch" class="text-zinc-600 uppercase font-semibold">Idle</span>
-          </div>
-          <div class="font-bold text-xs text-zinc-200">Task Planner</div>
-          <p class="text-[11px] text-zinc-400 leading-snug">Breaks down the input</p>
-        </div>
-
-        <!-- Agent 2 -->
-        <div id="nodeResearch" class="border border-borderSubtle bg-canvas/70 p-3.5 rounded-2xl space-y-1 transition-all">
-          <div class="flex items-center justify-between text-[11px] font-mono text-zinc-500">
-            <span>Agent 02</span>
-            <span id="statusResearch" class="text-zinc-600 uppercase font-semibold">Idle</span>
-          </div>
-          <div class="font-bold text-xs text-zinc-200" id="nameAgent2">Market Researcher</div>
-          <p class="text-[11px] text-zinc-400 leading-snug" id="descAgent2">Searches existing solutions</p>
-        </div>
-
-        <!-- Agent 3 -->
-        <div id="nodeArch" class="border border-borderSubtle bg-canvas/70 p-3.5 rounded-2xl space-y-1 transition-all">
-          <div class="flex items-center justify-between text-[11px] font-mono text-zinc-500">
-            <span>Agent 03</span>
-            <span id="statusArch" class="text-zinc-600 uppercase font-semibold">Idle</span>
-          </div>
-          <div class="font-bold text-xs text-zinc-200" id="nameAgent3">System Architect</div>
-          <p class="text-[11px] text-zinc-400 leading-snug" id="descAgent3">Audits code & tech stack</p>
-        </div>
-
-        <!-- Agent 4 -->
-        <div id="nodeRoadmap" class="border border-borderSubtle bg-canvas/70 p-3.5 rounded-2xl space-y-1 transition-all">
-          <div class="flex items-center justify-between text-[11px] font-mono text-zinc-500">
-            <span>Agent 04</span>
-            <span id="statusRoadmap" class="text-zinc-600 uppercase font-semibold">Idle</span>
-          </div>
-          <div class="font-bold text-xs text-zinc-200" id="nameAgent4">Roadmap & Risk</div>
-          <p class="text-[11px] text-zinc-400 leading-snug" id="descAgent4">Milestones & failure stress-test</p>
-        </div>
-
-        <!-- Agent 5 -->
-        <div id="nodeCritic" class="border border-borderSubtle bg-canvas/70 p-3.5 rounded-2xl space-y-1 transition-all col-span-2 sm:col-span-1">
-          <div class="flex items-center justify-between text-[11px] font-mono text-zinc-500">
-            <span>Agent 05</span>
-            <span id="statusCritic" class="text-zinc-600 uppercase font-semibold">Idle</span>
-          </div>
-          <div class="font-bold text-xs text-zinc-200">Fact & Code Verifier</div>
-          <p class="text-[11px] text-zinc-400 leading-snug">Checks code syntax & facts</p>
-        </div>
-
-      </div>
+      <!-- Quick Progress Strip (4 Core Evaluation 1 Agents) -->
+      <div id="agentNodesStrip" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
 
       <!-- Detailed Agent Storyboard (Revealed sequentially with pause and loader) -->
       <div id="agentStepsDetail" class="space-y-4 pt-2"></div>
@@ -366,10 +327,10 @@
 
     </section>
 
-    <!-- FULL PROJECT BREAKDOWN (Clean, Spacious, Un-Boxy Editorial Layout) -->
+    <!-- FULL PROJECT BREAKDOWN -->
     <section id="outputArea" class="hidden space-y-12">
 
-      <!-- Metrics Strip (Clean and minimal) -->
+      <!-- Metrics Strip -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div class="bg-surface/50 border border-borderSubtle p-5 rounded-2xl space-y-1">
           <div class="text-[11px] font-mono text-zinc-500 uppercase">Fact Verification</div>
@@ -389,7 +350,7 @@
         </div>
       </div>
 
-      <!-- DETAILED IDEA VIEW (No code boxes, clean editorial document) -->
+      <!-- DETAILED IDEA VIEW -->
       <div id="ideaView" class="space-y-12">
         
         <!-- Executive Briefing Header -->
@@ -400,7 +361,7 @@
               <h2 id="ideaProjectTitle" class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight"></h2>
             </div>
             <span class="text-xs font-mono text-zinc-400 border border-borderSubtle px-3 py-1.5 rounded-xl bg-canvas">
-              Project Specification
+              13-Section Specification
             </span>
           </div>
 
@@ -415,19 +376,186 @@
           </div>
         </div>
 
-        <!-- 1. Target Users -->
+        <!-- 1. DETERMINISTIC FEASIBILITY SCORECARD (Task 9.5) -->
+        <div class="bg-surface/60 border border-borderSubtle p-8 sm:p-10 rounded-3xl space-y-6 shadow-md">
+          <div class="flex flex-wrap items-start justify-between gap-4 border-b border-borderSubtle pb-4">
+            <div>
+              <span class="text-xs font-mono text-blue-400 uppercase tracking-wider font-semibold">Deterministic Decision Engine</span>
+              <h3 class="text-xl font-bold text-white mt-1">Feasibility Decision Scorecard</h3>
+            </div>
+            <div class="flex items-center space-x-3">
+              <div id="scScoreNum" class="text-2xl font-extrabold font-mono text-white">0/100</div>
+              <span id="scVerdictBadge" class="px-3 py-1 rounded-xl text-xs font-mono font-bold uppercase bg-emerald-950/60 border border-emerald-800 text-emerald-300">
+                GO
+              </span>
+            </div>
+          </div>
+
+          <!-- Academic Disclaimer Banner -->
+          <div class="p-3.5 rounded-xl bg-blue-950/30 border border-blue-900/60 flex items-center space-x-3">
+            <svg class="w-4 h-4 text-blue-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <p id="scDisclaimerText" class="text-xs font-mono text-blue-300"></p>
+          </div>
+
+          <p id="scVerdictSummary" class="text-sm text-zinc-200 leading-relaxed italic"></p>
+
+          <!-- 7-Category Breakdown Table -->
+          <div class="space-y-2 pt-2">
+            <span class="text-xs font-mono text-zinc-400 uppercase font-semibold">7-Category Project Decision Rubric:</span>
+            <div class="bg-surface/50 border border-borderSubtle rounded-2xl overflow-hidden divide-y divide-borderSubtle" id="scCategoriesContainer"></div>
+          </div>
+
+          <!-- Strengths & Key Risks Tags -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 border-t border-borderSubtle/60">
+            <div class="space-y-2">
+              <span class="text-xs font-mono uppercase text-emerald-400 font-semibold">Key Strengths:</span>
+              <div id="scStrengthsContainer" class="flex flex-wrap gap-2"></div>
+            </div>
+            <div class="space-y-2">
+              <span class="text-xs font-mono uppercase text-amber-400 font-semibold">Key Risks to Mitigate:</span>
+              <div id="scRisksContainer" class="flex flex-wrap gap-2"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. ADVERSARIAL KILL AGENT & EVIDENCE RECONCILER (Task 9.3) -->
+        <div class="bg-surface/60 border border-borderSubtle p-8 sm:p-10 rounded-3xl space-y-6 shadow-md">
+          <div class="border-b border-borderSubtle pb-4 flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <span class="text-xs font-mono text-red-400 uppercase tracking-wider font-semibold">Adversarial Stress-Testing</span>
+              <h3 class="text-xl font-bold text-white mt-1">Devil's Advocate (Kill Agent) & Reconciler</h3>
+            </div>
+            <span id="recVerdictBadge" class="text-xs font-mono px-3 py-1 rounded-xl bg-canvas border border-borderSubtle text-zinc-300">
+              Verdict Pending
+            </span>
+          </div>
+
+          <!-- Bear Case Alert -->
+          <div class="p-6 rounded-2xl bg-red-950/20 border border-red-900/50 space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-mono font-bold text-red-400 uppercase tracking-wider">Critical Failure Stress-Test (Bear Case)</span>
+              <span class="text-xs font-mono text-zinc-400">Why this idea might fail</span>
+            </div>
+            <p id="killBearCaseSummary" class="text-sm text-zinc-200 leading-relaxed"></p>
+          </div>
+
+          <!-- Fatal Flaws Cards -->
+          <div class="space-y-3">
+            <span class="text-xs font-mono text-zinc-400 uppercase font-semibold">Identified Fatal Flaws & Empirical Tests:</span>
+            <div id="fatalFlawsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+          </div>
+
+          <!-- Incumbent Threats List -->
+          <div class="space-y-2 pt-2">
+            <span class="text-xs font-mono text-zinc-400 uppercase font-semibold">Incumbent Replication Threats:</span>
+            <ul id="incumbentThreatsContainer" class="list-disc list-inside space-y-1.5 pl-2"></ul>
+          </div>
+
+          <!-- Dialectical Reconciliation Box -->
+          <div class="p-6 rounded-2xl bg-canvas/80 border border-blue-900/50 space-y-4">
+            <div class="border-b border-borderSubtle/60 pb-3 flex items-center justify-between">
+              <span class="text-xs font-mono font-bold text-blue-400 uppercase tracking-wider">Impartial Systems Arbiter Synthesis</span>
+              <span class="text-xs text-zinc-500 font-mono">Thesis vs Antithesis</span>
+            </div>
+            <p id="recSynthesisRationale" class="text-sm text-zinc-200 leading-relaxed"></p>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+              <div class="space-y-1.5">
+                <span class="text-[11px] font-mono text-emerald-400 uppercase font-semibold">Non-Negotiable Success Preconditions:</span>
+                <ul id="recPreconditionsContainer" class="list-disc list-inside space-y-1 pl-2"></ul>
+              </div>
+              <div class="space-y-1.5">
+                <span class="text-[11px] font-mono text-amber-400 uppercase font-semibold">Key Architectural Tradeoffs:</span>
+                <ul id="recTradeoffsContainer" class="list-disc list-inside space-y-1 pl-2"></ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. METAGPT-STYLE PRODUCT REQUIREMENTS DOCUMENT & MERMAID MODELS (Task 9.4) -->
+        <div class="bg-surface/60 border border-borderSubtle p-8 sm:p-10 rounded-3xl space-y-6 shadow-md">
+          <div class="border-b border-borderSubtle pb-4 flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <span class="text-xs font-mono text-blue-400 uppercase tracking-wider font-semibold">MetaGPT Product Specification</span>
+              <h3 class="text-xl font-bold text-white mt-1">Product Requirements Document (PRD) & Architecture</h3>
+            </div>
+            <span class="text-xs font-mono text-zinc-400 border border-borderSubtle px-3 py-1 rounded-xl bg-canvas">
+              User Stories & Mermaid
+            </span>
+          </div>
+
+          <!-- Product Vision & Audience -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-surface/50 border border-borderSubtle p-5 rounded-2xl space-y-1">
+              <span class="text-[11px] font-mono text-zinc-400 uppercase font-semibold">Product Vision</span>
+              <p id="prdVisionText" class="text-xs sm:text-sm text-zinc-200 leading-relaxed"></p>
+            </div>
+            <div class="bg-surface/50 border border-borderSubtle p-5 rounded-2xl space-y-1">
+              <span class="text-[11px] font-mono text-zinc-400 uppercase font-semibold">Target Audience Profile</span>
+              <p id="prdAudienceText" class="text-xs sm:text-sm text-zinc-200 leading-relaxed"></p>
+            </div>
+          </div>
+
+          <!-- User Stories -->
+          <div class="space-y-3 pt-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-mono text-zinc-400 uppercase font-semibold">Formal User Stories (with Acceptance Criteria):</span>
+              <span class="text-xs text-zinc-500 font-mono">Agile Epics</span>
+            </div>
+            <div id="userStoriesContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+          </div>
+
+          <!-- Functional Requirements Table -->
+          <div class="space-y-3 pt-2">
+            <span class="text-xs font-mono text-zinc-400 uppercase font-semibold">Functional Requirements Matrix:</span>
+            <div class="bg-surface/50 border border-borderSubtle rounded-2xl overflow-hidden divide-y divide-borderSubtle" id="functionalReqsContainer"></div>
+          </div>
+
+          <!-- Non-Functional Requirements Grid -->
+          <div class="space-y-2 pt-2">
+            <span class="text-xs font-mono text-zinc-400 uppercase font-semibold">Non-Functional Requirements:</span>
+            <div id="nonFunctionalReqsContainer" class="grid grid-cols-2 sm:grid-cols-4 gap-3"></div>
+          </div>
+
+          <!-- Interactive Mermaid Architecture Models -->
+          <div class="space-y-3 pt-4 border-t border-borderSubtle/60">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <span class="text-xs font-mono text-zinc-300 uppercase font-semibold">Architectural Models (Mermaid.js):</span>
+              <div class="flex items-center space-x-2 bg-canvas p-1 rounded-xl border border-borderSubtle">
+                <button id="tabMermaid_architecture" onclick="switchMermaidTab('architecture')" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white transition">
+                  System Architecture
+                </button>
+                <button id="tabMermaid_component" onclick="switchMermaidTab('component')" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold text-zinc-400 hover:text-white transition">
+                  Component Topology
+                </button>
+                <button id="tabMermaid_dataflow" onclick="switchMermaidTab('dataflow')" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold text-zinc-400 hover:text-white transition">
+                  Dataflow Sequence
+                </button>
+              </div>
+            </div>
+
+            <!-- Mermaid Render Container -->
+            <div id="mermaidContainer" class="bg-canvas/90 border border-borderSubtle rounded-2xl p-4 min-h-[160px] flex items-center justify-center">
+              <span class="text-xs font-mono text-zinc-500">Diagram will render upon completion.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. Target Users -->
         <div class="space-y-4">
           <div class="border-b border-borderSubtle pb-3 flex items-baseline justify-between">
-            <h3 class="text-base sm:text-lg font-bold text-white">1. Target Users</h3>
+            <h3 class="text-base sm:text-lg font-bold text-white">Target Personas</h3>
             <span class="text-xs text-zinc-500">Who experiences this problem</span>
           </div>
           <div id="personasContainer" class="grid grid-cols-1 md:grid-cols-3 gap-5"></div>
         </div>
 
-        <!-- 2. Competitors & Market Research (Comparison Table) -->
+        <!-- 5. Competitors & Market Research -->
         <div class="space-y-4">
           <div class="border-b border-borderSubtle pb-3 flex items-baseline justify-between">
-            <h3 class="text-base sm:text-lg font-bold text-white">2. Competitors & Market Research</h3>
+            <h3 class="text-base sm:text-lg font-bold text-white">Competitors & Market Research</h3>
             <span class="text-xs text-zinc-500">Live search references & differentiators</span>
           </div>
           <div class="bg-surface/50 border border-borderSubtle rounded-2xl overflow-hidden">
@@ -435,10 +563,10 @@
           </div>
         </div>
 
-        <!-- 3. Recommended Tech Stack (Clean Architecture Breakdown) -->
+        <!-- 6. Recommended Tech Stack -->
         <div class="space-y-4">
           <div class="border-b border-borderSubtle pb-3 flex items-baseline justify-between">
-            <h3 class="text-base sm:text-lg font-bold text-white">3. Recommended Tech Stack</h3>
+            <h3 class="text-base sm:text-lg font-bold text-white">Recommended Tech Stack</h3>
             <span class="text-xs text-zinc-500">Production choices & engineering tradeoffs</span>
           </div>
           <div class="bg-surface/50 border border-borderSubtle rounded-2xl overflow-hidden">
@@ -446,23 +574,14 @@
           </div>
         </div>
 
-        <!-- 4. Development Roadmap & Major Risks -->
+        <!-- 7. Development Roadmap & Major Risks -->
         <div class="space-y-5">
           <div class="border-b border-borderSubtle pb-3 flex items-baseline justify-between">
-            <h3 class="text-base sm:text-lg font-bold text-white">4. Development Roadmap & Major Risks</h3>
+            <h3 class="text-base sm:text-lg font-bold text-white">Development Roadmap & Major Risks</h3>
             <span class="text-xs text-zinc-500">Timeline & failure stress-test</span>
           </div>
 
-          <!-- Bear Case Failure Warning Alert -->
-          <div id="bearCaseAlert" class="p-6 rounded-2xl bg-red-950/20 border border-red-900/50 space-y-2">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-mono font-bold text-red-400 uppercase tracking-wider">Critical Failure Stress-Test (Bear Case)</span>
-              <span class="text-xs font-mono text-zinc-400">What could break this project</span>
-            </div>
-            <p id="bearCaseText" class="text-sm text-zinc-200 leading-relaxed"></p>
-          </div>
-
-          <!-- Milestone Roadmap (Connected Timeline Flow) -->
+          <!-- Milestone Roadmap -->
           <div id="roadmapContainer" class="space-y-4"></div>
 
           <!-- Technical Risks Table -->
@@ -474,7 +593,7 @@
           </div>
         </div>
 
-        <!-- 5. Strategic Implementation Takeaways -->
+        <!-- 8. Strategic Implementation Takeaways -->
         <div class="bg-surface/60 border border-borderSubtle p-8 rounded-3xl space-y-3">
           <div class="flex items-center justify-between border-b border-borderSubtle pb-3">
             <h3 class="text-sm font-bold text-white uppercase tracking-wider font-mono">Strategic Implementation Takeaways</h3>
@@ -485,28 +604,36 @@
 
       </div>
 
-      <!-- CODEBASE ANALYSIS VIEW (With Wrong Code vs Correct Code AST Comparison) -->
+      <!-- CODEBASE ANALYSIS VIEW (Task 9.2 Educational Comparison & Read-Only Guidance) -->
       <div id="codeView" class="space-y-8 hidden">
         <div class="bg-surface/60 border border-borderSubtle p-8 rounded-3xl space-y-4">
-          <div class="flex items-center justify-between border-b border-borderSubtle pb-4">
-            <h3 class="text-xl font-bold text-white">Codebase Diagnosis Summary</h3>
-            <span id="codeCriticBadge" class="text-xs font-mono font-semibold px-3 py-1 rounded-xl border border-emerald-800 bg-emerald-950/40 text-emerald-300">
-              [VERIFIED IN AST]
-            </span>
+          <div class="flex flex-wrap items-center justify-between gap-3 border-b border-borderSubtle pb-4">
+            <div>
+              <h3 class="text-xl font-bold text-white">Codebase Diagnosis Summary</h3>
+              <p class="text-xs text-zinc-400 mt-0.5">AST-based fault localization and root-cause analysis.</p>
+            </div>
+            <div class="flex items-center space-x-2">
+              <span class="text-xs font-mono font-bold px-3 py-1 rounded-xl border border-blue-800 bg-blue-950/60 text-blue-300">
+                Read-Only: Hypothesis & Fix Direction (No Automated Edits)
+              </span>
+              <span id="codeCriticBadge" class="text-xs font-mono font-semibold px-3 py-1 rounded-xl border border-emerald-800 bg-emerald-950/40 text-emerald-300">
+                [VERIFIED IN AST]
+              </span>
+            </div>
           </div>
           <p id="codeSummaryText" class="text-sm sm:text-base text-zinc-200 leading-relaxed"></p>
         </div>
 
         <div class="space-y-5">
           <div class="border-b border-borderSubtle pb-3 flex items-baseline justify-between">
-            <h3 class="text-base sm:text-lg font-bold text-white">Ranked Fault Candidates & Patch Suggestions</h3>
+            <h3 class="text-base sm:text-lg font-bold text-white">Ranked Fault Candidates & Educational Pattern Comparisons</h3>
             <span class="text-xs text-zinc-500">AST symbols matched against query</span>
           </div>
           <div id="codeCandidatesContainer" class="space-y-6"></div>
         </div>
       </div>
 
-      <!-- CONVERSATIONAL FOLLOW-UP (ChatGPT Style with Simulated Thinking Process) -->
+      <!-- CONVERSATIONAL FOLLOW-UP (Persistent Session Memory with Specialist Routing) -->
       <div class="bg-surface/60 border border-borderSubtle p-8 sm:p-10 rounded-3xl space-y-6 shadow-lg">
         <div class="flex flex-wrap items-center justify-between gap-4 border-b border-borderSubtle pb-4">
           <div>
@@ -524,29 +651,27 @@
         <!-- Quick Prompts with Dynamic Specialist Routing -->
         <div class="flex flex-wrap items-center gap-2 pt-1">
           <span class="text-xs text-zinc-500 font-medium">Quick ask:</span>
-          <button onclick="setFollowupPrompt('Can we replace the backend with FastAPI or Go?')" class="text-xs text-zinc-400 hover:text-white border border-borderSubtle hover:border-zinc-600 bg-canvas px-3 py-1.5 rounded-xl transition">
-            Switch backend to FastAPI / Go
-          </button>
-          <button onclick="setFollowupPrompt('Who are the closest market competitors to this idea?')" class="text-xs text-zinc-400 hover:text-white border border-borderSubtle hover:border-zinc-600 bg-canvas px-3 py-1.5 rounded-xl transition">
-            Analyze competitors
-          </button>
-          <button onclick="setFollowupPrompt('What are the top 3 architectural bottlenecks in this design?')" class="text-xs text-zinc-400 hover:text-white border border-borderSubtle hover:border-zinc-600 bg-canvas px-3 py-1.5 rounded-xl transition">
-            Analyze bottlenecks
-          </button>
-          <button onclick="setFollowupPrompt('What are the exact deliverables for Phase 1 MVP?')" class="text-xs text-zinc-400 hover:text-white border border-borderSubtle hover:border-zinc-600 bg-canvas px-3 py-1.5 rounded-xl transition">
-            MVP phase deliverables
-          </button>
+          <div id="followupQuickChips" class="flex flex-wrap items-center gap-2"></div>
         </div>
 
-        <!-- Input Bar with Enter-to-Submit support -->
-        <div class="flex items-end gap-3 pt-2">
-          <textarea id="followupInput" rows="2" placeholder="Ask any question... (Press Enter to send, Shift+Enter for new line)" class="flex-1 bg-canvas border border-borderSubtle focus:border-blue-500 rounded-2xl p-3.5 text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none resize-none leading-relaxed transition"></textarea>
-          <button id="btnSendFollowup" onclick="sendFollowup()" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs px-6 py-3.5 rounded-2xl transition flex items-center space-x-2 shadow-md">
-            <span id="btnFollowupText">Send</span>
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
-            </svg>
-          </button>
+        <!-- Unified Modern Chat Input Box with Bottom Action Bar -->
+        <div class="bg-canvas border border-borderSubtle focus-within:border-blue-500 rounded-2xl p-3.5 transition shadow-inner">
+          <textarea id="followupInput" rows="2" placeholder="Ask any question about architecture, risks, code, or milestones..." class="w-full bg-transparent text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none resize-none leading-relaxed"></textarea>
+          <div class="flex items-center justify-between pt-2.5 border-t border-borderSubtle/50 mt-1">
+            <span class="text-[11px] font-mono text-zinc-500 flex items-center space-x-1">
+              <span>Press</span>
+              <kbd class="px-1.5 py-0.5 rounded bg-surface border border-borderSubtle text-zinc-400 text-[10px]">Enter ↵</kbd>
+              <span>to send,</span>
+              <kbd class="px-1.5 py-0.5 rounded bg-surface border border-borderSubtle text-zinc-400 text-[10px]">Shift + Enter</kbd>
+              <span>for new line</span>
+            </span>
+            <button id="btnSendFollowup" onclick="sendFollowup()" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs px-5 py-2.5 rounded-xl transition flex items-center space-x-2 shadow-md">
+              <span id="btnFollowupText">Send</span>
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -558,6 +683,89 @@
     let activePillar = 'idea';
     let currentSessionState = null;
     let timerInterval = null;
+    let currentMermaidTab = 'architecture';
+
+    const IDEA_AGENTS = [
+      { id: 'node_0', name: 'Idea Decomposer', role: 'Task Planner & Scope', desc: 'Decomposes problem & MVP scope' },
+      { id: 'node_1', name: 'Market Intelligence', role: 'Competitor Intelligence', desc: 'Live market analysis & tech stack' },
+      { id: 'node_2', name: 'Adversarial Kill Agent', role: "Devil's Advocate Critic", desc: 'Stress-tests fatal flaws & risks' },
+      { id: 'node_3', name: 'Scorecard & Roadmap', role: 'Deterministic Scorer', desc: '100-point rubric & delivery roadmap' }
+    ];
+
+    const CODE_AGENTS = [
+      { id: 'node_0', name: 'Task Planner & AST Indexer', role: 'Code Structure Parser', desc: 'Parses AST files and symbol table' },
+      { id: 'node_1', name: 'Code Navigation Agent', role: 'Hybrid RAG Retriever', desc: 'BM25 and vector semantic search' },
+      { id: 'node_2', name: 'Diagnosis Agent', role: 'Root-Cause Specialist', desc: 'Hypothesis and fix direction' },
+      { id: 'node_3', name: 'Deterministic Critic', role: 'Fact & Line Verifier', desc: 'Physical disk and syntax check' }
+    ];
+
+    // Initialize Mermaid.js
+    if (window.mermaid) {
+      mermaid.initialize({
+        startOnLoad: false,
+        theme: 'dark',
+        securityLevel: 'loose',
+        themeVariables: {
+          darkMode: true,
+          background: '#080a10',
+          primaryColor: '#1e3a8a',
+          primaryTextColor: '#f1f4fb',
+          primaryBorderColor: '#3b82f6',
+          lineColor: '#60a5fa',
+          secondaryColor: '#1e293b',
+          tertiaryColor: '#0f172a'
+        }
+      });
+    }
+
+    function renderProgressStrip(mode) {
+      const container = document.getElementById('agentNodesStrip');
+      if (!container) return;
+      container.innerHTML = '';
+      const agents = mode === 'idea' ? IDEA_AGENTS : CODE_AGENTS;
+      
+      container.className = 'grid grid-cols-2 md:grid-cols-4 gap-4';
+
+      agents.forEach((ag, idx) => {
+        const card = document.createElement('div');
+        card.id = ag.id;
+        card.className = 'border border-borderSubtle bg-canvas/70 p-4 rounded-2xl space-y-1.5 transition-all';
+        card.innerHTML = `
+          <div class="flex items-center justify-between text-[11px] font-mono text-zinc-500">
+            <span>Agent 0${idx + 1}</span>
+            <span class="status-badge text-zinc-600 uppercase font-semibold">Idle</span>
+          </div>
+          <div class="font-bold text-xs sm:text-sm text-zinc-100">${ag.name}</div>
+          <p class="text-[11px] text-zinc-400 leading-snug">${ag.desc}</p>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function updateFollowupPromptChips(mode) {
+      const container = document.getElementById('followupQuickChips');
+      if (!container) return;
+      container.innerHTML = '';
+      const chips = mode === 'idea' ? [
+        { label: 'Analyze top competitors', prompt: 'Who are the closest market competitors to this idea?' },
+        { label: 'Success preconditions', prompt: 'What are the non-negotiable preconditions for success?' },
+        { label: 'Explain User Story US-01', prompt: 'Explain User Story US-01 and its acceptance criteria in detail.' },
+        { label: 'Technical bottlenecks', prompt: 'What are the top 3 architectural bottlenecks in this design?' }
+      ] : [
+        { label: 'Where is auth verified?', prompt: 'Where is customer authentication verified in the codebase?' },
+        { label: 'What calls that function?', prompt: 'What functions call the authentication handler?' },
+        { label: 'What is the blast radius?', prompt: 'What is the blast radius and risk if I modify it?' },
+        { label: 'Show flow trace', prompt: 'Show me the end-to-end request flow for login and checkout.' }
+      ];
+
+      chips.forEach(c => {
+        const btn = document.createElement('button');
+        btn.className = 'text-xs text-zinc-400 hover:text-white border border-borderSubtle hover:border-zinc-600 bg-canvas px-3 py-1.5 rounded-xl transition';
+        btn.innerText = c.label;
+        btn.onclick = () => setFollowupPrompt(c.prompt);
+        container.appendChild(btn);
+      });
+    }
 
     function selectPillar(mode) {
       activePillar = mode;
@@ -571,13 +779,6 @@
       const codeChips = document.getElementById('codeChips');
       const btnRunText = document.getElementById('btnRunText');
 
-      const nameAgent2 = document.getElementById('nameAgent2');
-      const descAgent2 = document.getElementById('descAgent2');
-      const nameAgent3 = document.getElementById('nameAgent3');
-      const descAgent3 = document.getElementById('descAgent3');
-      const nameAgent4 = document.getElementById('nameAgent4');
-      const descAgent4 = document.getElementById('descAgent4');
-
       if (mode === 'idea') {
         btnIdea.className = 'px-5 py-2.5 rounded-xl text-xs font-semibold transition bg-blue-600 text-white shadow-sm';
         btnCode.className = 'px-5 py-2.5 rounded-xl text-xs font-semibold transition text-zinc-400 hover:text-white';
@@ -587,32 +788,21 @@
         codeChips.classList.add('hidden');
         inputLabel.innerText = "Describe your startup or project idea:";
         mainPrompt.placeholder = "What problem are you solving? Who is it for? What is your solution...";
-        btnRunText.innerText = "Run Multi-Agent Pipeline";
-
-        nameAgent2.innerText = "Market Researcher";
-        descAgent2.innerText = "Searches existing solutions";
-        nameAgent3.innerText = "System Architect";
-        descAgent3.innerText = "Audits code & tech stack";
-        nameAgent4.innerText = "Roadmap & Risk";
-        descAgent4.innerText = "Milestones & failure stress-test";
+        btnRunText.innerText = "Run Multi-Agent Pipeline (4 Agents)";
       } else {
         btnCode.className = 'px-5 py-2.5 rounded-xl text-xs font-semibold transition bg-blue-600 text-white shadow-sm';
         btnIdea.className = 'px-5 py-2.5 rounded-xl text-xs font-semibold transition text-zinc-400 hover:text-white';
         codeTargetSection.classList.remove('hidden');
-        modeDescription.innerText = "AST code parser, fault localization & patch generation";
+        modeDescription.innerText = "AST code parser, fault localization & root-cause diagnosis";
         ideaChips.classList.add('hidden');
         codeChips.classList.remove('hidden');
         inputLabel.innerText = "Enter error traceback or code exploration question:";
         mainPrompt.placeholder = "Paste an exception traceback or ask about code structure (e.g. ValueError in verify_token)...";
-        btnRunText.innerText = "Diagnose Codebase with AST";
-
-        nameAgent2.innerText = "Code Structure Indexer";
-        descAgent2.innerText = "Scans classes & function symbols";
-        nameAgent3.innerText = "Navigation Agent";
-        descAgent3.innerText = "Narrows context & searches symbols";
-        nameAgent4.innerText = "Diagnosis Agent";
-        descAgent4.innerText = "Pinpoints bug root cause";
+        btnRunText.innerText = "Diagnose Codebase with AST (4 Agents)";
       }
+
+      renderProgressStrip(mode);
+      updateFollowupPromptChips(mode);
     }
 
     function setPrompt(type) {
@@ -627,6 +817,8 @@
         input.value = "ValueError: Token expired when verify_token validates customer credentials during checkout in order processor.";
       } else if (type === 'auth_flow') {
         input.value = "Where is customer authentication verified when placing an order, and how is session expiry checked?";
+      } else if (type === 'blast') {
+        input.value = "What is the change impact and blast radius if I modify verify_token in auth.py?";
       }
     }
 
@@ -665,18 +857,18 @@
     function setAgentNodeState(nodeId, statusText, isActive, isDone) {
       const node = document.getElementById(nodeId);
       if (!node) return;
-      const statusSpan = node.querySelector('span:last-child');
+      const statusSpan = node.querySelector('.status-badge');
       if (statusSpan) statusSpan.innerText = statusText;
 
       if (isActive) {
         node.className = "border border-blue-500 bg-blue-950/40 p-3.5 rounded-2xl space-y-1 transition-all shadow-md shadow-blue-950/40";
-        if (statusSpan) statusSpan.className = "text-blue-400 uppercase font-bold text-[11px]";
+        if (statusSpan) statusSpan.className = "status-badge text-blue-400 uppercase font-bold text-[11px]";
       } else if (isDone) {
         node.className = "border border-emerald-900 bg-emerald-950/20 p-3.5 rounded-2xl space-y-1 transition-all";
-        if (statusSpan) statusSpan.className = "text-emerald-400 uppercase font-bold text-[11px]";
+        if (statusSpan) statusSpan.className = "status-badge text-emerald-400 uppercase font-bold text-[11px]";
       } else {
         node.className = "border border-borderSubtle bg-canvas/70 p-3.5 rounded-2xl space-y-1 transition-all";
-        if (statusSpan) statusSpan.className = "text-zinc-600 uppercase font-semibold text-[11px]";
+        if (statusSpan) statusSpan.className = "status-badge text-zinc-600 uppercase font-semibold text-[11px]";
       }
     }
 
@@ -692,10 +884,10 @@
         <div class="flex flex-wrap items-center justify-between gap-2 border-b border-borderSubtle/70 pb-3">
           <div class="flex items-center space-x-2.5">
             <span class="text-xs font-mono font-bold text-blue-400 bg-blue-950/70 border border-blue-800/80 px-2.5 py-0.5 rounded-lg">Step 0${idx + 1}</span>
-            <h4 class="text-sm sm:text-base font-bold text-white">${step.agent_name}</h4>
+            <h4 class="text-sm sm:text-base font-bold text-white">${escapeHtml(step.agent_name)}</h4>
           </div>
           <div class="flex items-center space-x-3 text-xs font-mono">
-            <span class="text-zinc-400 border border-borderSubtle bg-surface px-2.5 py-1 rounded-md">${d.tool ? d.tool : 'Reasoning Engine'}</span>
+            <span class="text-zinc-400 border border-borderSubtle bg-surface px-2.5 py-1 rounded-md">${escapeHtml(d.tool || 'Reasoning Engine')}</span>
             <span class="text-emerald-400 font-semibold">+${step.elapsed_ms}ms</span>
           </div>
         </div>
@@ -703,7 +895,7 @@
         <div class="space-y-1">
           <span class="text-[11px] font-mono uppercase text-zinc-500 font-semibold">Goal & Thinking:</span>
           <p class="text-xs sm:text-sm text-zinc-300 leading-relaxed italic bg-surface/60 p-3.5 rounded-xl border border-borderSubtle/50">
-            "${d.thinking || step.action}"
+            "${escapeHtml(d.thinking || step.action)}"
           </p>
         </div>
 
@@ -711,7 +903,7 @@
           <div class="space-y-1.5 pt-1">
             <span class="text-[11px] font-mono uppercase text-emerald-400 font-semibold">What It Found:</span>
             <ul class="space-y-1 text-xs sm:text-sm text-zinc-200 pl-4 list-disc marker:text-emerald-500 leading-relaxed">
-              ${findingsList.map(f => `<li>${f}</li>`).join('')}
+              ${findingsList.map(f => `<li>${escapeHtml(f)}</li>`).join('')}
             </ul>
           </div>
         ` : ''}
@@ -719,7 +911,7 @@
         ${d.handoff ? `
           <div class="pt-2 border-t border-borderSubtle/60 flex items-center space-x-2 text-xs">
             <span class="font-mono text-[11px] uppercase text-zinc-500 font-semibold">Passed Forward:</span>
-            <span class="text-zinc-300 font-medium">${d.handoff}</span>
+            <span class="text-zinc-300 font-medium">${escapeHtml(d.handoff)}</span>
           </div>
         ` : ''}
       `;
@@ -728,11 +920,14 @@
     }
 
     function getAgentActionDescription(agentName, idx) {
-      if (idx === 0) return "Decomposing requirements and orchestrating team execution...";
-      if (idx === 1) return "Searching live competitor references and indexing code structure...";
-      if (idx === 2) return "Evaluating system architecture tradeoffs and auditing dependencies...";
-      if (idx === 3) return "Formulating milestone timelines and failure stress-tests...";
-      return "Executing deterministic Python AST syntax and citation checks...";
+      if (agentName.includes('Decomposer') || idx === 0) return "Decomposing requirements, personas, and MVP scope...";
+      if (agentName.includes('Market')) return "Searching live competitor references and stack architecture...";
+      if (agentName.includes('Kill') || agentName.includes('Advocate')) return "Stress-testing unproven assumptions and evaluating fatal flaws...";
+      if (agentName.includes('Scorecard') || agentName.includes('Roadmap') || idx === 3) return "Evaluating deterministic 100-point rubric and delivery milestones...";
+      if (agentName.includes('AST') || agentName.includes('Indexer')) return "Parsing syntax trees and mapping call relationships...";
+      if (agentName.includes('Diagnosis')) return "Formulating root-cause hypothesis and fix direction...";
+      if (agentName.includes('Critic')) return "Executing deterministic Python AST syntax and disk checks...";
+      return "Analyzing query context and dispatching domain specialist...";
     }
 
     async function executeWorkflow() {
@@ -759,11 +954,8 @@
       stepsContainer.innerHTML = '';
       document.getElementById('outputArea').classList.add('hidden');
 
-      setAgentNodeState('nodeOrchestrator', 'Working...', true, false);
-      setAgentNodeState('nodeResearch', 'Queued', false, false);
-      setAgentNodeState('nodeArch', 'Queued', false, false);
-      setAgentNodeState('nodeRoadmap', 'Queued', false, false);
-      setAgentNodeState('nodeCritic', 'Queued', false, false);
+      renderProgressStrip(activePillar);
+      setAgentNodeState('node_0', 'Working...', true, false);
 
       try {
         const intent = activePillar === 'idea' ? 'idea_validation' : 'codebase_analysis';
@@ -781,14 +973,14 @@
         currentSessionState = state;
         clearInterval(timerInterval);
 
-        // Progressive sequential reveal of steps 1 through 5 with active loading indicators and pauses
+        // Progressive sequential reveal of agent steps with active shimmer loader and deliberate pauses
         const traces = state.execution_trace || [];
         const agentSteps = traces.filter(t => t.details && (t.details.thinking || t.details.findings));
-        const nodeIds = ['nodeOrchestrator', 'nodeResearch', 'nodeArch', 'nodeRoadmap', 'nodeCritic'];
+        const currentAgents = activePillar === 'idea' ? IDEA_AGENTS : CODE_AGENTS;
 
         for (let i = 0; i < agentSteps.length; i++) {
           const step = agentSteps[i];
-          const currentNodeId = nodeIds[i] || nodeIds[nodeIds.length - 1];
+          const currentNodeId = currentAgents[i] ? currentAgents[i].id : `node_${i}`;
 
           // 1. Mark top node as working
           setAgentNodeState(currentNodeId, 'Working...', true, false);
@@ -813,19 +1005,18 @@
           stepsContainer.appendChild(loaderCard);
           loaderCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
-          // 3. Pause for 1 second while loading
-          await new Promise(r => setTimeout(r, 950));
+          // 3. Pause for 850ms while loading
+          await new Promise(r => setTimeout(r, 850));
 
           // 4. Remove loader and display completed rich agent card
           loaderCard.remove();
           renderSingleAgentCard(step, i);
           setAgentNodeState(currentNodeId, 'Done', false, true);
 
-          // 5. Pause for a full second so the user can easily read what this agent finished
-          await new Promise(r => setTimeout(r, 900));
+          // 5. Pause for 750ms so user can digest findings
+          await new Promise(r => setTimeout(r, 750));
         }
 
-        setAgentNodeState('nodeCritic', 'Verified', false, true);
         document.getElementById('pipelineStatusText').innerText = "All Agents Complete";
         document.getElementById('pipelineStatusText').className = "text-emerald-400 font-semibold";
         document.getElementById('btnExportTop').classList.remove('hidden');
@@ -875,8 +1066,8 @@
         row.className = 'border-l-2 border-blue-500/50 pl-3 py-1 flex items-start justify-between text-xs font-mono';
         row.innerHTML = `
           <div>
-            <span class="text-white font-bold">[${t.agent_name}]</span>
-            <span class="text-zinc-400 ml-2">${t.action}</span>
+            <span class="text-white font-bold">[${escapeHtml(t.agent_name)}]</span>
+            <span class="text-zinc-400 ml-2">${escapeHtml(t.action)}</span>
           </div>
           <span class="text-zinc-500 text-[11px] whitespace-nowrap ml-3">+${t.elapsed_ms}ms</span>
         `;
@@ -889,7 +1080,7 @@
       document.getElementById('kpiRevisions').innerText = `${state.revision_count} Retries Needed`;
       
       const out = state.final_output || {};
-      if (out.feasibility_score) {
+      if (out.feasibility_score !== undefined) {
         document.getElementById('kpiTrack').innerText = `${out.feasibility_score}/100 Rating`;
       } else {
         document.getElementById('kpiTrack').innerText = state.intent === 'idea_validation' ? 'Idea Track' : 'Codebase Track';
@@ -904,33 +1095,296 @@
       }
     }
 
+    function switchMermaidTab(tab) {
+      currentMermaidTab = tab;
+      const tabs = ['architecture', 'component', 'dataflow'];
+      tabs.forEach(t => {
+        const btn = document.getElementById(`tabMermaid_${t}`);
+        if (btn) {
+          if (t === tab) {
+            btn.className = 'px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white shadow-sm transition';
+          } else {
+            btn.className = 'px-3.5 py-1.5 rounded-lg text-xs font-semibold text-zinc-400 hover:text-white transition';
+          }
+        }
+      });
+
+      const prd = currentSessionState && currentSessionState.final_output && currentSessionState.final_output.prd;
+      if (!prd) return;
+
+      let chart = '';
+      if (tab === 'architecture') chart = prd.architecture_diagram_mermaid || '';
+      else if (tab === 'component') chart = prd.component_diagram_mermaid || '';
+      else if (tab === 'dataflow') chart = prd.dataflow_diagram_mermaid || '';
+
+      renderMermaidDiagram('mermaidContainer', chart);
+    }
+
+    async function renderMermaidDiagram(containerId, chartDefinition) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      if (!chartDefinition || !chartDefinition.trim()) {
+        container.innerHTML = '<div class="text-xs font-mono text-zinc-500 italic p-6 text-center">No diagram specification available.</div>';
+        return;
+      }
+
+      container.innerHTML = `
+        <div class="flex items-center justify-center p-8 space-x-2 text-xs font-mono text-blue-400">
+          <svg class="w-4 h-4 animate-spin text-blue-400" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+          </svg>
+          <span>Rendering diagram model...</span>
+        </div>
+      `;
+
+      if (window.mermaid) {
+        try {
+          const cleanChart = chartDefinition.trim();
+          const uniqueId = 'mermaid_diag_' + Math.random().toString(36).substring(2, 9);
+          const { svg } = await mermaid.render(uniqueId, cleanChart);
+          container.innerHTML = `
+            <div class="overflow-x-auto p-4 flex justify-center bg-black/40 rounded-2xl border border-borderSubtle w-full">
+              ${svg}
+            </div>
+          `;
+          return;
+        } catch (e) {
+          console.warn("Mermaid SVG render failed, displaying structured definition:", e);
+        }
+      }
+
+      // Fallback display
+      container.innerHTML = `
+        <div class="p-4 bg-black/50 rounded-2xl border border-borderSubtle w-full">
+          <div class="text-[11px] font-mono text-zinc-500 mb-2">Mermaid Definition:</div>
+          <pre class="text-xs font-mono text-blue-300 overflow-x-auto leading-relaxed whitespace-pre">${escapeHtml(chartDefinition.trim())}</pre>
+        </div>
+      `;
+    }
+
     function renderIdeaResults(state) {
       const out = state.final_output || {};
       document.getElementById('ideaProjectTitle').innerText = out.project_title || "Validated Engineering Concept";
       document.getElementById('ideaProblemStatement').innerText = out.problem_statement || "";
       document.getElementById('ideaCoreValue').innerText = out.core_value_prop || "";
 
-      // 1. Personas (Clean split cards)
+      // 1. Feasibility Decision Scorecard (Task 9.5)
+      const sc = out.scorecard || {};
+      const scoreVal = sc.total_score !== undefined ? sc.total_score : (out.feasibility_score || 0);
+      const verdictVal = sc.verdict || out.feasibility_verdict || 'GO';
+      const disclaimerVal = sc.rubric_disclaimer || out.rubric_disclaimer || 'Feasibility Score: based on the defined project rubric.';
+      
+      document.getElementById('scScoreNum').innerText = `${scoreVal}/100`;
+      const verdictEl = document.getElementById('scVerdictBadge');
+      verdictEl.innerText = verdictVal;
+      if (verdictVal === 'GO') {
+        verdictEl.className = 'px-3 py-1 rounded-xl text-xs font-mono font-bold uppercase bg-emerald-950/60 border border-emerald-800 text-emerald-300';
+      } else if (verdictVal === 'PIVOT') {
+        verdictEl.className = 'px-3 py-1 rounded-xl text-xs font-mono font-bold uppercase bg-amber-950/60 border border-amber-800 text-amber-300';
+      } else {
+        verdictEl.className = 'px-3 py-1 rounded-xl text-xs font-mono font-bold uppercase bg-rose-950/60 border border-rose-800 text-rose-300';
+      }
+      document.getElementById('scDisclaimerText').innerText = disclaimerVal;
+      document.getElementById('scVerdictSummary').innerText = sc.verdict_summary || 'Evaluated against the 7-category project rubric.';
+
+      // 7-category rubric table
+      const catTableBody = document.getElementById('scCategoriesContainer');
+      catTableBody.innerHTML = '';
+      (sc.categories || []).forEach(cat => {
+        const pct = Math.round((cat.score / cat.max_score) * 100);
+        const row = document.createElement('div');
+        row.className = 'p-4 sm:p-5 hover:bg-surface/40 transition space-y-2';
+        row.innerHTML = `
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex items-center space-x-2">
+              <span class="text-xs font-bold text-white font-mono">${escapeHtml(cat.category_name)}</span>
+              <span class="text-[11px] font-mono text-zinc-400">(${cat.score} / ${cat.max_score} pts)</span>
+            </div>
+            <div class="w-32 bg-canvas rounded-full h-2 border border-borderSubtle overflow-hidden">
+              <div class="bg-blue-500 h-2 rounded-full" style="width: ${pct}%"></div>
+            </div>
+          </div>
+          <p class="text-xs text-zinc-300 leading-relaxed">${escapeHtml(cat.rationale || '')}</p>
+        `;
+        catTableBody.appendChild(row);
+      });
+
+      // Strengths & Risks tags
+      const strengthsContainer = document.getElementById('scStrengthsContainer');
+      strengthsContainer.innerHTML = '';
+      (sc.key_strengths || []).forEach(s => {
+        const tag = document.createElement('span');
+        tag.className = 'text-xs font-mono px-3 py-1 rounded-xl bg-emerald-950/40 border border-emerald-800/80 text-emerald-300';
+        tag.innerText = s;
+        strengthsContainer.appendChild(tag);
+      });
+
+      const scRisksContainer = document.getElementById('scRisksContainer');
+      scRisksContainer.innerHTML = '';
+      (sc.key_risks || []).forEach(r => {
+        const tag = document.createElement('span');
+        tag.className = 'text-xs font-mono px-3 py-1 rounded-xl bg-amber-950/40 border border-amber-800/80 text-amber-300';
+        tag.innerText = r;
+        scRisksContainer.appendChild(tag);
+      });
+
+      // 2. Adversarial Kill Agent & Reconciler (Task 9.3)
+      const kill = out.kill_report || {};
+      const rec = out.reconciliation || {};
+
+      document.getElementById('killBearCaseSummary').innerText = kill.bear_case_summary || out.bear_case_critic || 'Bear-case stress testing active.';
+
+      const fatalFlawsContainer = document.getElementById('fatalFlawsContainer');
+      fatalFlawsContainer.innerHTML = '';
+      (kill.fatal_flaws || []).forEach(flaw => {
+        const card = document.createElement('div');
+        card.className = 'p-4 sm:p-5 rounded-2xl bg-canvas/80 border border-red-900/40 space-y-2';
+        const sevClass = flaw.severity === 'CRITICAL'
+          ? 'bg-rose-950 text-rose-300 border-rose-800'
+          : flaw.severity === 'HIGH'
+          ? 'bg-amber-950 text-amber-300 border-amber-800'
+          : 'bg-blue-950 text-blue-300 border-blue-800';
+        card.innerHTML = `
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <h4 class="text-sm font-bold text-white">${escapeHtml(flaw.title)}</h4>
+            <span class="text-[10px] font-mono px-2.5 py-0.5 rounded-lg border font-bold uppercase ${sevClass}">
+              ${escapeHtml(flaw.severity)}
+            </span>
+          </div>
+          <p class="text-xs text-zinc-300 leading-relaxed">${escapeHtml(flaw.reason)}</p>
+          <div class="pt-1 text-[11px] font-mono text-zinc-400">
+            <span class="text-zinc-500 uppercase font-semibold">Validation Test:</span>
+            <span class="text-zinc-300 ml-1">${escapeHtml(flaw.mitigation_test)}</span>
+          </div>
+        `;
+        fatalFlawsContainer.appendChild(card);
+      });
+
+      const threatsContainer = document.getElementById('incumbentThreatsContainer');
+      threatsContainer.innerHTML = '';
+      (kill.incumbent_threats || []).forEach(t => {
+        const li = document.createElement('li');
+        li.className = 'text-xs text-zinc-300';
+        li.innerText = t;
+        threatsContainer.appendChild(li);
+      });
+
+      document.getElementById('recVerdictBadge').innerText = rec.verdict || 'Synthesis Complete';
+      document.getElementById('recSynthesisRationale').innerText = rec.synthesis_rationale || '';
+
+      const recPreconditions = document.getElementById('recPreconditionsContainer');
+      recPreconditions.innerHTML = '';
+      (rec.must_have_mitigations || []).forEach(m => {
+        const li = document.createElement('li');
+        li.className = 'text-xs text-zinc-200 leading-relaxed';
+        li.innerText = m;
+        recPreconditions.appendChild(li);
+      });
+
+      const recTradeoffs = document.getElementById('recTradeoffsContainer');
+      recTradeoffs.innerHTML = '';
+      (rec.key_tradeoffs || []).forEach(t => {
+        const li = document.createElement('li');
+        li.className = 'text-xs text-zinc-300 leading-relaxed';
+        li.innerText = t;
+        recTradeoffs.appendChild(li);
+      });
+
+      // 3. MetaGPT-Style PRD & Architecture Engine (Task 9.4)
+      const prd = out.prd || {};
+      document.getElementById('prdVisionText').innerText = prd.product_vision || out.problem_statement || '';
+      document.getElementById('prdAudienceText').innerText = prd.target_audience_summary || '';
+
+      const userStoriesContainer = document.getElementById('userStoriesContainer');
+      userStoriesContainer.innerHTML = '';
+      (prd.user_stories || []).forEach(story => {
+        const card = document.createElement('div');
+        card.className = 'bg-surface/50 border border-borderSubtle p-5 rounded-2xl space-y-3';
+        const criteriaList = (story.acceptance_criteria || []).map(c => `
+          <li class="flex items-start space-x-2 text-xs text-zinc-300">
+            <span class="text-blue-400 mt-0.5">✓</span>
+            <span>${escapeHtml(c)}</span>
+          </li>
+        `).join('');
+        card.innerHTML = `
+          <div class="flex items-center justify-between border-b border-borderSubtle/60 pb-2">
+            <span class="text-xs font-mono font-bold text-blue-400 uppercase tracking-wider">${escapeHtml(story.story_id)}</span>
+            <span class="text-[11px] font-mono text-zinc-400">${escapeHtml(story.persona)}</span>
+          </div>
+          <div class="text-xs text-zinc-200 space-y-1">
+            <p><strong class="text-zinc-400 font-mono text-[11px]">WANT:</strong> ${escapeHtml(story.want)}</p>
+            <p><strong class="text-zinc-400 font-mono text-[11px]">SO THAT:</strong> ${escapeHtml(story.so_that)}</p>
+          </div>
+          <div class="pt-2 border-t border-borderSubtle/60 space-y-1.5">
+            <span class="text-[10px] font-mono uppercase text-emerald-400 font-semibold block">Acceptance Criteria:</span>
+            <ul class="space-y-1">${criteriaList}</ul>
+          </div>
+        `;
+        userStoriesContainer.appendChild(card);
+      });
+
+      const frContainer = document.getElementById('functionalReqsContainer');
+      frContainer.innerHTML = '';
+      (prd.functional_requirements || []).forEach(fr => {
+        const row = document.createElement('div');
+        row.className = 'p-4 sm:p-5 hover:bg-surface/40 transition space-y-1.5';
+        const prioClass = fr.priority === 'Must Have'
+          ? 'bg-blue-950 text-blue-300 border-blue-800'
+          : fr.priority === 'Should Have'
+          ? 'bg-cyan-950 text-cyan-300 border-cyan-800'
+          : 'bg-zinc-800 text-zinc-300 border-zinc-700';
+        row.innerHTML = `
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex items-center space-x-2">
+              <span class="text-xs font-mono font-bold text-blue-400">${escapeHtml(fr.req_id)}</span>
+              <span class="text-xs font-bold text-white">${escapeHtml(fr.title)}</span>
+            </div>
+            <span class="text-[10px] font-mono px-2.5 py-0.5 rounded-lg border font-semibold ${prioClass}">
+              ${escapeHtml(fr.priority)}
+            </span>
+          </div>
+          <p class="text-xs text-zinc-300 leading-relaxed">${escapeHtml(fr.description)}</p>
+        `;
+        frContainer.appendChild(row);
+      });
+
+      const nfrContainer = document.getElementById('nonFunctionalReqsContainer');
+      nfrContainer.innerHTML = '';
+      const nfrs = prd.non_functional_requirements || {};
+      for (const [key, val] of Object.entries(nfrs)) {
+        const card = document.createElement('div');
+        card.className = 'bg-surface/50 border border-borderSubtle p-4 rounded-xl space-y-1';
+        card.innerHTML = `
+          <span class="text-[10px] font-mono uppercase text-zinc-400 font-semibold">${escapeHtml(key)}</span>
+          <p class="text-xs text-zinc-200 leading-relaxed">${escapeHtml(val)}</p>
+        `;
+        nfrContainer.appendChild(card);
+      }
+
+      switchMermaidTab('architecture');
+
+      // 4. Target Personas
       const personasContainer = document.getElementById('personasContainer');
       personasContainer.innerHTML = '';
       (out.target_personas || []).forEach(p => {
         const div = document.createElement('div');
         div.className = 'bg-surface/50 border border-borderSubtle p-6 rounded-2xl space-y-3';
         div.innerHTML = `
-          <div class="text-xs font-mono font-bold text-blue-400 uppercase tracking-wider">${p.persona}</div>
+          <div class="text-xs font-mono font-bold text-blue-400 uppercase tracking-wider">${escapeHtml(p.persona)}</div>
           <div class="space-y-1">
             <span class="text-[11px] font-mono text-zinc-500 uppercase">Core Pain Point</span>
-            <p class="text-sm text-zinc-200 leading-relaxed">${p.pain_point}</p>
+            <p class="text-sm text-zinc-200 leading-relaxed">${escapeHtml(p.pain_point)}</p>
           </div>
           <div class="pt-2 border-t border-borderSubtle/60 space-y-1">
             <span class="text-[11px] font-mono text-emerald-400 uppercase font-semibold">Expected Benefit</span>
-            <p class="text-xs text-zinc-300 leading-relaxed">${p.expected_benefit}</p>
+            <p class="text-xs text-zinc-300 leading-relaxed">${escapeHtml(p.expected_benefit)}</p>
           </div>
         `;
         personasContainer.appendChild(div);
       });
 
-      // 2. Competitors (Clean comparison list with differentiators)
+      // 5. Competitors
       const compContainer = document.getElementById('competitorsContainer');
       compContainer.innerHTML = '';
       (out.competitors || []).forEach(c => {
@@ -938,19 +1392,19 @@
         div.className = 'p-5 sm:p-6 space-y-2 hover:bg-surface/40 transition';
         div.innerHTML = `
           <div class="flex flex-wrap items-baseline justify-between gap-2">
-            <h4 class="font-bold text-white text-sm">${c.name}</h4>
+            <h4 class="font-bold text-white text-sm">${escapeHtml(c.name)}</h4>
             <span class="text-[11px] font-mono text-zinc-500">Live Search Reference</span>
           </div>
-          <p class="text-sm text-zinc-300 leading-relaxed">${c.summary || ''}</p>
+          <p class="text-sm text-zinc-300 leading-relaxed">${escapeHtml(c.summary || '')}</p>
           <div class="pt-1 flex items-baseline space-x-2 text-xs">
             <span class="font-mono text-blue-400 font-semibold uppercase text-[11px]">Our Advantage:</span>
-            <span class="text-zinc-200">${c.gaps || 'Tailored specifically to requirements'}</span>
+            <span class="text-zinc-200">${escapeHtml(c.gaps || 'Tailored specifically to requirements')}</span>
           </div>
         `;
         compContainer.appendChild(div);
       });
 
-      // 3. Tech Stack (Clean architecture breakdown)
+      // 6. Tech Stack
       const techContainer = document.getElementById('techStackContainer');
       techContainer.innerHTML = '';
       const stack = out.tech_stack || {};
@@ -959,37 +1413,26 @@
         div.className = 'p-5 sm:p-6 space-y-2 hover:bg-surface/40 transition';
         div.innerHTML = `
           <div class="flex flex-wrap items-center justify-between gap-2">
-            <span class="text-xs font-mono text-blue-400 uppercase font-bold tracking-wider">${category}</span>
+            <span class="text-xs font-mono text-blue-400 uppercase font-bold tracking-wider">${escapeHtml(category)}</span>
             <span class="text-xs font-mono font-bold text-white bg-canvas px-3 py-1 rounded-lg border border-borderSubtle">
-              ${item.choice || ''}
+              ${escapeHtml(item.choice || '')}
             </span>
           </div>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1 text-xs sm:text-sm">
             <div>
               <span class="text-[11px] font-mono text-zinc-500 uppercase font-semibold block">Engineering Rationale:</span>
-              <p class="text-zinc-300 leading-relaxed mt-0.5">${item.rationale || ''}</p>
+              <p class="text-zinc-300 leading-relaxed mt-0.5">${escapeHtml(item.rationale || '')}</p>
             </div>
             <div>
               <span class="text-[11px] font-mono text-amber-300 uppercase font-semibold block">Technical Tradeoff:</span>
-              <p class="text-zinc-400 leading-relaxed mt-0.5">${item.tradeoffs || 'Standard operational overhead'}</p>
+              <p class="text-zinc-400 leading-relaxed mt-0.5">${escapeHtml(item.tradeoffs || 'Standard operational overhead')}</p>
             </div>
           </div>
         `;
         techContainer.appendChild(div);
       }
 
-      // 4. Bear Case Stress-Test Alert
-      const bearAlert = document.getElementById('bearCaseAlert');
-      const bearText = document.getElementById('bearCaseText');
-      if (out.bear_case_critic) {
-        bearText.innerText = out.bear_case_critic;
-        bearAlert.classList.remove('hidden');
-      } else {
-        bearText.innerText = "High initial hardware or API integration friction could slow down user onboarding.";
-        bearAlert.classList.remove('hidden');
-      }
-
-      // Roadmap Phases (Milestone timeline)
+      // 7. Roadmap Phases
       const roadmapContainer = document.getElementById('roadmapContainer');
       roadmapContainer.innerHTML = '';
       (out.phases || []).forEach(ph => {
@@ -999,23 +1442,23 @@
           <div class="flex flex-wrap items-center justify-between gap-3 border-b border-borderSubtle/60 pb-3">
             <div>
               <span class="text-xs font-mono text-blue-400 uppercase font-semibold tracking-wider">Milestone Step 0${ph.phase_number}</span>
-              <h4 class="font-bold text-base text-white mt-0.5">${ph.phase_name}</h4>
+              <h4 class="font-bold text-base text-white mt-0.5">${escapeHtml(ph.phase_name)}</h4>
             </div>
             <span class="text-xs font-mono text-zinc-300 border border-borderSubtle px-3 py-1 rounded-xl bg-canvas">
-              ${ph.duration_weeks}
+              ${escapeHtml(ph.duration_weeks)}
             </span>
           </div>
 
           <div class="space-y-1.5">
             <span class="text-[11px] font-mono text-zinc-400 uppercase font-semibold block">Deliverables:</span>
             <ul class="list-disc list-inside space-y-1 text-sm text-zinc-200 leading-relaxed">
-              ${(ph.deliverables || []).map(d => `<li>${d}</li>`).join('')}
+              ${(ph.deliverables || []).map(d => `<li>${escapeHtml(d)}</li>`).join('')}
             </ul>
           </div>
 
           <div class="pt-2 border-t border-borderSubtle/60 flex items-baseline space-x-2 text-xs">
             <span class="font-mono text-emerald-400 uppercase font-semibold text-[11px]">Exit Criteria:</span>
-            <span class="text-zinc-200">${ph.exit_criteria}</span>
+            <span class="text-zinc-200">${escapeHtml(ph.exit_criteria)}</span>
           </div>
         `;
         roadmapContainer.appendChild(div);
@@ -1029,14 +1472,14 @@
         div.className = 'p-5 sm:p-6 space-y-2 hover:bg-surface/40 transition';
         div.innerHTML = `
           <div class="flex flex-wrap items-baseline justify-between gap-2">
-            <h4 class="text-sm font-bold text-white">${r.risk}</h4>
+            <h4 class="text-sm font-bold text-white">${escapeHtml(r.risk)}</h4>
             <span class="text-xs font-mono px-2.5 py-0.5 rounded-lg border border-borderSubtle bg-canvas text-zinc-300">
-              ${r.category} (${r.severity})
+              ${escapeHtml(r.category)} (${escapeHtml(r.severity)})
             </span>
           </div>
           <div class="flex items-baseline space-x-2 text-xs sm:text-sm">
             <span class="font-mono text-blue-400 uppercase font-semibold text-[11px]">Mitigation:</span>
-            <span class="text-zinc-300">${r.mitigation}</span>
+            <span class="text-zinc-300">${escapeHtml(r.mitigation)}</span>
           </div>
         `;
         risksContainer.appendChild(div);
@@ -1051,176 +1494,6 @@
         tipsContainer.appendChild(li);
       });
     }
-
-    function setFollowupPrompt(text) {
-      document.getElementById('followupInput').value = text;
-      document.getElementById('followupInput').focus();
-    }
-
-    function escapeHtml(str) {
-      if (!str) return '';
-      return str
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-    }
-
-    function getSpecialistBadgeClass(agentName) {
-      if (!agentName) return 'text-blue-300 bg-blue-950/60 border-blue-800';
-      if (agentName.includes('Market')) return 'text-purple-300 bg-purple-950/60 border-purple-800';
-      if (agentName.includes('Roadmap') || agentName.includes('Delivery')) return 'text-cyan-300 bg-cyan-950/60 border-cyan-800';
-      if (agentName.includes('Risk') || agentName.includes('Security')) return 'text-amber-300 bg-amber-950/60 border-amber-800';
-      if (agentName.includes('Code') || agentName.includes('AST')) return 'text-emerald-300 bg-emerald-950/60 border-emerald-800';
-      return 'text-blue-300 bg-blue-950/60 border-blue-800';
-    }
-
-    async function sendFollowup() {
-      const input = document.getElementById('followupInput');
-      const query = input.value.trim();
-      if (!query) return;
-
-      const btn = document.getElementById('btnSendFollowup');
-      const btnText = document.getElementById('btnFollowupText');
-      const thread = document.getElementById('followupThread');
-
-      // User Message Bubble (Neat and right-accented)
-      const userCard = document.createElement('div');
-      userCard.className = 'bg-blue-950/30 border border-blue-900/50 p-4 rounded-2xl space-y-1 ml-auto max-w-2xl animate-step-reveal';
-      userCard.innerHTML = `
-        <span class="text-[11px] font-mono uppercase text-blue-400 font-semibold">You:</span>
-        <p class="text-sm text-zinc-100 font-medium">${escapeHtml(query)}</p>
-      `;
-      thread.appendChild(userCard);
-      input.value = '';
-
-      btn.disabled = true;
-      btnText.innerText = 'Thinking...';
-
-      // Animated Simulated Thinking Process Block
-      const thinkingCard = document.createElement('div');
-      thinkingCard.id = 'followupThinkingCard';
-      thinkingCard.className = 'bg-surface/50 border border-blue-900/40 p-5 rounded-2xl space-y-2.5 animate-pulse max-w-2xl';
-      thinkingCard.innerHTML = `
-        <div class="flex items-center space-x-2 text-xs font-mono text-blue-400">
-          <svg class="w-4 h-4 animate-spin text-blue-400" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
-          </svg>
-          <span class="font-bold uppercase tracking-wider">Multi-Agent Reasoning in Progress...</span>
-          <span id="followupThinkingTimer" class="text-zinc-500 text-[11px] font-mono">(0.4s)</span>
-        </div>
-        <div id="followupThinkingStep" class="text-xs text-zinc-300 font-mono pl-3 border-l-2 border-blue-500/50">
-          Retrieving project context and active architecture state...
-        </div>
-      `;
-      thread.appendChild(thinkingCard);
-      thinkingCard.scrollIntoView({ behavior: 'smooth' });
-
-      const thinkingStartTime = Date.now();
-      let thinkingStepIdx = 0;
-      const thinkingSteps = [
-        "Retrieving project context and active architecture state...",
-        "Selecting domain specialist agent and formulating hypotheses...",
-        "Synthesizing recommendations, code snippets, and tradeoffs..."
-      ];
-
-      const thinkingInterval = setInterval(() => {
-        const sec = ((Date.now() - thinkingStartTime) / 1000).toFixed(1);
-        const timerEl = document.getElementById('followupThinkingTimer');
-        if (timerEl) timerEl.innerText = `(${sec}s)`;
-
-        thinkingStepIdx = (thinkingStepIdx + 1) % thinkingSteps.length;
-        const stepEl = document.getElementById('followupThinkingStep');
-        if (stepEl) stepEl.innerText = thinkingSteps[thinkingStepIdx];
-      }, 700);
-
-      try {
-        const fetchPromise = fetch('/api/followup', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({
-            query: query,
-            context: currentSessionState ? currentSessionState.final_output : null
-          })
-        });
-
-        // Ensure user sees at least 1.4 seconds of reasoning animation
-        const [res] = await Promise.all([
-          fetchPromise,
-          new Promise(r => setTimeout(r, 1400))
-        ]);
-
-        const data = await res.json();
-        clearInterval(thinkingInterval);
-
-        const existingThinking = document.getElementById('followupThinkingCard');
-        if (existingThinking) existingThinking.remove();
-
-        const totalThinkingSec = ((Date.now() - thinkingStartTime) / 1000).toFixed(1);
-        const badgeClass = getSpecialistBadgeClass(data.agent_name || '');
-        const parsedMarkdown = marked.parse(data.answer || '');
-
-        // Assistant Message Bubble (Parsed Markdown HTML + Expandable Thinking)
-        const agentCard = document.createElement('div');
-        agentCard.className = 'border border-borderSubtle bg-surface/70 p-6 sm:p-7 rounded-2xl space-y-4 animate-step-reveal';
-        
-        agentCard.innerHTML = `
-          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-borderSubtle pb-3">
-            <div class="flex items-center space-x-2.5">
-              <span class="text-xs font-mono font-bold px-2.5 py-0.5 rounded-lg border ${badgeClass}">
-                ${data.agent_name || 'Technical Co-Pilot'}
-              </span>
-              <span class="text-xs text-zinc-400">${data.action_taken || 'Response'}</span>
-            </div>
-            <span class="text-[11px] font-mono text-zinc-500">Domain Specialist</span>
-          </div>
-
-          <!-- Expandable Reasoning Process Details (ChatGPT/DeepSeek style) -->
-          <details class="bg-canvas/70 border border-borderSubtle rounded-xl p-3 text-xs text-zinc-400 group">
-            <summary class="cursor-pointer font-mono font-medium flex items-center justify-between select-none hover:text-zinc-200">
-              <span class="flex items-center space-x-2">
-                <svg class="w-3.5 h-3.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
-                </svg>
-                <span>Reasoning Process (${totalThinkingSec}s)</span>
-              </span>
-              <span class="text-[10px] text-zinc-500 group-open:rotate-180 transition-transform">▼</span>
-            </summary>
-            <div class="mt-2.5 pt-2 border-t border-borderSubtle/50 text-zinc-300 leading-relaxed italic">
-              "${escapeHtml(data.thinking || 'Evaluated query context against system architecture constraints.')}"
-            </div>
-          </details>
-
-          <div class="prose-chat">${parsedMarkdown}</div>
-        `;
-        thread.appendChild(agentCard);
-        agentCard.scrollIntoView({ behavior: 'smooth' });
-
-      } catch (err) {
-        clearInterval(thinkingInterval);
-        const existingThinking = document.getElementById('followupThinkingCard');
-        if (existingThinking) existingThinking.remove();
-        alert('Error sending follow-up: ' + err);
-      } finally {
-        btn.disabled = false;
-        btnText.innerText = 'Send';
-      }
-    }
-
-    // Enter to Send (Shift+Enter for newline)
-    document.addEventListener('DOMContentLoaded', () => {
-      const inputEl = document.getElementById('followupInput');
-      if (inputEl) {
-        inputEl.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            sendFollowup();
-          }
-        });
-      }
-    });
 
     function renderCodeResults(state) {
       const out = state.final_output || {};
@@ -1241,93 +1514,314 @@
 
       (out.candidates || []).forEach(c => {
         const card = document.createElement('div');
-        card.className = 'border border-borderSubtle bg-surface/40 p-6 sm:p-8 rounded-3xl space-y-5';
+        card.className = 'border border-borderSubtle bg-surface/50 p-6 sm:p-8 rounded-3xl space-y-5 shadow-sm';
+        
+        const citationsList = Array.isArray(c.citations) && c.citations.length > 0
+          ? c.citations
+          : [`${c.file_path}:${c.line_start}-${c.line_end} (${c.symbol_name})`];
+
         card.innerHTML = `
           <div class="flex flex-wrap items-center justify-between gap-3 border-b border-borderSubtle pb-4">
             <div class="flex items-center space-x-3">
               <span class="bg-blue-950 border border-blue-800 text-blue-300 px-2.5 py-1 rounded-xl text-xs font-mono font-bold">#${c.rank}</span>
-              <h4 class="font-mono font-bold text-base text-white">${c.symbol_name}</h4>
-              <span class="text-zinc-400 text-xs font-mono">${c.file_path}:${c.line_start}-${c.line_end}</span>
+              <h4 class="font-mono font-bold text-base text-white">${escapeHtml(c.symbol_name)}</h4>
+              <span class="text-zinc-400 text-xs font-mono">${escapeHtml(c.file_path)}:${c.line_start}-${c.line_end}</span>
             </div>
-            <span class="font-mono text-xs text-zinc-300 border border-borderSubtle bg-canvas px-3 py-1 rounded-xl">
-              Confidence: ${c.confidence ? c.confidence.toUpperCase() : 'MEDIUM'}
-            </span>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div class="space-y-1">
-              <span class="text-[11px] font-mono text-zinc-500 uppercase font-semibold">Root Cause Hypothesis:</span>
-              <p class="text-sm text-zinc-300 leading-relaxed">${c.root_cause_hypothesis}</p>
-            </div>
-            <div class="space-y-1">
-              <span class="text-[11px] font-mono text-emerald-400 uppercase font-semibold">Recommended Fix:</span>
-              <p class="text-sm text-zinc-300 leading-relaxed">${c.suggested_fix}</p>
+            <div class="flex items-center space-x-2">
+              <span class="font-mono text-xs text-zinc-300 border border-borderSubtle bg-canvas px-3 py-1 rounded-xl">
+                Confidence: ${c.confidence ? c.confidence.toUpperCase() : 'MEDIUM'}
+              </span>
+              <span class="font-mono text-xs text-blue-400 border border-blue-900 bg-blue-950/50 px-2.5 py-1 rounded-xl">
+                Read-Only Analysis
+              </span>
             </div>
           </div>
 
-          <!-- Side-by-Side Wrong Code vs Correct Code AST Comparison -->
+          <div class="space-y-1">
+            <span class="text-[11px] font-mono text-zinc-400 uppercase font-semibold">Root Cause Hypothesis:</span>
+            <p class="text-sm text-zinc-200 leading-relaxed">${escapeHtml(c.why_problematic || c.root_cause_hypothesis)}</p>
+          </div>
+
+          <!-- Task 9.2: Side-by-Side Educational Pattern Comparison -->
           <div class="space-y-2 pt-2">
-            <span class="text-[11px] font-mono text-zinc-400 uppercase font-semibold">AST Code Inspection & Proposed Patch:</span>
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-mono text-zinc-300 uppercase font-semibold">Educational Pattern Comparison:</span>
+              <span class="text-[11px] font-mono text-zinc-500">Human review required</span>
+            </div>
+
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
               
-              <!-- Wrong / Buggy Code -->
-              <div class="rounded-2xl border border-red-900/50 bg-red-950/15 p-4 space-y-2">
+              <!-- Current / Risky Implementation -->
+              <div class="rounded-2xl border border-red-900/50 bg-red-950/15 p-4 space-y-2.5">
                 <div class="flex items-center justify-between border-b border-red-900/40 pb-2">
-                  <span class="text-xs font-mono font-bold text-red-400 uppercase tracking-wider">Buggy Code Lines (AST Evidence)</span>
+                  <span class="text-xs font-mono font-bold text-red-400 uppercase tracking-wider">Current / Risky Implementation</span>
                   <span class="text-[11px] font-mono text-red-300/80">Lines ${c.line_start}-${c.line_end}</span>
                 </div>
-                <pre class="text-xs font-mono text-red-200 overflow-x-auto leading-relaxed p-3.5 rounded-xl bg-black/50 border border-red-900/30 whitespace-pre">${escapeHtml(c.wrong_code || '# Buggy implementation in AST')}</pre>
+                <pre class="text-xs font-mono text-red-200 overflow-x-auto leading-relaxed p-3.5 rounded-xl bg-black/50 border border-red-900/30 whitespace-pre">${escapeHtml(c.wrong_code || '# Current implementation in retrieved file')}</pre>
+                <div class="pt-1 text-xs text-red-300/90 leading-relaxed">
+                  <strong class="font-mono uppercase text-[10px] text-red-400 block mb-0.5">Why It Is Problematic:</strong>
+                  ${escapeHtml(c.why_problematic || c.root_cause_hypothesis)}
+                </div>
               </div>
 
-              <!-- Correct / Fixed Code -->
-              <div class="rounded-2xl border border-emerald-900/50 bg-emerald-950/15 p-4 space-y-2">
+              <!-- Correct / Recommended Pattern -->
+              <div class="rounded-2xl border border-emerald-900/50 bg-emerald-950/15 p-4 space-y-2.5">
                 <div class="flex items-center justify-between border-b border-emerald-900/40 pb-2">
-                  <span class="text-xs font-mono font-bold text-emerald-400 uppercase tracking-wider">Correct Code (Proposed Patch)</span>
-                  <span class="text-[11px] font-mono text-emerald-300/80">Verified Fix</span>
+                  <span class="text-xs font-mono font-bold text-emerald-400 uppercase tracking-wider">Correct / Recommended Pattern</span>
+                  <span class="text-[11px] font-mono text-emerald-300/80">Educational Guidance</span>
                 </div>
-                <pre class="text-xs font-mono text-emerald-200 overflow-x-auto leading-relaxed p-3.5 rounded-xl bg-black/50 border border-emerald-900/30 whitespace-pre">${escapeHtml(c.correct_code || '# Proposed fix')}</pre>
+                <pre class="text-xs font-mono text-emerald-200 overflow-x-auto leading-relaxed p-3.5 rounded-xl bg-black/50 border border-emerald-900/30 whitespace-pre">${escapeHtml(c.recommended_pattern || c.correct_code || '# Recommended fix direction')}</pre>
+                <div class="pt-1 text-xs text-emerald-300/90 leading-relaxed">
+                  <strong class="font-mono uppercase text-[10px] text-emerald-400 block mb-0.5">Explanation of the Change:</strong>
+                  ${escapeHtml(c.explanation_of_change || c.suggested_fix)}
+                </div>
               </div>
 
             </div>
+          </div>
+
+          <!-- Grounded Citations List -->
+          <div class="pt-3 border-t border-borderSubtle/60 flex flex-wrap items-center gap-2">
+            <span class="text-[11px] font-mono text-zinc-500 uppercase font-semibold">Grounded Citations:</span>
+            ${citationsList.map(cit => `
+              <span class="text-[11px] font-mono px-2.5 py-1 rounded-lg bg-canvas border border-borderSubtle text-blue-300">
+                ${escapeHtml(cit)}
+              </span>
+            `).join('')}
           </div>
         `;
         container.appendChild(card);
       });
     }
 
+    function setFollowupPrompt(text) {
+      document.getElementById('followupInput').value = text;
+      document.getElementById('followupInput').focus();
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function getSpecialistBadgeClass(agentName) {
+      if (!agentName) return 'text-blue-300 bg-blue-950/60 border-blue-800';
+      if (agentName.includes('Market')) return 'text-purple-300 bg-purple-950/60 border-purple-800';
+      if (agentName.includes('Kill') || agentName.includes('Devil')) return 'text-rose-300 bg-rose-950/60 border-rose-800';
+      if (agentName.includes('Scorecard') || agentName.includes('Rubric')) return 'text-amber-300 bg-amber-950/60 border-amber-800';
+      if (agentName.includes('PRD') || agentName.includes('Architect')) return 'text-cyan-300 bg-cyan-950/60 border-cyan-800';
+      if (agentName.includes('Roadmap') || agentName.includes('Delivery')) return 'text-emerald-300 bg-emerald-950/60 border-emerald-800';
+      if (agentName.includes('Code') || agentName.includes('AST') || agentName.includes('Diagnosis')) return 'text-blue-300 bg-blue-950/60 border-blue-800';
+      return 'text-blue-300 bg-blue-950/60 border-blue-800';
+    }
+
+    async function sendFollowup() {
+      const input = document.getElementById('followupInput');
+      const query = input.value.trim();
+      if (!query) return;
+
+      const btn = document.getElementById('btnSendFollowup');
+      const btnText = document.getElementById('btnFollowupText');
+      const thread = document.getElementById('followupThread');
+
+      const userCard = document.createElement('div');
+      userCard.className = 'bg-blue-950/30 border border-blue-900/50 p-4 rounded-2xl space-y-1 ml-auto max-w-2xl animate-step-reveal';
+      userCard.innerHTML = `
+        <span class="text-[11px] font-mono uppercase text-blue-400 font-semibold">You:</span>
+        <p class="text-sm text-zinc-100 font-medium">${escapeHtml(query)}</p>
+      `;
+      thread.appendChild(userCard);
+      input.value = '';
+
+      btn.disabled = true;
+      btnText.innerText = 'Thinking...';
+
+      const thinkingCard = document.createElement('div');
+      thinkingCard.id = 'followupThinkingCard';
+      thinkingCard.className = 'bg-surface/50 border border-blue-900/40 p-5 rounded-2xl space-y-2.5 animate-pulse max-w-2xl';
+      thinkingCard.innerHTML = `
+        <div class="flex items-center space-x-2 text-xs font-mono text-blue-400">
+          <svg class="w-4 h-4 animate-spin text-blue-400" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+          </svg>
+          <span class="font-bold uppercase tracking-wider">Multi-Agent Reasoning in Progress...</span>
+          <span id="followupThinkingTimer" class="text-zinc-500 text-[11px] font-mono">(0.4s)</span>
+        </div>
+        <div id="followupThinkingStep" class="text-xs text-zinc-300 font-mono pl-3 border-l-2 border-blue-500/50">
+          Retrieving repository context and active session state...
+        </div>
+      `;
+      thread.appendChild(thinkingCard);
+      thinkingCard.scrollIntoView({ behavior: 'smooth' });
+
+      const thinkingStartTime = Date.now();
+      let thinkingStepIdx = 0;
+      const thinkingSteps = [
+        "Retrieving repository context and active session state...",
+        "Resolving symbol references and inspecting AST / architecture...",
+        "Synthesizing recommendations, tradeoffs, and educational guidance..."
+      ];
+
+      const thinkingInterval = setInterval(() => {
+        const sec = ((Date.now() - thinkingStartTime) / 1000).toFixed(1);
+        const timerEl = document.getElementById('followupThinkingTimer');
+        if (timerEl) timerEl.innerText = `(${sec}s)`;
+
+        thinkingStepIdx = (thinkingStepIdx + 1) % thinkingSteps.length;
+        const stepEl = document.getElementById('followupThinkingStep');
+        if (stepEl) stepEl.innerText = thinkingSteps[thinkingStepIdx];
+      }, 700);
+
+      try {
+        const repoPath = document.getElementById('repoPathInput') ? document.getElementById('repoPathInput').value.trim() : null;
+        const sessionId = currentSessionState ? currentSessionState.session_id : null;
+
+        const fetchPromise = fetch('/api/followup', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            query: query,
+            context: currentSessionState ? currentSessionState.final_output : null,
+            session_id: sessionId,
+            repo_path: repoPath
+          })
+        });
+
+        const [res] = await Promise.all([
+          fetchPromise,
+          new Promise(r => setTimeout(r, 1200))
+        ]);
+
+        const data = await res.json();
+        clearInterval(thinkingInterval);
+
+        const existingThinking = document.getElementById('followupThinkingCard');
+        if (existingThinking) existingThinking.remove();
+
+        const totalThinkingSec = ((Date.now() - thinkingStartTime) / 1000).toFixed(1);
+        const badgeClass = getSpecialistBadgeClass(data.agent_name || '');
+        const parsedMarkdown = marked.parse(data.answer || '');
+
+        const agentCard = document.createElement('div');
+        agentCard.className = 'border border-borderSubtle bg-surface/70 p-6 sm:p-7 rounded-2xl space-y-4 animate-step-reveal';
+        
+        agentCard.innerHTML = `
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-borderSubtle pb-3">
+            <div class="flex items-center space-x-2.5">
+              <span class="text-xs font-mono font-bold px-2.5 py-0.5 rounded-lg border ${badgeClass}">
+                ${escapeHtml(data.agent_name || 'Technical Co-Pilot')}
+              </span>
+              <span class="text-xs text-zinc-400">${escapeHtml(data.action_taken || 'Response')}</span>
+            </div>
+            <span class="text-[11px] font-mono text-zinc-500">Domain Specialist</span>
+          </div>
+
+          <details class="bg-canvas/70 border border-borderSubtle rounded-xl p-3 text-xs text-zinc-400 group">
+            <summary class="cursor-pointer font-mono font-medium flex items-center justify-between select-none hover:text-zinc-200">
+              <span class="flex items-center space-x-2">
+                <svg class="w-3.5 h-3.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                </svg>
+                <span>Reasoning Process (${totalThinkingSec}s)</span>
+              </span>
+              <span class="text-[10px] text-zinc-500 group-open:rotate-180 transition-transform">▼</span>
+            </summary>
+            <div class="mt-2.5 pt-2 border-t border-borderSubtle/50 text-zinc-300 leading-relaxed italic">
+              "${escapeHtml(data.thinking || 'Evaluated query context against system architecture constraints.')}"
+            </div>
+          </details>
+
+          <div class="prose-chat">${parsedMarkdown}</div>
+
+          ${(data.referenced_symbols && data.referenced_symbols.length > 0) ? `
+            <div class="pt-2 border-t border-borderSubtle/60 flex flex-wrap items-center gap-1.5 text-xs">
+              <span class="font-mono text-[10px] uppercase text-zinc-500 font-semibold">Referenced Symbols:</span>
+              ${data.referenced_symbols.map(s => `
+                <span class="font-mono text-[11px] text-blue-300 bg-canvas px-2 py-0.5 rounded border border-borderSubtle">${escapeHtml(s)}</span>
+              `).join('')}
+            </div>
+          ` : ''}
+
+          ${(data.referenced_files && data.referenced_files.length > 0) ? `
+            <div class="pt-1 flex flex-wrap items-center gap-1.5 text-xs">
+              <span class="font-mono text-[10px] uppercase text-zinc-500 font-semibold">Referenced Files:</span>
+              ${data.referenced_files.map(f => `
+                <span class="font-mono text-[11px] text-zinc-300 bg-canvas px-2 py-0.5 rounded border border-borderSubtle">${escapeHtml(f)}</span>
+              `).join('')}
+            </div>
+          ` : ''}
+        `;
+        thread.appendChild(agentCard);
+        agentCard.scrollIntoView({ behavior: 'smooth' });
+
+      } catch (err) {
+        clearInterval(thinkingInterval);
+        const existingThinking = document.getElementById('followupThinkingCard');
+        if (existingThinking) existingThinking.remove();
+        alert('Error sending follow-up: ' + err);
+      } finally {
+        btn.disabled = false;
+        btnText.innerText = 'Send';
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      renderProgressStrip('idea');
+      updateFollowupPromptChips('idea');
+
+      const inputEl = document.getElementById('followupInput');
+      if (inputEl) {
+        inputEl.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendFollowup();
+          }
+        });
+      }
+    });
+
     function exportReport() {
       if (!currentSessionState || !currentSessionState.final_output) return;
       const out = currentSessionState.final_output;
-      let md = `# Engineering Validation Brief\n`;
-      md += `Date: ${new Date().toLocaleDateString()}\n`;
-      md += `Session ID: ${currentSessionState.session_id}\n\n`;
+      let md = '';
 
-      if (currentSessionState.intent === 'idea_validation') {
-        md += `## Project Title: ${out.project_title}\n\n`;
-        md += `### Problem Statement\n${out.problem_statement}\n\n`;
-        md += `### Target Users\n`;
-        (out.target_personas || []).forEach(p => {
-          md += `- **${p.persona}:** ${p.pain_point} -> Benefit: ${p.expected_benefit}\n`;
-        });
-        md += `\n### Milestone Roadmap\n`;
-        (out.phases || []).forEach(p => {
-          md += `#### ${p.phase_name} (${p.duration_weeks})\n`;
-          (p.deliverables || []).forEach(d => md += `- ${d}\n`);
-          md += `*Exit Criteria:* ${p.exit_criteria}\n\n`;
-        });
+      if (out.full_report_markdown) {
+        md = out.full_report_markdown;
       } else {
-        md += `## Codebase Diagnosis Summary\n${out.summary}\n\n`;
-        (out.candidates || []).forEach(c => {
-          md += `### Candidate #${c.rank}: ${c.symbol_name} (${c.file_path}:${c.line_start}-${c.line_end})\n`;
-          md += `Hypothesis: ${c.root_cause_hypothesis}\n`;
-          md += `Suggested Fix: ${c.suggested_fix}\n\n`;
-        });
+        md = `# Engineering Validation Report\n`;
+        md += `Date: ${new Date().toLocaleDateString()}\n`;
+        md += `Session ID: ${currentSessionState.session_id || 'unassigned'}\n\n`;
+
+        if (currentSessionState.intent === 'idea_validation') {
+          md += `## Project Title: ${out.project_title || 'Validated Engineering Concept'}\n\n`;
+          md += `### Problem Statement\n${out.problem_statement || ''}\n\n`;
+          if (out.scorecard) {
+            md += `### Feasibility Scorecard: ${out.scorecard.total_score}/100 (${out.scorecard.verdict})\n`;
+            md += `*${out.scorecard.rubric_disclaimer}*\n\n`;
+          }
+          if (out.kill_report) {
+            md += `### Adversarial Bear Case Summary\n${out.kill_report.bear_case_summary || ''}\n\n`;
+          }
+        } else {
+          md += `## Codebase Diagnosis Summary\n${out.summary || ''}\n\n`;
+          (out.candidates || []).forEach(c => {
+            md += `### Candidate #${c.rank}: ${c.symbol_name} (${c.file_path}:${c.line_start}-${c.line_end})\n`;
+            md += `Hypothesis: ${c.root_cause_hypothesis}\n`;
+            md += `Suggested Fix: ${c.suggested_fix}\n\n`;
+          });
+        }
       }
 
       const blob = new Blob([md], {type: 'text/markdown'});
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = `validation_brief_${currentSessionState.session_id}.md`;
+      a.download = `engineering_report_${currentSessionState.session_id || 'export'}.md`;
       a.click();
     }
   </script>

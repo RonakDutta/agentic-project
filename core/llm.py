@@ -59,24 +59,39 @@ class LLMClient:
                 latency_ms = int((time.time() - start_time) * 1000)
                 usage = getattr(response, "usage", None)
                 tokens = usage.total_tokens if usage else 0
+                content = response.choices[0].message.content or ""
+
+                if not content.strip():
+                    raise ValueError(f"Received empty completion content from {current_model}")
 
                 self.total_calls += 1
                 self.total_tokens_used += tokens
                 self.total_latency_ms += latency_ms
 
-                return response.choices[0].message.content or ""
+                # Lightweight pacing between consecutive multi-agent calls to respect Groq rate limits
+                time.sleep(0.35)
+
+                return content
 
             except RateLimitError as e:
+                err_msg = str(e).lower()
+                last_error = e
+                # If daily tokens (TPD) are exhausted or already on fast model, fail immediately to activate deterministic fallbacks
+                if "tokens per day" in err_msg or "tpd" in err_msg or current_model == settings.fast_model:
+                    logger.warning(f"[LLMClient] Daily token limit reached on Groq. Failing fast to activate deterministic fallback.")
+                    raise
                 logger.warning(
                     f"[LLMClient] Rate limit hit on {current_model}. Falling back to {settings.fast_model}."
                 )
-                last_error = e
                 current_model = settings.fast_model
-                time.sleep(1.0)
+                time.sleep(0.5)
 
             except APIError as e:
                 logger.warning(f"[LLMClient] Groq API error on attempt {attempts}: {e}")
                 last_error = e
+                # If Groq server-side JSON schema validation failed, fallback to text mode for retry
+                if "json_validate_failed" in str(e).lower() or "failed to validate json" in str(e).lower():
+                    response_format = None
                 time.sleep(1.0)
 
             except Exception as e:
@@ -97,21 +112,37 @@ class LLMClient:
         """
         Generates and parses a structured JSON object.
         """
-        raw_text = self.generate(
-            messages=messages,
-            model=model,
-            temperature=temperature,
-            json_mode=True,
-        )
+        try:
+            raw_text = self.generate(
+                messages=messages,
+                model=model,
+                temperature=temperature,
+                json_mode=True,
+            )
+        except Exception as err:
+            logger.warning(
+                f"[LLMClient] Structured JSON mode failed ({err}). Retrying in standard text mode..."
+            )
+            raw_text = self.generate(
+                messages=messages,
+                model=model,
+                temperature=temperature,
+                json_mode=False,
+            )
+
         try:
             return json.loads(raw_text)
         except json.JSONDecodeError:
             # Fallback markdown code fence extraction
             cleaned = raw_text.strip()
-            if cleaned.startswith("```json"):
-                cleaned = cleaned[7:]
-            if cleaned.endswith("```"):
-                cleaned = cleaned[:-3]
+            if "```json" in cleaned:
+                cleaned = cleaned.split("```json")[1].split("```")[0].strip()
+            elif "```" in cleaned:
+                cleaned = cleaned.split("```")[1].split("```")[0].strip()
+            elif "{" in cleaned and "}" in cleaned:
+                start = cleaned.find("{")
+                end = cleaned.rfind("}") + 1
+                cleaned = cleaned[start:end]
             return json.loads(cleaned.strip())
 
     def get_metrics(self) -> Dict[str, Any]:

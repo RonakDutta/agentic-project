@@ -178,6 +178,19 @@ class PRDAgent:
     def __init__(self):
         self.llm = llm_client
 
+    @staticmethod
+    def _safe_choice(stack: Dict[str, Any], key: str, default: str) -> str:
+        if not isinstance(stack, dict):
+            return default
+        val = stack.get(key)
+        if isinstance(val, dict):
+            return val.get("choice", default) or default
+        if isinstance(val, str) and val.strip():
+            return val.strip()
+        if isinstance(val, list) and val:
+            return ", ".join(str(x) for x in val)
+        return default
+
     def generate(
         self,
         decomposed: DecomposedIdea,
@@ -186,26 +199,34 @@ class PRDAgent:
     ) -> PRDDocument:
         trace = [f"PRDAgent activated: Authoring formal PRD and architecture models for '{decomposed.project_title}'"]
 
+        backend_choice = self._safe_choice(market.tech_stack, "backend", "FastAPI")
+        frontend_choice = self._safe_choice(market.tech_stack, "frontend", "React")
+        db_choice = self._safe_choice(market.tech_stack, "database", "PostgreSQL")
+
         user_content = (
             f"Project Title: {decomposed.project_title}\n"
             f"Problem Statement: {decomposed.problem_statement}\n"
             f"Personas: {[p.get('persona') for p in decomposed.target_personas]}\n"
             f"Core Value Prop: {decomposed.core_value_prop}\n"
             f"MVP Features: {decomposed.mvp_features}\n"
-            f"Backend Stack: {market.tech_stack.get('backend', {}).get('choice', 'FastAPI')}\n"
-            f"Frontend Stack: {market.tech_stack.get('frontend', {}).get('choice', 'React')}\n"
-            f"Database: {market.tech_stack.get('database', {}).get('choice', 'PostgreSQL')}\n\n"
+            f"Backend Stack: {backend_choice}\n"
+            f"Frontend Stack: {frontend_choice}\n"
+            f"Database: {db_choice}\n\n"
             "Author a formal Product Requirements Document matching the requested JSON schema."
         )
 
         trace.append("Querying Groq LLM for formal PRD user stories and functional requirements...")
-        res = self.llm.generate_json(
-            messages=[
-                {"role": "system", "content": PRD_SYSTEM_PROMPT},
-                {"role": "user", "content": user_content},
-            ],
-            temperature=0.2,
-        )
+        try:
+            res = self.llm.generate_json(
+                messages=[
+                    {"role": "system", "content": PRD_SYSTEM_PROMPT},
+                    {"role": "user", "content": user_content},
+                ],
+                temperature=0.2,
+            )
+        except Exception as err:
+            trace.append(f"PRD LLM note ({err}). Using structured MetaGPT specification fallback.")
+            res = {}
 
         # Parse User Stories
         raw_stories = res.get("user_stories", [])
@@ -267,9 +288,9 @@ class PRDAgent:
         })
 
         # Generate Deterministic Mermaid Diagrams
-        fe_choice = market.tech_stack.get("frontend", {}).get("choice", "React Dashboard")
-        be_choice = market.tech_stack.get("backend", {}).get("choice", "FastAPI Service")
-        db_choice = market.tech_stack.get("database", {}).get("choice", "PostgreSQL Database")
+        fe_choice = self._safe_choice(market.tech_stack, "frontend", "React Dashboard")
+        be_choice = self._safe_choice(market.tech_stack, "backend", "FastAPI Service")
+        db_choice = self._safe_choice(market.tech_stack, "database", "PostgreSQL Database")
 
         # 1. High-Level Architecture Diagram
         arch_mermaid = (

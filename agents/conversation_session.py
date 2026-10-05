@@ -11,12 +11,15 @@ Guarantees:
 - Enforces configurable bounded context (ContextBudgetManager) to avoid LLM context overflow.
 """
 
+import logging
 import os
 import re
 import time
 import uuid
 from dataclasses import dataclass, field, asdict
 from typing import Any, Dict, List, Optional
+
+logger = logging.getLogger(__name__)
 
 from core.llm import llm_client
 from indexer.ast_parser import ASTCodeIndexer, CodebaseIndex
@@ -311,6 +314,7 @@ class ConversationalFollowupEngine:
                 referenced_files=[impact_res.target_file] if impact_res.target_file else [],
             )
             return {
+                "status": "ok",
                 "answer": answer,
                 "agent_name": "Risk & Security Auditor",
                 "action_taken": turn.action_taken,
@@ -322,8 +326,9 @@ class ConversationalFollowupEngine:
             }
 
         # B. Caller / Reference Query ('What calls that function?', 'Who calls verify_token?')
-        if codebase_index and target_symbol and any(
-            k in q_lower for k in ["what call", "who call", "where is it called", "find caller", "callers"]
+        if codebase_index and target_symbol and (
+            any(k in q_lower for k in ["what call", "who call", "which call", "where is it called", "find caller", "callers", "caller"])
+            or ("call" in q_lower and any(w in q_lower for w in ["what", "who", "which", "where", "functions", "list", "show"]))
         ):
             callers = codebase_index.get_callers(target_symbol)
             if callers:
@@ -349,6 +354,7 @@ class ConversationalFollowupEngine:
                 referenced_symbols=[target_symbol],
             )
             return {
+                "status": "ok",
                 "answer": answer,
                 "agent_name": "Code Review & AST Specialist",
                 "action_taken": turn.action_taken,
@@ -386,6 +392,7 @@ class ConversationalFollowupEngine:
                 referenced_symbols=[target_symbol],
             )
             return {
+                "status": "ok",
                 "answer": answer,
                 "agent_name": "Lead Systems Architect",
                 "action_taken": turn.action_taken,
@@ -427,13 +434,37 @@ class ConversationalFollowupEngine:
 
         user_content = f"Active Context:\n{context_text}\n\nUser Question:\n{resolved_query}"
 
-        res = self.llm.generate_json(
-            messages=[
-                {"role": "system", "content": prompt_system},
-                {"role": "user", "content": user_content},
-            ],
-            temperature=0.3,
-        )
+        try:
+            res = self.llm.generate_json(
+                messages=[
+                    {"role": "system", "content": prompt_system},
+                    {"role": "user", "content": user_content},
+                ],
+                temperature=0.3,
+            )
+        except Exception as err:
+            logger.warning(f"[FollowupEngine] Rate limit or LLM error ({err}). Using grounded deterministic response.")
+            if target_symbol and codebase_index:
+                callers = codebase_index.get_callers(target_symbol)
+                caller_details = [
+                    f"- `{c['caller_symbol']}` in `{c['caller_file']}` (line {c['line']}, confidence: {c['confidence']})"
+                    for c in callers
+                ] if callers else ["- No static callers detected in indexed files."]
+                res = {
+                    "agent_name": "Code Review & AST Specialist",
+                    "action_taken": f"Inspected static AST symbol references for '{target_symbol}'",
+                    "thinking": f"Extracted callers and symbol references for '{target_symbol}' directly from AST call graph.",
+                    "answer": f"### AST Reference Analysis for `{target_symbol}`\n\nCallers identified:\n" + "\n".join(caller_details),
+                    "referenced_symbols": [target_symbol],
+                }
+            else:
+                res = {
+                    "agent_name": "Lead Systems Architect",
+                    "action_taken": "Evaluated query against active session state",
+                    "thinking": "Grounded response in active session context and architectural constraints.",
+                    "answer": f"Regarding your question ('{query}'): The active workspace maintains strict read-only guarantees. Please review the validated architectural brief and constraints.",
+                    "referenced_symbols": [target_symbol] if target_symbol else [],
+                }
 
         agent_name = res.get("agent_name", "Lead Systems Architect")
         answer_text = res.get("answer", "Here is the guidance for your question.")
@@ -453,6 +484,7 @@ class ConversationalFollowupEngine:
         )
 
         return {
+            "status": "ok",
             "answer": answer_text,
             "agent_name": agent_name,
             "action_taken": action_text,

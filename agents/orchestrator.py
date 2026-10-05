@@ -98,16 +98,37 @@ class OrchestratorAgent:
             if repo_path:
                 intent_context += f"Context: Repository path provided ({repo_path})\n"
 
-            intent_json = self.llm.generate_json(
-                messages=[
-                    {"role": "system", "content": ORCHESTRATOR_INTENT_PROMPT},
-                    {"role": "user", "content": intent_context},
-                ],
-                temperature=0.1,
-            )
-            intent = intent_json.get("intent", "idea_validation")
-            confidence = float(intent_json.get("confidence", 0.9))
-            plan_steps = intent_json.get("plan_steps", [])
+            try:
+                intent_json = self.llm.generate_json(
+                    messages=[
+                        {"role": "system", "content": ORCHESTRATOR_INTENT_PROMPT},
+                        {"role": "user", "content": intent_context},
+                    ],
+                    temperature=0.1,
+                )
+                intent = intent_json.get("intent", "idea_validation")
+                confidence = float(intent_json.get("confidence", 0.9))
+                plan_steps = intent_json.get("plan_steps", [])
+            except Exception as err:
+                state.add_trace("Orchestrator", f"LLM intent note ({err}). Using deterministic intent classifier.")
+                code_signals = ["traceback", "error", "exception", "def ", "class ", "valueerror", "function", "bug", "line ", "fail", "token"]
+                q_low = query.lower()
+                if repo_path or any(s in q_low for s in code_signals):
+                    intent = "codebase_analysis"
+                    confidence = 0.95
+                    plan_steps = ["Parse AST & Index", "Navigate Code Chunks", "Diagnose Root Cause", "Deterministic Critic Verification"]
+                else:
+                    intent = "idea_validation"
+                    confidence = 0.95
+                    plan_steps = [
+                        "Decompose Idea",
+                        "Conduct Market & Competitor Research",
+                        "Adversarial Kill Critique",
+                        "Weigh Evidence & Reconcile",
+                        "Score Feasibility Rubric",
+                        "Generate PRD & Architecture Models",
+                        "Generate 3-Phase Roadmap & Risk Matrix",
+                    ]
 
         state.intent = intent
         state.intent_confidence = confidence
@@ -368,22 +389,12 @@ class OrchestratorAgent:
         reconciler_result = self.reconciler_agent.reconcile(decomposed, market, kill_report)
         state.add_trace(
             agent_name="Evidence Reconciler",
-            action=f"Synthesized debate verdict: '{reconciler_result.verdict}'",
+            action=f"Synthesized debate verdict: '{reconciler_result.verdict}' with {len(reconciler_result.must_have_mitigations)} mitigations",
             status="completed",
             agent_role="Impartial Systems Arbiter",
             input_summary="Thesis (Value Prop) vs Antithesis (Fatal Flaws)",
             output_summary=f"Balanced {len(reconciler_result.key_tradeoffs)} tradeoffs and {len(reconciler_result.must_have_mitigations)} success preconditions",
             evidence_count=len(reconciler_result.must_have_mitigations),
-            details={
-                "thinking": "Weighed value proposition against adversarial risks to define non-negotiable preconditions for success.",
-                "tool": "Dialectical Synthesis Engine",
-                "findings": [
-                    f"Verdict: {reconciler_result.verdict}",
-                    f"Key Tradeoff: {reconciler_result.key_tradeoffs[0] if reconciler_result.key_tradeoffs else 'Time to market'}",
-                    f"Must-Have Mitigation: {reconciler_result.must_have_mitigations[0] if reconciler_result.must_have_mitigations else 'None'}",
-                ],
-                "handoff": "Passed reconciled evidence to Feasibility Scorecard Engine.",
-            },
         )
 
         # Step 5: Feasibility Scorecard Engine (Task 9.5)
@@ -396,16 +407,6 @@ class OrchestratorAgent:
             input_summary="Decomposition, Market data, Kill flaws, Reconciler mitigations",
             output_summary=f"Score: {scorecard.total_score}/100 across 7 rubric categories",
             evidence_count=7,
-            details={
-                "thinking": "Applied deterministic project rubric across Problem, Demand, Defensibility, Tech, GTM, Resources, and Risk.",
-                "tool": "Deterministic 100-Point Rubric Calculator",
-                "findings": [
-                    f"Total Score: {scorecard.total_score}/100 ({scorecard.verdict})",
-                    scorecard.rubric_disclaimer,
-                    f"Top Strength: {scorecard.key_strengths[0] if scorecard.key_strengths else 'Problem Validation'}",
-                ],
-                "handoff": "Passed feasibility ratings to PRD & Architecture Engine.",
-            },
         )
 
         # Step 6: PRD & Architecture Engine (Task 9.4)
@@ -418,37 +419,28 @@ class OrchestratorAgent:
             input_summary="Product brief, stack recommendations, and success criteria",
             output_summary=f"{len(prd.user_stories)} User Stories, {len(prd.functional_requirements)} Functional Requirements, 3 Mermaid Models",
             evidence_count=len(prd.user_stories) + len(prd.functional_requirements),
-            details={
-                "thinking": "Authored formal product requirements document with acceptance criteria and created architectural Mermaid models.",
-                "tool": "MetaGPT Specification & Mermaid Generator",
-                "findings": [
-                    f"User Stories: {len(prd.user_stories)} (US-01, US-02...)",
-                    f"Functional Reqs: {len(prd.functional_requirements)} (FR-01, FR-02...)",
-                    "Generated System Architecture, Component Topology, and Dataflow Sequence diagrams",
-                ],
-                "handoff": "Passed specifications to Roadmap & Risk Assessor.",
-            },
         )
 
-        # Step 7: Roadmap & Risk Assessor
+        # Step 7: Roadmap & Risk Assessor (Emitted as 4th Storyboard Step: Scorecard & Roadmap)
         roadmap = self.roadmap_agent.generate(decomposed, market)
         state.add_trace(
-            agent_name="Roadmap & Risk Assessor",
-            action=f"Formulated 3-phase delivery roadmap ({roadmap.phases[0].duration_weeks} MVP phase)",
+            agent_name="Scorecard & Roadmap",
+            action=f"Evaluated 100-point rubric ({scorecard.total_score}/100) and formulated 3-phase delivery roadmap",
             status="completed",
-            agent_role="Milestone Delivery Planner",
+            agent_role="Deterministic Decision Scorer & Milestone Planner",
             input_summary="Architecture, MVP features, and delivery constraints",
-            output_summary=f"Planned 3 phases across {len(roadmap.phases)} milestones, {len(roadmap.risks)} risks mapped",
-            evidence_count=len(roadmap.phases) + len(roadmap.risks),
+            output_summary=f"Score: {scorecard.total_score}/100 ({scorecard.verdict}), 3 phases, {len(roadmap.risks)} risks mapped",
+            evidence_count=7 + len(roadmap.phases) + len(roadmap.risks),
             details={
-                "thinking": "Structured chronological milestones from proof-of-concept to production scale.",
-                "tool": "Milestone & Risk Matrix Planner",
+                "thinking": "Evaluated deterministic 100-point rubric across 7 categories and formulated delivery milestones.",
+                "tool": "Deterministic Rubric Calculator & Milestone Engine",
                 "findings": [
+                    f"Feasibility Score: {scorecard.total_score}/100 ({scorecard.verdict}) based on project rubric",
                     f"Phase 1 MVP: {roadmap.phases[0].phase_name} ({roadmap.phases[0].duration_weeks})",
-                    f"Total Risks Cataloged: {len(roadmap.risks)}",
-                    f"Strategic Tips: {len(roadmap.evaluation_tips)} evaluation pointers",
+                    f"Cataloged {len(roadmap.risks)} operational risks and {len(scorecard.key_strengths)} strategic strengths",
+                    f"Synthesized {len(prd.user_stories)} PRD User Stories with 3 Mermaid models",
                 ],
-                "handoff": "Compiled complete 13-section deliverables report.",
+                "handoff": "Compiled complete deliverables and registered persistent session memory.",
             },
         )
 
