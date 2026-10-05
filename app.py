@@ -40,6 +40,8 @@ class InspectRepoRequest(BaseModel):
 class FollowupRequest(BaseModel):
     query: str
     context: Optional[dict] = None
+    session_id: Optional[str] = None
+    repo_path: Optional[str] = None
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -71,9 +73,14 @@ async def execute_query(req: QueryRequest):
 
 @app.post("/api/followup")
 async def execute_followup(req: FollowupRequest):
-    """Answers conversational follow-up questions with previous context."""
+    """Answers conversational follow-up questions with persistent repository session context."""
     try:
-        result = orchestrator.answer_followup(query=req.query, context=req.context)
+        result = orchestrator.answer_followup(
+            query=req.query,
+            context=req.context,
+            session_id=req.session_id,
+            repo_path=req.repo_path,
+        )
         return JSONResponse(content=result)
     except Exception as err:
         return JSONResponse(
@@ -114,10 +121,19 @@ async def health_check():
         content={
             "status": "online",
             "model": settings.primary_model,
-            "fast_model": settings.fast_model,
             "metrics": llm_client.get_metrics(),
         }
     )
+
+
+@app.get("/api/session/{session_id}")
+async def get_session_info(session_id: str):
+    """Returns conversation history and active entities for a session."""
+    from agents.conversation_session import session_manager
+    session = session_manager.get_session(session_id)
+    if not session:
+        return JSONResponse(status_code=404, content={"status": "not_found", "message": f"Session '{session_id}' not found."})
+    return JSONResponse(content={"status": "ok", "session": session.to_dict()})
 
 
 if __name__ == "__main__":

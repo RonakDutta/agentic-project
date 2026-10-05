@@ -2,6 +2,14 @@
 Diagnosis Agent.
 Takes candidate code chunks and reported errors/queries, performs fault localization,
 and produces a ranked root-cause hypothesis with suggested fix directions using Groq.
+
+Task 9.2: Grounded Anti-Pattern vs Recommended Pattern Educational Slices.
+Produces:
+1. Current implementation (strictly grounded in retrieved repository code)
+2. Why it is problematic (root-cause rationale)
+3. Correct / recommended pattern (educational guidance)
+4. Explanation of the change
+5. Grounded citations with file, lines, and symbol
 """
 
 from dataclasses import dataclass, field
@@ -23,6 +31,31 @@ class FaultCandidate:
     suggested_fix: str
     wrong_code: str = ""
     correct_code: str = ""
+    # Task 9.2 Educational Comparison Fields
+    why_problematic: str = ""
+    recommended_pattern: str = ""
+    explanation_of_change: str = ""
+    citations: List[str] = field(default_factory=list)
+
+    def to_educational_slice(self) -> Dict[str, Any]:
+        """Returns structured comparison between risky pattern and recommended pattern."""
+        citation_entry = f"{self.file_path}:{self.line_start}-{self.line_end} ({self.symbol_name})"
+        return {
+            "current_implementation": {
+                "file_path": self.file_path,
+                "lines": f"{self.line_start}-{self.line_end}",
+                "symbol": self.symbol_name,
+                "code": self.wrong_code,
+            },
+            "why_problematic": self.why_problematic or self.root_cause_hypothesis,
+            "recommended_pattern": self.recommended_pattern or self.correct_code,
+            "explanation_of_change": self.explanation_of_change or self.suggested_fix,
+            "recommended_details": {
+                "code": self.recommended_pattern or self.correct_code,
+                "explanation": self.explanation_of_change or self.suggested_fix,
+            },
+            "citations": self.citations or [citation_entry],
+        }
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -36,8 +69,12 @@ class FaultCandidate:
             "suggested_fix": self.suggested_fix,
             "wrong_code": self.wrong_code,
             "correct_code": self.correct_code,
+            "why_problematic": self.why_problematic or self.root_cause_hypothesis,
+            "recommended_pattern": self.recommended_pattern or self.correct_code,
+            "explanation_of_change": self.explanation_of_change or self.suggested_fix,
+            "citations": self.citations or [f"{self.file_path}:{self.line_start}-{self.line_end} ({self.symbol_name})"],
+            "educational_slice": self.to_educational_slice(),
         }
-
 
 
 @dataclass
@@ -53,6 +90,7 @@ class DiagnosisResult:
             "query": self.query,
             "summary": self.summary,
             "candidates": [c.to_dict() for c in self.ranked_candidates],
+            "educational_slices": [c.to_educational_slice() for c in self.ranked_candidates],
             "trace": self.trace,
         }
 
@@ -77,8 +115,11 @@ CRITICAL GROUNDING RULES:
       "confidence": "high",
       "root_cause_hypothesis": "Detailed explanation of why this specific code is causing or related to the problem.",
       "suggested_fix": "Clear explanation of what needs to be changed or checked.",
-      "wrong_code": "# The buggy code lines from the chunk",
-      "correct_code": "# The corrected code patch"
+      "wrong_code": "# The exact code lines from the retrieved chunk",
+      "correct_code": "# The recommended code pattern",
+      "why_problematic": "Detailed explanation of why this current code is problematic or risky.",
+      "recommended_pattern": "# The safe recommended code pattern",
+      "explanation_of_change": "Explanation of the change and why it resolves the issue."
     }
   ]
 }
@@ -114,7 +155,8 @@ class DiagnosisAgent:
         user_prompt = (
             f"Reported Issue / Question:\n{nav_result.query}\n\n"
             f"Retrieved Code Chunks:\n{evidence_text}\n\n"
-            f"Analyze the problem, evaluate the code chunks, identify the faulty code lines (wrong_code), and provide the corrected code patch (correct_code) in the required JSON format."
+            f"Analyze the problem, evaluate the code chunks, identify the faulty code lines (wrong_code), "
+            f"and provide the educational comparison (why_problematic, recommended_pattern, explanation_of_change) in JSON format."
         )
 
         trace.append("Calling Groq LLM for root-cause analysis and fault ranking...")
@@ -137,20 +179,31 @@ class DiagnosisAgent:
             fix_text = item.get("suggested_fix", "Apply bug fix.")
             fallback_correct = item.get("correct_code") or f"# Proposed patch for {symbol}\n# {fix_text}"
 
+            why_prob = item.get("why_problematic") or item.get("root_cause_hypothesis", "")
+            rec_pat = item.get("recommended_pattern") or fallback_correct
+            exp_chg = item.get("explanation_of_change") or fix_text
+            file_path = item.get("file_path", "")
+            line_start = int(item.get("line_start", 1))
+            line_end = int(item.get("line_end", 1))
+            citation = f"{file_path}:{line_start}-{line_end} ({symbol})"
+
             cand = FaultCandidate(
                 rank=item.get("rank", len(ranked_candidates) + 1),
-                file_path=item.get("file_path", ""),
+                file_path=file_path,
                 symbol_name=symbol,
-                line_start=int(item.get("line_start", 1)),
-                line_end=int(item.get("line_end", 1)),
+                line_start=line_start,
+                line_end=line_end,
                 confidence=item.get("confidence", "medium"),
                 root_cause_hypothesis=item.get("root_cause_hypothesis", ""),
                 suggested_fix=fix_text,
                 wrong_code=item.get("wrong_code") or fallback_wrong,
                 correct_code=fallback_correct,
+                why_problematic=why_prob,
+                recommended_pattern=rec_pat,
+                explanation_of_change=exp_chg,
+                citations=[citation],
             )
             ranked_candidates.append(cand)
-
 
         trace.append(f"Diagnosis completed with {len(ranked_candidates)} ranked candidate hypotheses.")
 

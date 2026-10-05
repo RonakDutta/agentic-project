@@ -1,6 +1,12 @@
 """
 Workflow State Schema for the Multi-Agent Co-Pilot.
 Maintains state transitions, agent handoffs, execution traces, and metrics.
+Task 9.12: Standardized Agent Execution Trace Schema.
+
+Guarantees:
+- Captures component, role, action, status, duration, input/output summary, and evidence counts.
+- Excludes internal private chain-of-thought dumps to maintain clean, readable transparency.
+- Full backwards-compatibility with existing add_trace calls.
 """
 
 import time
@@ -13,12 +19,32 @@ class TraceStep:
     step_id: int
     agent_name: str
     action: str
-    status: str  # 'running', 'completed', 'warning', 'revised'
+    status: str  # 'running', 'completed', 'warning', 'revised', 'failed'
     elapsed_ms: int
     details: Dict[str, Any] = field(default_factory=dict)
+    # Standardized Phase 9 Observability Fields
+    agent_role: str = ""
+    duration_ms: int = 0
+    input_summary: str = ""
+    output_summary: str = ""
+    evidence_count: int = 0
+    citations: List[str] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:
-        return asdict(self)
+        return {
+            "step_id": self.step_id,
+            "agent_name": self.agent_name,
+            "agent_role": self.agent_role or self.agent_name,
+            "action": self.action,
+            "status": self.status,
+            "elapsed_ms": self.elapsed_ms,
+            "duration_ms": self.duration_ms or self.elapsed_ms,
+            "input_summary": self.input_summary,
+            "output_summary": self.output_summary,
+            "evidence_count": self.evidence_count,
+            "citations": self.citations,
+            "details": self.details,
+        }
 
 
 @dataclass
@@ -44,8 +70,22 @@ class AgentWorkflowState:
     start_time: float = field(default_factory=time.time)
 
     def add_trace(
-        self, agent_name: str, action: str, status: str = "completed", details: Optional[Dict[str, Any]] = None
+        self,
+        agent_name: str,
+        action: str,
+        status: str = "completed",
+        details: Optional[Dict[str, Any]] = None,
+        agent_role: str = "",
+        input_summary: str = "",
+        output_summary: str = "",
+        evidence_count: int = 0,
+        citations: Optional[List[str]] = None,
+        duration_ms: int = 0,
     ) -> None:
+        """
+        Records a standardized execution trace step for an agent action.
+        Maintains complete backward compatibility with older positional callers.
+        """
         elapsed = int((time.time() - self.start_time) * 1000)
         step = TraceStep(
             step_id=len(self.execution_trace) + 1,
@@ -54,6 +94,12 @@ class AgentWorkflowState:
             status=status,
             elapsed_ms=elapsed,
             details=details or {},
+            agent_role=agent_role or agent_name,
+            duration_ms=duration_ms or (elapsed if not self.execution_trace else elapsed - self.execution_trace[-1].elapsed_ms),
+            input_summary=input_summary,
+            output_summary=output_summary,
+            evidence_count=evidence_count,
+            citations=citations or [],
         )
         self.execution_trace.append(step)
 

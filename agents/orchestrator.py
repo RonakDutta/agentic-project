@@ -16,6 +16,7 @@ from agents.idea_agent import IdeaDecompositionAgent
 from agents.market_agent import MarketTechStackAgent
 from agents.roadmap_agent import RoadmapRiskAgent
 from agents.workflow_state import AgentWorkflowState
+from agents.conversation_session import session_manager, followup_engine
 
 
 ORCHESTRATOR_INTENT_PROMPT = """You are the Supervisory Orchestrator Agent for an Agentic AI Engineering Co-Pilot.
@@ -114,6 +115,32 @@ class OrchestratorAgent:
             f"Workflow successfully completed in {state.total_latency_ms}ms.",
             status="completed",
         )
+
+        # Register in session manager for persistent conversational follow-ups
+        try:
+            session = session_manager.get_or_create_session(state.session_id, repo_path)
+            if state.final_output:
+                if state.final_output.get("type") == "codebase_analysis":
+                    candidates = state.final_output.get("candidates", [])
+                    symbols = [c.get("symbol_name") for c in candidates if c.get("symbol_name")]
+                    files = [c.get("file_path") for c in candidates if c.get("file_path")]
+                    session.add_turn(
+                        user_query=query,
+                        agent_name="Diagnosis Agent",
+                        agent_role="Root-Cause Diagnosis Specialist",
+                        answer=state.final_output.get("summary", ""),
+                        referenced_symbols=symbols,
+                        referenced_files=files,
+                    )
+                elif state.final_output.get("type") == "idea_validation":
+                    session.add_turn(
+                        user_query=query,
+                        agent_name="Idea Decomposer",
+                        agent_role="Product & Idea Decomposition Agent",
+                        answer=state.final_output.get("problem_statement", "") or "Idea validation processed.",
+                    )
+        except Exception as sess_err:
+            print(f"[Orchestrator] Session registration note: {sess_err}")
 
         return state
 
@@ -356,78 +383,26 @@ class OrchestratorAgent:
             "evaluation_tips": roadmap.evaluation_tips,
         }
 
-    def answer_followup(self, query: str, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def answer_followup(
+        self,
+        query: str,
+        context: Optional[Dict[str, Any]] = None,
+        session_id: Optional[str] = None,
+        repo_path: Optional[str] = None,
+    ) -> Dict[str, Any]:
         """
-        Answers conversational follow-up questions (ChatGPT style)
-        using previous workflow output as grounding context.
-        Dynamically delegates the answer to the most appropriate specialized agent persona.
+        Answers conversational follow-up questions with previous context,
+        anaphora resolution, persistent multi-turn session memory, and specialist routing.
         """
-        context_summary = ""
-        if context:
-            if context.get("type") == "idea_validation":
-                context_summary = (
-                    f"Project: {context.get('project_title', '')}\n"
-                    f"Problem: {context.get('problem_statement', '')}\n"
-                    f"Backend: {context.get('tech_stack', {}).get('backend', {}).get('choice', '')}\n"
-                    f"Frontend: {context.get('tech_stack', {}).get('frontend', {}).get('choice', '')}\n"
-                    f"Database: {context.get('tech_stack', {}).get('database', {}).get('choice', '')}\n"
-                )
-            elif context.get("type") == "codebase_analysis":
-                context_summary = f"Code Diagnosis Summary: {context.get('summary', '')}\n"
+        sid = session_id or (context.get("session_id") if isinstance(context, dict) else None)
+        rpath = repo_path or (context.get("repo_path") if isinstance(context, dict) else None)
 
-        system_prompt = (
-            "You are an autonomous team of specialized engineering and product co-pilot agents.\n"
-            "Depending on what the user asks, the most relevant domain specialist MUST answer:\n"
-            "- 'Market Research Specialist': Responds when questions relate to competitors, target personas, business viability, product positioning, pricing, or user adoption.\n"
-            "- 'Lead Systems Architect': Responds when questions relate to system design, tech stack choices, backend/frontend frameworks, databases, APIs, caching, or scaling.\n"
-            "- 'Roadmap & Delivery Planner': Responds when questions relate to milestones, MVP development, project phases, sprint planning, or time estimation.\n"
-            "- 'Risk & Security Auditor': Responds when questions relate to security vulnerabilities, system bottlenecks, failure modes, data privacy, or stress testing.\n"
-            "- 'Code Review & AST Specialist': Responds when questions relate to code syntax, AST symbols, function logic, bug fixes, tracebacks, or implementation patches.\n\n"
-            "CRITICAL RULES:\n"
-            "1. DYNAMICALLY CHOOSE the single best specialist persona for this question. Do NOT default to Lead Systems Architect unless the query specifically asks about core architecture or tech stack.\n"
-            "2. Provide 1-2 sentences of specialist internal thinking in 'thinking' explaining how the persona analyzed the problem.\n"
-            "3. Write a clean, high-value, direct response in GitHub-flavored Markdown. Do NOT use horizontal rule separators (---). Use bold headers, bullet lists, and syntax-highlighted code blocks where helpful.\n\n"
-            "Output strict JSON with this schema:\n"
-            "{\n"
-            '  "agent_name": "Selected specialist persona (e.g. Market Research Specialist, Lead Systems Architect, Roadmap & Delivery Planner, Risk & Security Auditor, or Code Review & AST Specialist)",\n'
-            '  "action_taken": "One short sentence describing what this specialist investigated",\n'
-            '  "thinking": "1-2 sentences explaining internal specialist reasoning before formulating the answer",\n'
-            '  "answer": "Clean, nicely formatted markdown answer"\n'
-            "}"
+        return followup_engine.process_followup(
+            query=query,
+            session_id=sid,
+            repo_path=rpath,
+            context_override=context,
         )
-
-        user_content = f"Previous Context:\n{context_summary}\n\nUser Follow-up Question:\n{query}"
-        res = self.llm.generate_json(
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_content},
-            ],
-            temperature=0.3,
-        )
-
-        # Dynamic fallback for persona if generic
-        agent_name = res.get("agent_name", "")
-        q_lower = query.lower()
-        if not agent_name or agent_name in ["Technical Co-Pilot", "AI Assistant"]:
-            if any(k in q_lower for k in ["market", "competitor", "user", "customer", "price", "business", "monetiz", "sales"]):
-                agent_name = "Market Research Specialist"
-            elif any(k in q_lower for k in ["roadmap", "phase", "timeline", "week", "milestone", "mvp", "deliverable", "schedule"]):
-                agent_name = "Roadmap & Delivery Planner"
-            elif any(k in q_lower for k in ["risk", "security", "fail", "stress", "vulnerability", "bottleneck", "ddos", "auth"]):
-                agent_name = "Risk & Security Auditor"
-            elif any(k in q_lower for k in ["code", "bug", "traceback", "ast", "patch", "error", "exception", "function", "syntax"]):
-                agent_name = "Code Review & AST Specialist"
-            else:
-                agent_name = "Lead Systems Architect"
-
-        default_thinking = f"{agent_name} analyzed the question in relation to the active system context and synthesized recommendations."
-
-        return {
-            "answer": res.get("answer", "Here is the guidance for your question."),
-            "agent_name": agent_name,
-            "action_taken": res.get("action_taken", "Provided specialist recommendations"),
-            "thinking": res.get("thinking", default_thinking),
-        }
 
 
 
