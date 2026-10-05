@@ -19,8 +19,7 @@ def test_app_endpoints():
     print("[1/4] Testing GET / (HTML Dashboard)...")
     res = client.get("/")
     assert res.status_code == 200
-    assert "AGENTIC AI CO-PILOT" in res.text
-    assert "openai/gpt-oss-120b" in res.text
+    assert "Agentic Co-Pilot" in res.text
     print("      Dashboard HTML served successfully.")
 
     print("[2/4] Testing GET /api/sample-repo-path...")

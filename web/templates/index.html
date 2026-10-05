@@ -3,26 +3,31 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Agentic AI Co-Pilot | Multi-Agent RAG System</title>
+  <title>Agentic Co-Pilot | Idea & Code Intelligence</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <script>
     tailwind.config = {
       darkMode: 'class',
       theme: {
         extend: {
           fontFamily: {
-            sans: ['Inter', 'sans-serif'],
-            mono: ['JetBrains Mono', 'monospace'],
+            sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
           },
           colors: {
-            surface: {
-              DEFAULT: '#09090b',
-              50: '#18181b',
-              100: '#27272a',
-              200: '#3f3f46',
+            cozy: {
+              bg: '#0e0e11',
+              card: '#16161a',
+              cardHover: '#1c1c22',
+              border: '#26262e',
+              borderHover: '#383844',
+              muted: '#71717a',
+              text: '#f4f4f6',
+              accent: '#6366f1',
+              accentHover: '#4f46e5',
             }
           }
         }
@@ -31,242 +36,337 @@
   </script>
   <style>
     body {
-      background-color: #09090b;
-      color: #fafafa;
+      background-color: #0e0e11;
+      color: #f4f4f6;
+      font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     }
     pre, code {
       font-family: 'JetBrains Mono', monospace;
     }
     ::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
+      width: 5px;
+      height: 5px;
     }
     ::-webkit-scrollbar-track {
-      background: #09090b;
+      background: transparent;
     }
     ::-webkit-scrollbar-thumb {
       background: #27272a;
-      border-radius: 3px;
+      border-radius: 4px;
     }
     ::-webkit-scrollbar-thumb:hover {
       background: #3f3f46;
     }
+    .soft-blur {
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
   </style>
 </head>
-<body class="min-h-screen flex flex-col font-sans text-sm selection:bg-zinc-800 selection:text-white">
+<body class="min-h-screen flex flex-col font-sans selection:bg-indigo-900/60 selection:text-white">
 
-  <!-- Top Navigation Bar -->
-  <header class="border-b border-zinc-800 bg-zinc-950/80 backdrop-blur sticky top-0 z-50">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
+  <!-- Minimal Cozy Top Navigation -->
+  <header class="border-b border-cozy-border/60 bg-cozy-bg/85 soft-blur sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+      
+      <!-- Brand & Project Title -->
       <div class="flex items-center space-x-3">
-        <div class="bg-zinc-100 text-zinc-950 font-mono font-bold text-xs px-2 py-1 rounded">
-          AGY-01
+        <div class="h-9 w-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+          </svg>
         </div>
-        <div class="flex flex-col">
-          <span class="font-semibold tracking-tight text-zinc-100 text-sm">AGENTIC AI CO-PILOT</span>
-          <span class="text-[10px] text-zinc-400 font-mono">Multi-Agent RAG System (Idea & Codebase)</span>
+        <div>
+          <div class="font-bold tracking-tight text-white text-base">Agentic Co-Pilot</div>
+          <div class="text-[11px] text-zinc-400">Multi-Agent RAG System for Idea & Codebase Analysis</div>
         </div>
       </div>
 
-      <div class="flex items-center space-x-3 font-mono text-xs">
-        <span class="border border-zinc-800 px-2 py-0.5 rounded text-zinc-400">
-          MODEL: <span class="text-zinc-200" id="headerModel">openai/gpt-oss-120b</span>
+      <!-- Right Header Actions -->
+      <div class="flex items-center space-x-2.5">
+        <span class="text-xs font-mono text-zinc-400 border border-cozy-border bg-cozy-card px-2.5 py-1 rounded-lg">
+          Groq / 120B Engine
         </span>
-        <span class="border border-emerald-900/60 bg-emerald-950/40 text-emerald-400 px-2 py-0.5 rounded">
-          STATUS: ONLINE
-        </span>
-        <button id="btnExportMd" class="border border-zinc-700 hover:border-zinc-500 bg-zinc-900 text-zinc-300 hover:text-white px-2.5 py-0.5 rounded transition">
-          Export Report
+        <button onclick="resetWorkspace()" class="text-xs text-zinc-300 hover:text-white border border-cozy-border hover:border-cozy-borderHover bg-cozy-card hover:bg-cozy-cardHover px-3 py-1.5 rounded-lg transition font-medium flex items-center space-x-1.5">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+          </svg>
+          <span>New Session</span>
+        </button>
+        <button id="btnExport" onclick="exportReport()" class="hidden text-xs text-white bg-indigo-600 hover:bg-indigo-500 px-3 py-1.5 rounded-lg transition font-medium flex items-center space-x-1.5 shadow-sm">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+          </svg>
+          <span>Export Report</span>
         </button>
       </div>
+
     </div>
   </header>
 
-  <!-- Subheader & Mode Switcher -->
-  <div class="border-b border-zinc-800 bg-zinc-900/50">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 flex space-x-2 py-2">
-      <button id="tabBtnCode" onclick="switchTab('code')" class="px-3 py-1.5 font-medium rounded text-xs transition border border-zinc-700 bg-zinc-800 text-white">
-        Codebase Analysis & Diagnosis (Pillar 1)
-      </button>
-      <button id="tabBtnIdea" onclick="switchTab('idea')" class="px-3 py-1.5 font-medium rounded text-xs transition border border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50">
-        Idea Validation & Roadmap (Pillar 2)
-      </button>
-    </div>
-  </div>
+  <!-- Main Canvas Container -->
+  <main class="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-8 flex flex-col space-y-6">
 
-  <!-- Main Container -->
-  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+    <!-- WELCOME / INTRO HERO (shown when idle) -->
+    <section id="heroSection" class="text-center py-6 space-y-3">
+      <h1 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+        What would you like to explore today?
+      </h1>
+      <p class="text-zinc-400 text-sm max-w-xl mx-auto leading-relaxed">
+        Choose between deep codebase fault diagnosis using AST structure, or structured idea validation and milestone roadmapping.
+      </p>
 
-    <!-- Left Column: User Inputs (5 Cols) -->
-    <section class="lg:col-span-5 space-y-5">
-      
-      <!-- CODE TRACK INPUTS -->
-      <div id="codeInputs" class="space-y-4">
-        <div class="border border-zinc-800 bg-zinc-950 p-4 rounded-lg space-y-3">
+      <!-- Quick Action Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto pt-4 text-left">
+        <!-- Codebase Card -->
+        <button onclick="selectModeAndPrompt('code', 'sample')" class="group p-4 rounded-2xl border border-cozy-border bg-cozy-card hover:bg-cozy-cardHover hover:border-indigo-500/50 transition-all duration-200 text-left space-y-2">
           <div class="flex items-center justify-between">
-            <label class="text-xs font-semibold text-zinc-200 uppercase tracking-wider font-mono">1. Repository Path</label>
-            <button onclick="loadSampleRepo()" class="text-[11px] font-mono text-zinc-400 hover:text-white underline">
-              Use Built-In Sample Repo
-            </button>
-          </div>
-          <div class="flex space-x-2">
-            <input type="text" id="repoPathInput" placeholder="C:/path/to/python-project" class="flex-1 bg-zinc-900 border border-zinc-800 rounded px-3 py-1.5 text-xs font-mono text-zinc-200 focus:outline-none focus:border-zinc-600">
-            <button onclick="inspectRepo()" class="border border-zinc-700 hover:border-zinc-500 bg-zinc-900 px-3 py-1.5 text-xs font-mono rounded text-zinc-300 hover:text-white transition">
-              Inspect AST
-            </button>
-          </div>
-          <div id="repoStats" class="hidden border-t border-zinc-800/80 pt-2 text-[11px] font-mono text-zinc-400 grid grid-cols-3 gap-2 text-center">
-            <div class="bg-zinc-900/60 p-1.5 rounded"><span id="statFiles" class="text-zinc-200 font-bold">0</span> Files</div>
-            <div class="bg-zinc-900/60 p-1.5 rounded"><span id="statChunks" class="text-zinc-200 font-bold">0</span> Chunks</div>
-            <div class="bg-zinc-900/60 p-1.5 rounded"><span id="statSymbols" class="text-zinc-200 font-bold">0</span> Symbols</div>
-          </div>
-        </div>
-
-        <div class="border border-zinc-800 bg-zinc-950 p-4 rounded-lg space-y-3">
-          <div class="flex items-center justify-between">
-            <label class="text-xs font-semibold text-zinc-200 uppercase tracking-wider font-mono">2. Error Trace or Query</label>
-            <button onclick="fillSampleCodeQuery()" class="text-[11px] font-mono text-zinc-400 hover:text-white underline">
-              Sample Error
-            </button>
-          </div>
-          <textarea id="codeQueryInput" rows="5" placeholder="Paste an exception traceback or enter a question (e.g. ValueError: Token expired in verify_token)..." class="w-full bg-zinc-900 border border-zinc-800 rounded p-2.5 text-xs font-mono text-zinc-200 focus:outline-none focus:border-zinc-600 resize-none"></textarea>
-          <button id="btnRunCode" onclick="runAnalysis('codebase_analysis')" class="w-full py-2 bg-zinc-100 hover:bg-white text-zinc-950 font-semibold text-xs rounded transition flex items-center justify-center space-x-2">
-            <span>RUN CODE DIAGNOSIS</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- IDEA TRACK INPUTS -->
-      <div id="ideaInputs" class="hidden space-y-4">
-        <div class="border border-zinc-800 bg-zinc-950 p-4 rounded-lg space-y-3">
-          <div class="flex items-center justify-between">
-            <label class="text-xs font-semibold text-zinc-200 uppercase tracking-wider font-mono">Startup / Project Idea</label>
-            <div class="space-x-2">
-              <button onclick="fillSampleIdea('iot')" class="text-[11px] font-mono text-zinc-400 hover:text-white underline">Sample IoT</button>
-              <button onclick="fillSampleIdea('peer')" class="text-[11px] font-mono text-zinc-400 hover:text-white underline">Sample AI Tool</button>
+            <div class="p-2 rounded-xl bg-indigo-500/10 text-indigo-400">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
+              </svg>
             </div>
+            <span class="text-[11px] font-mono text-zinc-500 uppercase tracking-wider">Pillar 1</span>
           </div>
-          <textarea id="ideaQueryInput" rows="7" placeholder="Describe your project idea in plain language (problem, target users, hardware or software scope)..." class="w-full bg-zinc-900 border border-zinc-800 rounded p-2.5 text-xs text-zinc-200 focus:outline-none focus:border-zinc-600 resize-none"></textarea>
-          <button id="btnRunIdea" onclick="runAnalysis('idea_validation')" class="w-full py-2 bg-zinc-100 hover:bg-white text-zinc-950 font-semibold text-xs rounded transition flex items-center justify-center space-x-2">
-            <span>VALIDATE IDEA & GENERATE ROADMAP</span>
+          <div class="font-semibold text-zinc-100 text-sm group-hover:text-white transition">Codebase Diagnosis</div>
+          <p class="text-xs text-zinc-400 leading-relaxed">
+            Locate bug roots, inspect AST syntax trees, and get line-level verified explanations.
+          </p>
+        </button>
+
+        <!-- Idea Card -->
+        <button onclick="selectModeAndPrompt('idea', 'sample')" class="group p-4 rounded-2xl border border-cozy-border bg-cozy-card hover:bg-cozy-cardHover hover:border-violet-500/50 transition-all duration-200 text-left space-y-2">
+          <div class="flex items-center justify-between">
+            <div class="p-2 rounded-xl bg-violet-500/10 text-violet-400">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+              </svg>
+            </div>
+            <span class="text-[11px] font-mono text-zinc-500 uppercase tracking-wider">Pillar 2</span>
+          </div>
+          <div class="font-semibold text-zinc-100 text-sm group-hover:text-white transition">Idea Validation & Roadmap</div>
+          <p class="text-xs text-zinc-400 leading-relaxed">
+            Decompose product concepts, discover competitors, recommend tech stacks, and map roadmaps.
+          </p>
+        </button>
+      </div>
+    </section>
+
+    <!-- UNIFIED COZY INPUT CARD -->
+    <section class="border border-cozy-border bg-cozy-card rounded-2xl shadow-xl p-4 sm:p-5 space-y-4">
+      
+      <!-- Mode Toggle & Path Pill -->
+      <div class="flex flex-wrap items-center justify-between gap-2.5 pb-2 border-b border-cozy-border/60">
+        
+        <!-- Segmented Mode Control -->
+        <div class="bg-cozy-bg p-1 rounded-xl border border-cozy-border flex items-center space-x-1">
+          <button id="modeBtnCode" onclick="setMode('code')" class="px-3.5 py-1.5 rounded-lg text-xs font-medium transition bg-zinc-800 text-white shadow-sm flex items-center space-x-1.5">
+            <svg class="w-3.5 h-3.5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
+            </svg>
+            <span>Codebase Mode</span>
           </button>
+          <button id="modeBtnIdea" onclick="setMode('idea')" class="px-3.5 py-1.5 rounded-lg text-xs font-medium transition text-zinc-400 hover:text-white flex items-center space-x-1.5">
+            <svg class="w-3.5 h-3.5 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+            </svg>
+            <span>Idea Mode</span>
+          </button>
+        </div>
+
+        <!-- Repo Path Controls (Visible in Code Mode) -->
+        <div id="repoControls" class="flex items-center space-x-2 text-xs">
+          <button onclick="loadSampleRepo()" class="text-zinc-400 hover:text-white border border-cozy-border bg-cozy-bg px-2.5 py-1.5 rounded-lg transition font-mono flex items-center space-x-1">
+            <svg class="w-3 h-3 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z"/>
+            </svg>
+            <span>Load Sample Repo</span>
+          </button>
+          <button onclick="inspectRepo()" id="btnInspect" class="hidden text-zinc-300 hover:text-white border border-cozy-border bg-cozy-bg px-2.5 py-1.5 rounded-lg transition font-mono">
+            Inspect AST
+          </button>
+        </div>
+
+      </div>
+
+      <!-- Optional Repo Path Input (Visible in Code Mode) -->
+      <div id="repoPathRow" class="flex items-center space-x-2 bg-cozy-bg p-2 rounded-xl border border-cozy-border">
+        <span class="text-xs font-mono text-zinc-500 pl-2">Repo:</span>
+        <input type="text" id="repoPathInput" placeholder="Path to Python project..." class="flex-1 bg-transparent text-xs font-mono text-zinc-200 focus:outline-none placeholder:text-zinc-600">
+        <div id="repoStatsBadge" class="hidden font-mono text-[11px] text-zinc-400 px-2 py-0.5 rounded bg-zinc-800/80">
+          <span id="statSummaryText">0 files indexed</span>
         </div>
       </div>
 
-      <!-- AGENT EXECUTION TRACE ACCORDION -->
-      <div class="border border-zinc-800 bg-zinc-950 p-4 rounded-lg space-y-3">
-        <div class="flex items-center justify-between">
-          <span class="text-xs font-mono font-semibold text-zinc-300 uppercase tracking-wider">Agent Execution Trace</span>
-          <span id="traceStepCount" class="font-mono text-[11px] text-zinc-500">0 Steps</span>
+      <!-- Main Textarea Input -->
+      <div class="relative">
+        <textarea id="mainQueryInput" rows="4" placeholder="Describe the error, ask a codebase question, or type your product idea..." class="w-full bg-cozy-bg border border-cozy-border focus:border-zinc-500 rounded-xl p-3.5 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none resize-none transition-all leading-relaxed"></textarea>
+      </div>
+
+      <!-- Bottom Input Row: Sample Quick Chips + Submit Button -->
+      <div class="flex flex-wrap items-center justify-between gap-3 pt-1">
+        
+        <!-- Quick Starter Chips -->
+        <div class="flex flex-wrap items-center gap-1.5">
+          <span class="text-xs text-zinc-500 font-medium">Try:</span>
+          <div id="codeChips" class="flex flex-wrap items-center gap-1.5">
+            <button onclick="setSamplePrompt('token_expired')" class="text-xs text-zinc-400 hover:text-zinc-200 border border-cozy-border hover:border-zinc-700 bg-cozy-bg px-2.5 py-1 rounded-lg transition">
+              Token Expired Bug
+            </button>
+            <button onclick="setSamplePrompt('order_auth')" class="text-xs text-zinc-400 hover:text-zinc-200 border border-cozy-border hover:border-zinc-700 bg-cozy-bg px-2.5 py-1 rounded-lg transition">
+              Order Auth Flow
+            </button>
+          </div>
+          <div id="ideaChips" class="hidden flex flex-wrap items-center gap-1.5">
+            <button onclick="setSamplePrompt('iot_energy')" class="text-xs text-zinc-400 hover:text-zinc-200 border border-cozy-border hover:border-zinc-700 bg-cozy-bg px-2.5 py-1 rounded-lg transition">
+              IoT Energy Auditing
+            </button>
+            <button onclick="setSamplePrompt('ai_review')" class="text-xs text-zinc-400 hover:text-zinc-200 border border-cozy-border hover:border-zinc-700 bg-cozy-bg px-2.5 py-1 rounded-lg transition">
+              AI Student Code Reviewer
+            </button>
+          </div>
         </div>
-        <div id="traceContainer" class="space-y-2 max-h-64 overflow-y-auto pr-1">
-          <div class="text-zinc-600 font-mono text-xs italic">Awaiting query execution...</div>
-        </div>
+
+        <!-- Primary Action Button -->
+        <button id="btnSubmit" onclick="submitQuery()" class="bg-white hover:bg-zinc-200 text-zinc-950 font-semibold px-5 py-2 rounded-xl text-xs transition shadow-md flex items-center space-x-2">
+          <span id="btnSubmitText">Run Co-Pilot</span>
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+          </svg>
+        </button>
+
       </div>
 
     </section>
 
-    <!-- Right Column: Interactive Results & Inspection (7 Cols) -->
-    <section class="lg:col-span-7 space-y-5">
-
-      <!-- Loading Placeholder -->
-      <div id="loadingState" class="hidden border border-zinc-800 bg-zinc-950/60 p-8 rounded-lg text-center space-y-3">
-        <div class="font-mono text-xs text-zinc-400 animate-pulse">
-          Agents collaborating: Orchestrator -> Tool Execution -> Verification Pass...
-        </div>
-        <div class="text-[11px] text-zinc-600 font-mono" id="loadingTimer">Elapsed: 0s</div>
+    <!-- LOADING STATE -->
+    <section id="loadingSection" class="hidden border border-cozy-border bg-cozy-card rounded-2xl p-8 text-center space-y-4">
+      <div class="inline-flex items-center justify-center p-3 rounded-2xl bg-indigo-500/10 text-indigo-400 animate-pulse">
+        <svg class="w-6 h-6 animate-spin" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+        </svg>
       </div>
+      <div>
+        <h3 id="loadingTitle" class="text-sm font-semibold text-zinc-200">Agents collaborating on your request...</h3>
+        <p id="loadingSub" class="text-xs text-zinc-400 mt-1 font-mono">Orchestrator -> Tool Execution -> Verification Pass</p>
+      </div>
+      <div class="font-mono text-xs text-zinc-500" id="timerDisplay">0.0s elapsed</div>
+    </section>
 
-      <!-- CODE TRACK OUTPUT CONTAINER -->
-      <div id="codeResults" class="space-y-4">
-        <!-- Default Empty State -->
-        <div id="codeEmptyState" class="border border-dashed border-zinc-800 p-10 rounded-lg text-center space-y-2">
-          <p class="font-mono text-xs text-zinc-400">No codebase analysis executed yet.</p>
-          <p class="text-xs text-zinc-600">Enter a repo path or click "Use Built-In Sample Repo" to run the diagnosis pipeline.</p>
-        </div>
+    <!-- RESULTS SECTION -->
+    <section id="resultsSection" class="hidden space-y-6">
 
-        <!-- Rendered Code Output -->
-        <div id="codeOutputCard" class="hidden space-y-4">
-          <!-- Verification Header -->
-          <div class="border border-zinc-800 bg-zinc-950 p-4 rounded-lg flex items-center justify-between">
+      <!-- COLLAPSIBLE AGENT THINKING / TRACE BAR (Gemini / ChatGPT Style) -->
+      <div class="border border-cozy-border bg-cozy-card rounded-2xl overflow-hidden transition-all">
+        <button onclick="toggleTraceAccordion()" class="w-full px-5 py-3.5 flex items-center justify-between text-left hover:bg-cozy-cardHover transition">
+          <div class="flex items-center space-x-2.5">
+            <div class="p-1.5 rounded-lg bg-zinc-800 text-zinc-300">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+              </svg>
+            </div>
             <div>
-              <span class="text-xs font-mono text-zinc-400">GROUNDING VERIFICATION</span>
-              <div class="flex items-center space-x-2 mt-1">
-                <span id="criticStatusBadge" class="border px-2 py-0.5 rounded font-mono text-xs font-semibold"></span>
-                <span id="criticGroundingScore" class="font-mono text-xs text-zinc-300"></span>
-              </div>
-            </div>
-            <div class="text-right">
-              <span class="text-[11px] font-mono text-zinc-500">Total Latency</span>
-              <div id="codeLatencyBadge" class="font-mono text-xs font-bold text-zinc-200">0ms</div>
+              <span class="text-xs font-semibold text-zinc-200">Agent Reasoning Process</span>
+              <span id="traceSummaryPill" class="ml-2 font-mono text-[11px] text-zinc-400">11 steps completed in 4.2s</span>
             </div>
           </div>
+          <svg id="traceChevron" class="w-4 h-4 text-zinc-400 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+          </svg>
+        </button>
 
-          <!-- Problem Summary -->
-          <div class="border border-zinc-800 bg-zinc-950 p-4 rounded-lg space-y-1">
-            <span class="text-[11px] font-mono text-zinc-400 uppercase tracking-wider">Diagnosis Summary</span>
-            <p id="codeDiagSummary" class="text-xs text-zinc-200 leading-relaxed"></p>
-          </div>
-
-          <!-- Ranked Fault Candidates -->
-          <div class="space-y-3">
-            <span class="text-xs font-mono font-semibold text-zinc-300 uppercase tracking-wider">Ranked Candidate Locations</span>
-            <div id="candidatesList" class="space-y-3"></div>
-          </div>
+        <div id="traceBody" class="hidden border-t border-cozy-border/60 p-4 space-y-2 bg-cozy-bg/60">
+          <div id="traceTimelineList" class="space-y-2 text-xs font-mono"></div>
         </div>
       </div>
 
-      <!-- IDEA TRACK OUTPUT CONTAINER -->
-      <div id="ideaResults" class="hidden space-y-4">
-        <!-- Default Empty State -->
-        <div id="ideaEmptyState" class="border border-dashed border-zinc-800 p-10 rounded-lg text-center space-y-2">
-          <p class="font-mono text-xs text-zinc-400">No idea validation executed yet.</p>
-          <p class="text-xs text-zinc-600">Enter an idea or pick a sample above to generate market analysis and roadmaps.</p>
+      <!-- ANALYTICS / OBSERVABILITY STRIP -->
+      <div id="analyticsStrip" class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div class="border border-cozy-border bg-cozy-card p-3 rounded-xl">
+          <div class="text-[11px] font-mono text-zinc-500 uppercase">Verification</div>
+          <div id="metricGrounding" class="text-sm font-bold text-zinc-100 mt-0.5">100% Grounded</div>
+        </div>
+        <div class="border border-cozy-border bg-cozy-card p-3 rounded-xl">
+          <div class="text-[11px] font-mono text-zinc-500 uppercase">Latency</div>
+          <div id="metricLatency" class="text-sm font-bold text-zinc-100 mt-0.5">0ms</div>
+        </div>
+        <div class="border border-cozy-border bg-cozy-card p-3 rounded-xl">
+          <div class="text-[11px] font-mono text-zinc-500 uppercase">Intent Route</div>
+          <div id="metricIntent" class="text-sm font-bold text-zinc-100 mt-0.5">Codebase</div>
+        </div>
+        <div class="border border-cozy-border bg-cozy-card p-3 rounded-xl">
+          <div class="text-[11px] font-mono text-zinc-500 uppercase">Revisions</div>
+          <div id="metricRevisions" class="text-sm font-bold text-zinc-100 mt-0.5">0 Cycles</div>
+        </div>
+      </div>
+
+      <!-- CODE OUTPUT VIEW -->
+      <div id="codeOutputView" class="space-y-5 hidden">
+        <!-- Diagnosis Summary Card -->
+        <div class="border border-cozy-border bg-cozy-card p-5 rounded-2xl space-y-2">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-bold text-white">Diagnosis Summary</h3>
+            <span id="criticVerdictBadge" class="text-xs font-mono font-semibold px-2.5 py-0.5 rounded-lg border border-emerald-800/80 bg-emerald-950/40 text-emerald-300">
+              [VERIFIED IN AST]
+            </span>
+          </div>
+          <p id="codeSummaryText" class="text-xs sm:text-sm text-zinc-300 leading-relaxed"></p>
         </div>
 
-        <!-- Rendered Idea Output -->
-        <div id="ideaOutputCard" class="hidden space-y-4">
-          <!-- Overview Card -->
-          <div class="border border-zinc-800 bg-zinc-950 p-4 rounded-lg space-y-2">
-            <div class="flex items-center justify-between border-b border-zinc-800/80 pb-2">
-              <h2 id="ideaProjectTitle" class="text-sm font-bold text-zinc-100 font-mono"></h2>
-              <span class="font-mono text-[11px] border border-zinc-700 px-2 py-0.5 rounded text-zinc-300">Pillar 2: Idea Track</span>
-            </div>
-            <p id="ideaProblemStatement" class="text-xs text-zinc-300 leading-relaxed"></p>
-            <div class="text-xs text-zinc-400 font-mono mt-1">
-              Core Value: <span id="ideaCoreValue" class="text-zinc-200"></span>
-            </div>
-          </div>
+        <!-- Ranked Candidates List -->
+        <div class="space-y-3">
+          <h3 class="text-xs font-mono font-semibold text-zinc-400 uppercase tracking-wider">Candidate Locations (Ranked)</h3>
+          <div id="codeCandidatesContainer" class="space-y-3"></div>
+        </div>
+      </div>
 
-          <!-- Target Personas -->
-          <div class="border border-zinc-800 bg-zinc-950 p-4 rounded-lg space-y-2">
-            <span class="text-xs font-mono font-semibold text-zinc-300 uppercase tracking-wider">Target User Personas</span>
-            <div id="personasContainer" class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs"></div>
+      <!-- IDEA OUTPUT VIEW -->
+      <div id="ideaOutputView" class="space-y-5 hidden">
+        <!-- Project Title & Problem Statement -->
+        <div class="border border-cozy-border bg-cozy-card p-5 rounded-2xl space-y-3">
+          <div class="flex items-center justify-between border-b border-cozy-border/60 pb-3">
+            <h2 id="ideaTitleHeader" class="text-base font-bold text-white"></h2>
+            <span class="text-xs font-mono text-zinc-400 border border-cozy-border px-2.5 py-0.5 rounded-lg">Validated Brief</span>
           </div>
+          <div>
+            <span class="text-[11px] font-mono text-zinc-500 uppercase">Problem Statement</span>
+            <p id="ideaProblemText" class="text-xs sm:text-sm text-zinc-300 leading-relaxed mt-1"></p>
+          </div>
+          <div class="pt-2 border-t border-cozy-border/40">
+            <span class="text-[11px] font-mono text-zinc-500 uppercase">Core Value Proposition:</span>
+            <span id="ideaValueText" class="text-xs sm:text-sm text-zinc-200 font-medium ml-1"></span>
+          </div>
+        </div>
 
-          <!-- Recommended Tech Stack -->
-          <div class="border border-zinc-800 bg-zinc-950 p-4 rounded-lg space-y-2">
-            <span class="text-xs font-mono font-semibold text-zinc-300 uppercase tracking-wider">Recommended Tech Stack & Tradeoffs</span>
-            <div id="techStackContainer" class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs"></div>
-          </div>
+        <!-- Target User Personas -->
+        <div class="border border-cozy-border bg-cozy-card p-5 rounded-2xl space-y-3">
+          <h3 class="text-xs font-mono font-semibold text-zinc-400 uppercase tracking-wider">Target User Personas</h3>
+          <div id="ideaPersonasGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3"></div>
+        </div>
 
-          <!-- 3-Phase Roadmap -->
-          <div class="border border-zinc-800 bg-zinc-950 p-4 rounded-lg space-y-2">
-            <span class="text-xs font-mono font-semibold text-zinc-300 uppercase tracking-wider">3-Phase Development Roadmap</span>
-            <div id="roadmapPhasesContainer" class="space-y-2"></div>
-          </div>
+        <!-- Recommended Tech Stack -->
+        <div class="border border-cozy-border bg-cozy-card p-5 rounded-2xl space-y-3">
+          <h3 class="text-xs font-mono font-semibold text-zinc-400 uppercase tracking-wider">Recommended Tech Stack & Tradeoffs</h3>
+          <div id="ideaTechGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+        </div>
 
-          <!-- Risk Matrix -->
-          <div class="border border-zinc-800 bg-zinc-950 p-4 rounded-lg space-y-2">
-            <span class="text-xs font-mono font-semibold text-zinc-300 uppercase tracking-wider">Technical Risk Matrix & Mitigations</span>
-            <div id="risksContainer" class="space-y-1.5"></div>
-          </div>
+        <!-- 3-Phase Development Roadmap -->
+        <div class="border border-cozy-border bg-cozy-card p-5 rounded-2xl space-y-3">
+          <h3 class="text-xs font-mono font-semibold text-zinc-400 uppercase tracking-wider">3-Phase Development Roadmap</h3>
+          <div id="ideaRoadmapTimeline" class="space-y-3"></div>
+        </div>
 
-          <!-- Evaluation Tips -->
-          <div class="border border-zinc-800 bg-zinc-900/40 p-4 rounded-lg space-y-1">
-            <span class="text-[11px] font-mono text-zinc-400 uppercase tracking-wider">Evaluation Defense Tips</span>
-            <ul id="evalTipsList" class="list-disc list-inside text-xs text-zinc-300 space-y-1"></ul>
-          </div>
+        <!-- Risk Matrix -->
+        <div class="border border-cozy-border bg-cozy-card p-5 rounded-2xl space-y-3">
+          <h3 class="text-xs font-mono font-semibold text-zinc-400 uppercase tracking-wider">Technical Risk Matrix & Mitigations</h3>
+          <div id="ideaRisksGrid" class="space-y-2"></div>
+        </div>
+
+        <!-- Academic Evaluation Tips -->
+        <div class="border border-cozy-border bg-cozy-card p-5 rounded-2xl space-y-2">
+          <h3 class="text-xs font-mono font-semibold text-zinc-400 uppercase tracking-wider">Evaluation Defense Tips</h3>
+          <ul id="ideaTipsList" class="list-disc list-inside text-xs sm:text-sm text-zinc-300 space-y-1 leading-relaxed"></ul>
         </div>
       </div>
 
@@ -275,35 +375,60 @@
   </main>
 
   <script>
-    let currentMode = 'code';
-    let lastStateData = null;
-    let timerInterval = null;
+    let activeMode = 'code';
+    let lastResponse = null;
+    let timerId = null;
 
-    function switchTab(mode) {
-      currentMode = mode;
-      const codeInputs = document.getElementById('codeInputs');
-      const ideaInputs = document.getElementById('ideaInputs');
-      const codeResults = document.getElementById('codeResults');
-      const ideaResults = document.getElementById('ideaResults');
-      const tabBtnCode = document.getElementById('tabBtnCode');
-      const tabBtnIdea = document.getElementById('tabBtnIdea');
+    function setMode(mode) {
+      activeMode = mode;
+      const btnCode = document.getElementById('modeBtnCode');
+      const btnIdea = document.getElementById('modeBtnIdea');
+      const repoControls = document.getElementById('repoControls');
+      const repoPathRow = document.getElementById('repoPathRow');
+      const codeChips = document.getElementById('codeChips');
+      const ideaChips = document.getElementById('ideaChips');
+      const queryInput = document.getElementById('mainQueryInput');
 
       if (mode === 'code') {
-        codeInputs.classList.remove('hidden');
-        ideaInputs.classList.add('hidden');
-        codeResults.classList.remove('hidden');
-        ideaResults.classList.add('hidden');
-
-        tabBtnCode.className = 'px-3 py-1.5 font-medium rounded text-xs transition border border-zinc-700 bg-zinc-800 text-white';
-        tabBtnIdea.className = 'px-3 py-1.5 font-medium rounded text-xs transition border border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50';
+        btnCode.className = 'px-3.5 py-1.5 rounded-lg text-xs font-medium transition bg-zinc-800 text-white shadow-sm flex items-center space-x-1.5';
+        btnIdea.className = 'px-3.5 py-1.5 rounded-lg text-xs font-medium transition text-zinc-400 hover:text-white flex items-center space-x-1.5';
+        repoControls.classList.remove('hidden');
+        repoPathRow.classList.remove('hidden');
+        codeChips.classList.remove('hidden');
+        ideaChips.classList.add('hidden');
+        queryInput.placeholder = "Describe the bug, paste a traceback, or ask about code structure (e.g. ValueError in verify_token)...";
       } else {
-        codeInputs.classList.add('hidden');
-        ideaInputs.classList.remove('hidden');
-        codeResults.classList.add('hidden');
-        ideaResults.classList.remove('hidden');
+        btnIdea.className = 'px-3.5 py-1.5 rounded-lg text-xs font-medium transition bg-zinc-800 text-white shadow-sm flex items-center space-x-1.5';
+        btnCode.className = 'px-3.5 py-1.5 rounded-lg text-xs font-medium transition text-zinc-400 hover:text-white flex items-center space-x-1.5';
+        repoControls.classList.add('hidden');
+        repoPathRow.classList.add('hidden');
+        codeChips.classList.add('hidden');
+        ideaChips.classList.remove('hidden');
+        queryInput.placeholder = "Describe your startup or project idea (problem, audience, scope)...";
+      }
+    }
 
-        tabBtnIdea.className = 'px-3 py-1.5 font-medium rounded text-xs transition border border-zinc-700 bg-zinc-800 text-white';
-        tabBtnCode.className = 'px-3 py-1.5 font-medium rounded text-xs transition border border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50';
+    function selectModeAndPrompt(mode, type) {
+      setMode(mode);
+      if (mode === 'code') {
+        loadSampleRepo();
+        setSamplePrompt('token_expired');
+      } else {
+        setSamplePrompt('iot_energy');
+      }
+      document.getElementById('mainQueryInput').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function setSamplePrompt(type) {
+      const input = document.getElementById('mainQueryInput');
+      if (type === 'token_expired') {
+        input.value = "ValueError: Token expired when verify_token validates customer credentials during checkout in order processor.";
+      } else if (type === 'order_auth') {
+        input.value = "Where is customer authentication verified when placing an order, and how is session expiry checked?";
+      } else if (type === 'iot_energy') {
+        input.value = "A low-cost IoT energy monitoring system for residential apartment societies that uses ESP32 with CT current sensors to detect abnormal power spikes and alert residents.";
+      } else if (type === 'ai_review') {
+        input.value = "An automated AI peer review platform for engineering students to evaluate their lab code submissions against code quality, linting, and AST standards.";
       }
     }
 
@@ -312,9 +437,10 @@
         const res = await fetch('/api/sample-repo-path');
         const data = await res.json();
         document.getElementById('repoPathInput').value = data.path;
+        document.getElementById('btnInspect').classList.remove('hidden');
         inspectRepo();
-      } catch (e) {
-        console.error(e);
+      } catch (err) {
+        console.error(err);
       }
     }
 
@@ -330,61 +456,39 @@
         });
         const data = await res.json();
         if (data.status === 'ok') {
-          document.getElementById('statFiles').innerText = data.summary.total_files;
-          document.getElementById('statChunks').innerText = data.summary.total_chunks;
-          document.getElementById('statSymbols').innerText = data.summary.total_symbols;
-          document.getElementById('repoStats').classList.remove('hidden');
+          const badge = document.getElementById('repoStatsBadge');
+          const text = document.getElementById('statSummaryText');
+          text.innerText = `${data.summary.total_files} files, ${data.summary.total_chunks} functions parsed`;
+          badge.classList.remove('hidden');
         }
-      } catch (e) {
-        console.error(e);
+      } catch (err) {
+        console.error(err);
       }
     }
 
-    function fillSampleCodeQuery() {
-      document.getElementById('codeQueryInput').value = 
-        "ValueError: Token expired when verify_token validates customer credentials during checkout in order processor.";
-    }
-
-    function fillSampleIdea(type) {
-      if (type === 'iot') {
-        document.getElementById('ideaQueryInput').value = 
-          "A low-cost IoT energy auditing system for residential societies that detects abnormal power spikes using ESP32 with CT current sensors and alerts residents.";
-      } else {
-        document.getElementById('ideaQueryInput').value = 
-          "An automated AI peer review platform for engineering students to evaluate their lab code submissions against code quality, linting, and AST standards.";
-      }
-    }
-
-    async function runAnalysis(intent) {
-      const query = intent === 'codebase_analysis' 
-        ? document.getElementById('codeQueryInput').value.trim()
-        : document.getElementById('ideaQueryInput').value.trim();
-
+    async function submitQuery() {
+      const query = document.getElementById('mainQueryInput').value.trim();
       const repoPath = document.getElementById('repoPathInput').value.trim();
 
       if (!query) {
-        alert("Please enter a query or description.");
+        alert("Please enter a question or idea description.");
         return;
       }
 
-      // Show loading
-      document.getElementById('loadingState').classList.remove('hidden');
-      if (intent === 'codebase_analysis') {
-        document.getElementById('codeEmptyState').classList.add('hidden');
-        document.getElementById('codeOutputCard').classList.add('hidden');
-      } else {
-        document.getElementById('ideaEmptyState').classList.add('hidden');
-        document.getElementById('ideaOutputCard').classList.add('hidden');
-      }
+      // Hide Hero, Show Loading
+      document.getElementById('heroSection').classList.add('hidden');
+      document.getElementById('resultsSection').classList.add('hidden');
+      document.getElementById('loadingSection').classList.remove('hidden');
 
-      let elapsedSec = 0;
-      clearInterval(timerInterval);
-      timerInterval = setInterval(() => {
-        elapsedSec++;
-        document.getElementById('loadingTimer').innerText = `Elapsed: ${elapsedSec}s`;
-      }, 1000);
+      let startTime = Date.now();
+      clearInterval(timerId);
+      timerId = setInterval(() => {
+        let sec = ((Date.now() - startTime) / 1000).toFixed(1);
+        document.getElementById('timerDisplay').innerText = `${sec}s elapsed`;
+      }, 100);
 
       try {
+        const intent = activeMode === 'code' ? 'codebase_analysis' : 'idea_validation';
         const res = await fetch('/api/query', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
@@ -396,160 +500,172 @@
         });
 
         const state = await res.json();
-        lastStateData = state;
-        clearInterval(timerInterval);
-        document.getElementById('loadingState').classList.add('hidden');
+        lastResponse = state;
+        clearInterval(timerId);
+        document.getElementById('loadingSection').classList.add('hidden');
+        document.getElementById('resultsSection').classList.remove('hidden');
+        document.getElementById('btnExport').classList.remove('hidden');
 
-        renderExecutionTrace(state.execution_trace);
+        renderTraceSummary(state);
+        renderAnalytics(state);
 
         if (intent === 'codebase_analysis') {
-          renderCodeOutput(state);
+          document.getElementById('codeOutputView').classList.remove('hidden');
+          document.getElementById('ideaOutputView').classList.add('hidden');
+          renderCodeResults(state);
         } else {
-          renderIdeaOutput(state);
+          document.getElementById('codeOutputView').classList.add('hidden');
+          document.getElementById('ideaOutputView').classList.remove('hidden');
+          renderIdeaResults(state);
         }
 
       } catch (err) {
-        clearInterval(timerInterval);
-        document.getElementById('loadingState').classList.add('hidden');
-        alert("Error executing query: " + err);
+        clearInterval(timerId);
+        document.getElementById('loadingSection').classList.add('hidden');
+        alert("Execution error: " + err);
       }
     }
 
-    function renderExecutionTrace(traces) {
-      const container = document.getElementById('traceContainer');
-      document.getElementById('traceStepCount').innerText = `${traces.length} Steps`;
-      container.innerHTML = '';
-
-      traces.forEach(t => {
-        const div = document.createElement('div');
-        div.className = 'border border-zinc-800/80 bg-zinc-900/60 p-2 rounded text-xs font-mono';
-        
-        let statusBadge = 'text-zinc-400';
-        if (t.status === 'completed') statusBadge = 'text-emerald-400';
-        if (t.status === 'warning') statusBadge = 'text-amber-400';
-        if (t.status === 'revised') statusBadge = 'text-blue-400';
-
-        div.innerHTML = `
-          <div class="flex items-center justify-between">
-            <span class="font-bold text-zinc-200">[${t.agent_name}]</span>
-            <span class="text-[10px] text-zinc-500">+${t.elapsed_ms}ms</span>
-          </div>
-          <p class="text-[11px] text-zinc-400 mt-1">${t.action}</p>
-        `;
-        container.appendChild(div);
-      });
-      container.scrollTop = container.scrollHeight;
+    function toggleTraceAccordion() {
+      const body = document.getElementById('traceBody');
+      const chevron = document.getElementById('traceChevron');
+      body.classList.toggle('hidden');
+      chevron.classList.toggle('rotate-180');
     }
 
-    function renderCodeOutput(state) {
-      const output = state.final_output;
-      if (!output) return;
+    function renderTraceSummary(state) {
+      const traces = state.execution_trace || [];
+      document.getElementById('traceSummaryPill').innerText = 
+        `${traces.length} steps completed in ${(state.total_latency_ms / 1000).toFixed(1)}s`;
 
-      document.getElementById('codeOutputCard').classList.remove('hidden');
-      document.getElementById('codeLatencyBadge').innerText = `${state.total_latency_ms}ms`;
+      const list = document.getElementById('traceTimelineList');
+      list.innerHTML = '';
 
-      // Critic Badge
-      const critic = output.critic || {};
-      const badge = document.getElementById('criticStatusBadge');
+      traces.forEach(t => {
+        const item = document.createElement('div');
+        item.className = 'border-l-2 border-zinc-700 pl-3 py-1 flex items-start justify-between';
+        item.innerHTML = `
+          <div>
+            <span class="text-zinc-200 font-semibold">[${t.agent_name}]</span>
+            <span class="text-zinc-400 text-[11px] ml-1.5">${t.action}</span>
+          </div>
+          <span class="text-zinc-500 text-[10px] whitespace-nowrap ml-2">+${t.elapsed_ms}ms</span>
+        `;
+        list.appendChild(item);
+      });
+    }
+
+    function renderAnalytics(state) {
+      document.getElementById('metricLatency').innerText = `${state.total_latency_ms}ms`;
+      document.getElementById('metricIntent').innerText = state.intent === 'codebase_analysis' ? 'Code Diagnosis' : 'Idea Roadmap';
+      document.getElementById('metricRevisions').innerText = `${state.revision_count} Cycles`;
+
+      const critic = state.final_output?.critic || {};
+      const grounding = critic.grounding_score !== undefined 
+        ? `${Math.round(critic.grounding_score * 100)}% Verified`
+        : 'Grounded';
+      document.getElementById('metricGrounding').innerText = grounding;
+    }
+
+    function renderCodeResults(state) {
+      const out = state.final_output || {};
+      document.getElementById('codeSummaryText').innerText = out.summary || "Diagnosis complete.";
+
+      const critic = out.critic || {};
+      const badge = document.getElementById('criticVerdictBadge');
       if (critic.is_valid) {
-        badge.className = 'border border-emerald-900 bg-emerald-950/40 text-emerald-400 px-2 py-0.5 rounded font-mono text-xs font-semibold';
+        badge.className = 'text-xs font-mono font-semibold px-2.5 py-0.5 rounded-lg border border-emerald-800/80 bg-emerald-950/40 text-emerald-300';
         badge.innerText = '[VERIFIED IN AST]';
       } else {
-        badge.className = 'border border-amber-900 bg-amber-950/40 text-amber-400 px-2 py-0.5 rounded font-mono text-xs font-semibold';
+        badge.className = 'text-xs font-mono font-semibold px-2.5 py-0.5 rounded-lg border border-amber-800/80 bg-amber-950/40 text-amber-300';
         badge.innerText = '[NEEDS REVISION]';
       }
 
-      document.getElementById('criticGroundingScore').innerText = 
-        `Grounding Score: ${Math.round((critic.grounding_score || 0) * 100)}% (${critic.total_verified || 0} locations verified)`;
+      const container = document.getElementById('codeCandidatesContainer');
+      container.innerHTML = '';
 
-      document.getElementById('codeDiagSummary').innerText = output.summary || "No diagnosis available.";
-
-      const candidatesList = document.getElementById('candidatesList');
-      candidatesList.innerHTML = '';
-
-      (output.candidates || []).forEach(cand => {
+      (out.candidates || []).forEach(c => {
         const card = document.createElement('div');
-        card.className = 'border border-zinc-800 bg-zinc-950 p-4 rounded-lg space-y-2';
+        card.className = 'border border-cozy-border bg-cozy-card p-4 sm:p-5 rounded-2xl space-y-3';
         card.innerHTML = `
-          <div class="flex items-center justify-between border-b border-zinc-800/80 pb-2">
-            <div class="font-mono text-xs text-zinc-200">
-              <span class="bg-zinc-800 text-zinc-300 px-1.5 py-0.5 rounded mr-1.5 font-bold">#${cand.rank}</span>
-              <span class="font-bold text-zinc-100">${cand.symbol_name}</span>
-              <span class="text-zinc-500 text-[11px] ml-1">in ${cand.file_path}:${cand.line_start}-${cand.line_end}</span>
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-cozy-border/60 pb-3">
+            <div class="flex items-center space-x-2 font-mono text-xs">
+              <span class="bg-indigo-950/60 border border-indigo-800/80 text-indigo-300 px-2 py-0.5 rounded font-bold">#${c.rank}</span>
+              <span class="font-bold text-white text-sm">${c.symbol_name}</span>
+              <span class="text-zinc-400">in ${c.file_path}:${c.line_start}-${c.line_end}</span>
             </div>
-            <span class="font-mono text-[10px] uppercase border border-zinc-700 px-1.5 py-0.5 rounded text-zinc-400">
-              CONFIDENCE: ${cand.confidence}
+            <span class="font-mono text-[11px] text-zinc-400 border border-cozy-border px-2 py-0.5 rounded">
+              Confidence: ${c.confidence}
             </span>
           </div>
-          <div class="text-xs text-zinc-300">
-            <span class="font-mono text-zinc-400 text-[11px] block uppercase font-semibold">Root Cause Hypothesis:</span>
-            <p class="mt-0.5 leading-relaxed">${cand.root_cause_hypothesis}</p>
+
+          <div class="space-y-1">
+            <div class="text-[11px] font-mono text-zinc-500 uppercase">Root Cause Analysis</div>
+            <p class="text-xs sm:text-sm text-zinc-300 leading-relaxed">${c.root_cause_hypothesis}</p>
           </div>
-          <div class="text-xs text-zinc-300 pt-1 border-t border-zinc-900">
-            <span class="font-mono text-zinc-400 text-[11px] block uppercase font-semibold">Suggested Fix Direction:</span>
-            <p class="mt-0.5 text-emerald-400/90 leading-relaxed">${cand.suggested_fix}</p>
+
+          <div class="bg-cozy-bg p-3.5 rounded-xl border border-cozy-border/70 space-y-1">
+            <div class="text-[11px] font-mono text-emerald-400 uppercase font-semibold">Suggested Fix Direction</div>
+            <p class="text-xs text-zinc-300 leading-relaxed">${c.suggested_fix}</p>
           </div>
         `;
-        candidatesList.appendChild(card);
+        container.appendChild(card);
       });
     }
 
-    function renderIdeaOutput(state) {
-      const output = state.final_output;
-      if (!output) return;
-
-      document.getElementById('ideaOutputCard').classList.remove('hidden');
-      document.getElementById('ideaProjectTitle').innerText = output.project_title || "Project Title";
-      document.getElementById('ideaProblemStatement').innerText = output.problem_statement || "";
-      document.getElementById('ideaCoreValue').innerText = output.core_value_prop || "";
+    function renderIdeaResults(state) {
+      const out = state.final_output || {};
+      document.getElementById('ideaTitleHeader').innerText = out.project_title || "Project Title";
+      document.getElementById('ideaProblemText').innerText = out.problem_statement || "";
+      document.getElementById('ideaValueText').innerText = out.core_value_prop || "";
 
       // Personas
-      const personasContainer = document.getElementById('personasContainer');
-      personasContainer.innerHTML = '';
-      (output.target_personas || []).forEach(p => {
+      const personasGrid = document.getElementById('ideaPersonasGrid');
+      personasGrid.innerHTML = '';
+      (out.target_personas || []).forEach(p => {
         const div = document.createElement('div');
-        div.className = 'border border-zinc-800 bg-zinc-900/40 p-2.5 rounded';
+        div.className = 'bg-cozy-bg p-3.5 rounded-xl border border-cozy-border space-y-1.5';
         div.innerHTML = `
-          <div class="font-mono font-semibold text-zinc-200">${p.persona}</div>
-          <div class="text-zinc-400 text-[11px] mt-1"><span class="text-zinc-500">Pain:</span> ${p.pain_point}</div>
-          <div class="text-emerald-400/90 text-[11px] mt-0.5"><span class="text-zinc-500">Benefit:</span> ${p.expected_benefit}</div>
+          <div class="font-semibold text-zinc-100 text-xs">${p.persona}</div>
+          <div class="text-xs text-zinc-400 leading-relaxed"><span class="text-zinc-500">Pain:</span> ${p.pain_point}</div>
+          <div class="text-xs text-emerald-400/90 leading-relaxed"><span class="text-zinc-500">Benefit:</span> ${p.expected_benefit}</div>
         `;
-        personasContainer.appendChild(div);
+        personasGrid.appendChild(div);
       });
 
       // Tech Stack
-      const techStackContainer = document.getElementById('techStackContainer');
-      techStackContainer.innerHTML = '';
-      const stack = output.tech_stack || {};
+      const techGrid = document.getElementById('ideaTechGrid');
+      techGrid.innerHTML = '';
+      const stack = out.tech_stack || {};
       for (const [category, item] of Object.entries(stack)) {
         const div = document.createElement('div');
-        div.className = 'border border-zinc-800 bg-zinc-900/40 p-2.5 rounded font-mono text-[11px]';
+        div.className = 'bg-cozy-bg p-3.5 rounded-xl border border-cozy-border space-y-1';
         div.innerHTML = `
-          <div class="text-zinc-500 uppercase tracking-wider text-[10px] font-bold">${category}</div>
-          <div class="text-zinc-200 font-bold text-xs mt-0.5">${item.choice || ''}</div>
-          <div class="text-zinc-400 font-sans text-xs mt-1">${item.rationale || ''}</div>
+          <div class="text-[10px] font-mono text-zinc-500 uppercase font-bold">${category}</div>
+          <div class="text-xs font-bold text-white font-mono">${item.choice || ''}</div>
+          <div class="text-xs text-zinc-400 leading-relaxed">${item.rationale || ''}</div>
         `;
-        techStackContainer.appendChild(div);
+        techGrid.appendChild(div);
       }
 
       // Roadmap
-      const roadmapContainer = document.getElementById('roadmapPhasesContainer');
+      const roadmapContainer = document.getElementById('ideaRoadmapTimeline');
       roadmapContainer.innerHTML = '';
-      (output.phases || []).forEach(phase => {
+      (out.phases || []).forEach(phase => {
         const div = document.createElement('div');
-        div.className = 'border border-zinc-800 bg-zinc-900/40 p-3 rounded space-y-1.5';
+        div.className = 'bg-cozy-bg p-4 rounded-xl border border-cozy-border space-y-2';
         div.innerHTML = `
           <div class="flex items-center justify-between">
-            <span class="font-mono font-bold text-xs text-zinc-200">${phase.phase_name}</span>
-            <span class="font-mono text-[11px] text-zinc-500">${phase.duration_weeks}</span>
+            <span class="font-bold text-xs sm:text-sm text-zinc-100">${phase.phase_name}</span>
+            <span class="text-xs font-mono text-zinc-400 border border-cozy-border px-2 py-0.5 rounded">${phase.duration_weeks}</span>
           </div>
           <div class="text-xs text-zinc-400">
-            <span class="text-zinc-500 font-mono text-[10px] uppercase">Deliverables:</span>
-            <ul class="list-disc list-inside mt-0.5 space-y-0.5">
+            <span class="text-zinc-500 uppercase text-[10px] font-mono block">Deliverables:</span>
+            <ul class="list-disc list-inside mt-1 space-y-0.5 text-zinc-300">
               ${(phase.deliverables || []).map(d => `<li>${d}</li>`).join('')}
             </ul>
           </div>
-          <div class="text-[11px] text-emerald-400/80 font-mono mt-1">
+          <div class="text-xs text-emerald-400/90 font-mono pt-1 border-t border-cozy-border/40">
             Exit Criteria: ${phase.exit_criteria}
           </div>
         `;
@@ -557,77 +673,70 @@
       });
 
       // Risks
-      const risksContainer = document.getElementById('risksContainer');
-      risksContainer.innerHTML = '';
-      (output.risks || []).forEach(r => {
+      const risksGrid = document.getElementById('ideaRisksGrid');
+      risksGrid.innerHTML = '';
+      (out.risks || []).forEach(r => {
         const div = document.createElement('div');
-        div.className = 'border border-zinc-800 bg-zinc-900/40 p-2.5 rounded text-xs';
+        div.className = 'bg-cozy-bg p-3 rounded-xl border border-cozy-border flex flex-col sm:flex-row sm:items-center justify-between gap-2';
         div.innerHTML = `
-          <div class="flex items-center justify-between">
-            <span class="font-mono font-bold text-zinc-200">${r.category} Risk</span>
-            <span class="font-mono text-[10px] border border-zinc-700 px-1 rounded text-zinc-400">${r.severity}</span>
+          <div class="space-y-0.5">
+            <div class="text-xs font-semibold text-zinc-200">${r.risk}</div>
+            <div class="text-xs text-zinc-400"><span class="text-zinc-500 font-mono">Mitigation:</span> ${r.mitigation}</div>
           </div>
-          <p class="text-zinc-400 mt-1">${r.risk}</p>
-          <p class="text-emerald-400/90 text-[11px] mt-1"><span class="text-zinc-500 font-mono">Mitigation:</span> ${r.mitigation}</p>
+          <span class="text-[10px] font-mono px-2 py-0.5 rounded border border-cozy-border text-zinc-400 self-start sm:self-auto">${r.severity} Severity</span>
         `;
-        risksContainer.appendChild(div);
+        risksGrid.appendChild(div);
       });
 
       // Evaluation tips
-      const tipsList = document.getElementById('evalTipsList');
+      const tipsList = document.getElementById('ideaTipsList');
       tipsList.innerHTML = '';
-      (output.evaluation_tips || []).forEach(tip => {
+      (out.evaluation_tips || []).forEach(t => {
         const li = document.createElement('li');
-        li.innerText = tip;
+        li.innerText = t;
         tipsList.appendChild(li);
       });
     }
 
-    // Export Markdown Report
-    document.getElementById('btnExportMd').addEventListener('click', () => {
-      if (!lastStateData || !lastStateData.final_output) {
-        alert("Please run an analysis first before exporting.");
-        return;
-      }
-      const output = lastStateData.final_output;
-      let md = `# Engineering Co-Pilot Evaluation Report\n`;
-      md += `**Date:** ${new Date().toISOString()}\n`;
-      md += `**Session ID:** ${lastStateData.session_id}\n`;
-      md += `**Track:** ${lastStateData.intent}\n\n`;
+    function resetWorkspace() {
+      document.getElementById('mainQueryInput').value = '';
+      document.getElementById('heroSection').classList.remove('hidden');
+      document.getElementById('resultsSection').classList.add('hidden');
+      document.getElementById('btnExport').classList.add('hidden');
+      lastResponse = null;
+    }
 
-      if (lastStateData.intent === 'codebase_analysis') {
-        md += `## Codebase Diagnosis Summary\n${output.summary}\n\n`;
-        md += `### Critic Verification Status\n`;
-        md += `- Status: ${output.critic?.is_valid ? 'VERIFIED' : 'UNVERIFIED'}\n`;
-        md += `- Grounding Score: ${Math.round((output.critic?.grounding_score || 0) * 100)}%\n\n`;
-        md += `### Ranked Fault Locations\n`;
-        (output.candidates || []).forEach(c => {
-          md += `#### Rank ${c.rank}: ${c.symbol_name} (${c.file_path}:${c.line_start}-${c.line_end})\n`;
-          md += `- **Hypothesis:** ${c.root_cause_hypothesis}\n`;
-          md += `- **Suggested Fix:** ${c.suggested_fix}\n\n`;
+    function exportReport() {
+      if (!lastResponse || !lastResponse.final_output) return;
+      const out = lastResponse.final_output;
+      let md = `# Agentic Co-Pilot Evaluation Report\n`;
+      md += `Date: ${new Date().toLocaleDateString()}\n`;
+      md += `Session: ${lastResponse.session_id}\n\n`;
+
+      if (lastResponse.intent === 'codebase_analysis') {
+        md += `## Codebase Diagnosis Summary\n${out.summary}\n\n`;
+        (out.candidates || []).forEach(c => {
+          md += `### Candidate #${c.rank}: ${c.symbol_name} (${c.file_path}:${c.line_start}-${c.line_end})\n`;
+          md += `Hypothesis: ${c.root_cause_hypothesis}\n`;
+          md += `Suggested Fix: ${c.suggested_fix}\n\n`;
         });
       } else {
-        md += `## Project Title: ${output.project_title}\n\n`;
-        md += `### Problem Statement\n${output.problem_statement}\n\n`;
-        md += `### Target Personas\n`;
-        (output.target_personas || []).forEach(p => {
-          md += `- **${p.persona}:** ${p.pain_point} -> Benefit: ${p.expected_benefit}\n`;
-        });
-        md += `\n### 3-Phase Roadmap\n`;
-        (output.phases || []).forEach(phase => {
-          md += `#### ${phase.phase_name} (${phase.duration_weeks})\n`;
-          (phase.deliverables || []).forEach(d => md += `- ${d}\n`);
-          md += `*Exit Criteria:* ${phase.exit_criteria}\n\n`;
+        md += `## Project: ${out.project_title}\n\n`;
+        md += `### Problem Statement\n${out.problem_statement}\n\n`;
+        md += `### 3-Phase Roadmap\n`;
+        (out.phases || []).forEach(p => {
+          md += `#### ${p.phase_name} (${p.duration_weeks})\n`;
+          (p.deliverables || []).forEach(d => md += `- ${d}\n`);
+          md += `Exit Criteria: ${p.exit_criteria}\n\n`;
         });
       }
 
       const blob = new Blob([md], {type: 'text/markdown'});
-      const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url;
-      a.download = `agentic_report_${lastStateData.session_id}.md`;
+      a.href = URL.createObjectURL(blob);
+      a.download = `co_pilot_report_${lastResponse.session_id}.md`;
       a.click();
-    });
+    }
   </script>
 </body>
 </html>
