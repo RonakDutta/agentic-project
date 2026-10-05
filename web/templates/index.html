@@ -3,30 +3,33 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Agentic Co-Pilot | Idea Validation & Engineering Intelligence</title>
+  <title>Agentic Co-Pilot | Engineering Idea Validation & Code Intelligence</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- Modern Spacious Typography: Outfit for Headings, Plus Jakarta Sans for Body, JetBrains Mono for Code -->
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <script>
     tailwind.config = {
       darkMode: 'class',
       theme: {
         extend: {
           fontFamily: {
-            sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+            heading: ['Outfit', 'sans-serif'],
+            body: ['"Plus Jakarta Sans"', 'sans-serif'],
             mono: ['"JetBrains Mono"', 'monospace'],
           },
           colors: {
-            brand: {
-              bg: '#090a0f',
-              surface: '#11131a',
-              card: '#161922',
-              cardHover: '#1c202c',
-              border: '#232736',
-              borderSubtle: '#1b1f2b',
-              text: '#f1f3f9',
-              muted: '#8c93a8',
+            canvas: {
+              bg: '#0c0d12',
+              surface: '#13151c',
+              card: '#181a24',
+              subtle: '#202330',
+              border: '#262938',
+              borderLight: '#32374a',
+              text: '#f3f4f8',
+              muted: '#9499ad',
+              faint: '#60667d',
               accent: '#4f46e5',
             }
           }
@@ -36,150 +39,152 @@
   </script>
   <style>
     body {
-      background-color: #090a0f;
-      color: #f1f3f9;
-      font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+      background-color: #0c0d12;
+      color: #f3f4f8;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      line-height: 1.65;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      font-family: 'Outfit', sans-serif;
+      letter-spacing: -0.02em;
     }
     pre, code {
       font-family: 'JetBrains Mono', monospace;
     }
     ::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
+      width: 7px;
+      height: 7px;
     }
     ::-webkit-scrollbar-track {
       background: transparent;
     }
     ::-webkit-scrollbar-thumb {
-      background: #232736;
-      border-radius: 4px;
+      background: #262938;
+      border-radius: 6px;
     }
     ::-webkit-scrollbar-thumb:hover {
-      background: #32384c;
-    }
-    .soft-glow {
-      box-shadow: 0 0 50px -10px rgba(79, 70, 229, 0.15);
+      background: #363a4f;
     }
   </style>
 </head>
-<body class="min-h-screen flex flex-col font-sans selection:bg-indigo-950 selection:text-white">
+<body class="min-h-screen flex flex-col font-body selection:bg-indigo-900/60 selection:text-white">
 
-  <!-- Breathable, Clean Header -->
-  <header class="border-b border-brand-border/60 bg-brand-bg/90 backdrop-blur-md sticky top-0 z-50">
-    <div class="max-w-6xl mx-auto px-6 h-18 py-4 flex items-center justify-between">
+  <!-- Spacious, Modern Top Bar -->
+  <header class="border-b border-canvas-border/70 bg-canvas-bg/95 backdrop-blur-lg sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto px-6 sm:px-8 h-20 flex items-center justify-between">
       
-      <!-- Minimalist Typography Brand (No weird lucide icon logo) -->
+      <!-- Clean Editorial Brand Typography -->
       <div>
         <div class="flex items-center space-x-2.5">
-          <span class="font-extrabold tracking-tight text-white text-lg">IdeaCraft</span>
-          <span class="text-xs font-mono text-zinc-500 uppercase tracking-widest">Co-Pilot</span>
+          <span class="font-heading font-extrabold tracking-tight text-white text-xl">IdeaCraft</span>
+          <span class="text-xs font-mono text-zinc-500 uppercase tracking-widest pt-0.5">Studio</span>
         </div>
-        <p class="text-xs text-brand-muted mt-0.5">Multi-Agent RAG System for Idea Validation & Codebase Analysis</p>
+        <p class="text-xs text-canvas-muted mt-0.5 font-normal">Multi-Agent System for Academic Idea Validation & Codebase Analysis</p>
       </div>
 
-      <!-- Actions & Engine Indicator -->
+      <!-- Actions Strip -->
       <div class="flex items-center space-x-3">
-        <span class="text-xs font-mono text-brand-muted border border-brand-border bg-brand-surface px-3 py-1.5 rounded-xl">
-          Llama 3.3 / 120B Agent Mesh
+        <span class="text-xs font-mono text-canvas-muted border border-canvas-border bg-canvas-surface px-3 py-1.5 rounded-xl">
+          Llama 3.3 / 120B Cooperative Mesh
         </span>
-        <button onclick="resetCanvas()" class="text-xs text-brand-text hover:text-white border border-brand-border hover:border-zinc-600 bg-brand-surface hover:bg-brand-card px-3.5 py-1.5 rounded-xl transition font-medium">
-          New Validation
+        <button onclick="resetWorkspace()" class="text-xs text-canvas-text hover:text-white border border-canvas-border hover:border-canvas-borderLight bg-canvas-surface hover:bg-canvas-card px-4 py-2 rounded-xl transition font-medium">
+          New Workspace
         </button>
-        <button id="btnExport" onclick="exportReport()" class="hidden text-xs text-white bg-indigo-600 hover:bg-indigo-500 px-4 py-1.5 rounded-xl transition font-medium shadow-sm">
-          Export Brief
+        <button id="btnExport" onclick="exportReport()" class="hidden text-xs text-white bg-indigo-600 hover:bg-indigo-500 px-4 py-2 rounded-xl transition font-semibold shadow-md">
+          Export Full Brief
         </button>
       </div>
 
     </div>
   </header>
 
-  <!-- Main Breathable Canvas -->
-  <main class="flex-1 max-w-5xl w-full mx-auto px-6 py-10 space-y-12">
+  <!-- Main Open Canvas -->
+  <main class="flex-1 max-w-5xl w-full mx-auto px-6 sm:px-8 py-12 space-y-16">
 
-    <!-- HERO SECTION (Spacious & Inviting) -->
-    <section id="heroSection" class="text-center space-y-4 pt-4 pb-2">
-      <h1 class="text-3xl sm:text-4xl font-extrabold text-white tracking-tight max-w-2xl mx-auto leading-tight">
-        Validate your engineering ideas with cooperative AI agents.
+    <!-- WELCOME / INTRO HERO (Spacious & Clean) -->
+    <section id="heroSection" class="text-center space-y-4 pt-4">
+      <h1 class="text-3xl sm:text-5xl font-heading font-extrabold text-white tracking-tight max-w-3xl mx-auto leading-tight">
+        Validate software and engineering ideas with cooperative AI agents.
       </h1>
-      <p class="text-brand-muted text-sm max-w-xl mx-auto leading-relaxed">
-        Our multi-agent system decomposes your concept into problem definitions, target personas, live market competitors, production tech stacks, and a 3-phase development roadmap.
+      <p class="text-canvas-muted text-base max-w-2xl mx-auto leading-relaxed pt-1">
+        Our multi-agent system breaks down raw concepts into problem definitions, target personas, live market alternatives, production architectures, and phased development roadmaps.
       </p>
 
-      <!-- Mode Switcher: Idea Focus by default -->
-      <div class="pt-4 flex justify-center">
-        <div class="bg-brand-surface border border-brand-border p-1.5 rounded-2xl inline-flex space-x-1 shadow-sm">
-          <button id="tabIdea" onclick="switchMode('idea')" class="px-5 py-2 rounded-xl text-xs font-semibold transition bg-indigo-600 text-white shadow-md">
+      <!-- Spacious Mode Selector -->
+      <div class="pt-6 flex justify-center">
+        <div class="bg-canvas-surface border border-canvas-border p-1.5 rounded-2xl inline-flex space-x-2 shadow-sm">
+          <button id="tabIdea" onclick="switchMode('idea')" class="px-6 py-2.5 rounded-xl text-xs font-heading font-bold transition bg-indigo-600 text-white shadow-md">
             Pillar 1: Idea Validation & Roadmap
           </button>
-          <button id="tabCode" onclick="switchMode('code')" class="px-5 py-2 rounded-xl text-xs font-semibold transition text-brand-muted hover:text-white">
+          <button id="tabCode" onclick="switchMode('code')" class="px-6 py-2.5 rounded-xl text-xs font-heading font-bold transition text-canvas-muted hover:text-white">
             Pillar 2: Codebase Diagnosis & AST
           </button>
         </div>
       </div>
     </section>
 
-    <!-- EXPANSIVE UNIFIED INPUT EXPERIENCE -->
-    <section class="border border-brand-border bg-brand-surface rounded-3xl p-6 sm:p-8 soft-glow space-y-5">
+    <!-- EXPANSIVE INPUT WORKSPACE -->
+    <section class="border border-canvas-border bg-canvas-surface rounded-3xl p-8 sm:p-10 space-y-6 shadow-2xl">
       
-      <!-- Codebase Repo Bar (Shown only in Code Mode) -->
-      <div id="repoBar" class="hidden space-y-2 pb-4 border-b border-brand-border/60">
+      <!-- Codebase Repo Bar (Shown in Code Mode) -->
+      <div id="repoBar" class="hidden space-y-3 pb-6 border-b border-canvas-border/80">
         <div class="flex items-center justify-between text-xs">
           <label class="font-mono text-zinc-400 font-semibold uppercase tracking-wider">Repository Location</label>
-          <button onclick="loadSampleRepo()" class="text-indigo-400 hover:text-indigo-300 font-mono text-xs underline">
+          <button onclick="loadSampleRepo()" class="text-indigo-400 hover:text-indigo-300 font-mono text-xs underline font-medium">
             Use Built-In Sample Microservice
           </button>
         </div>
-        <div class="flex items-center space-x-2 bg-brand-bg p-2 rounded-xl border border-brand-border">
-          <input type="text" id="repoPathInput" placeholder="C:/path/to/python-project" class="flex-1 bg-transparent text-xs font-mono text-brand-text focus:outline-none px-2">
-          <button onclick="inspectRepo()" class="text-xs font-mono text-zinc-300 hover:text-white border border-brand-border bg-brand-card px-3 py-1 rounded-lg">
+        <div class="flex items-center space-x-3 bg-canvas-bg p-3 rounded-2xl border border-canvas-border">
+          <input type="text" id="repoPathInput" placeholder="C:/path/to/python-project" class="flex-1 bg-transparent text-xs font-mono text-canvas-text focus:outline-none px-2">
+          <button onclick="inspectRepo()" class="text-xs font-mono text-zinc-200 hover:text-white border border-canvas-border bg-canvas-card hover:bg-canvas-subtle px-4 py-1.5 rounded-xl font-medium">
             Inspect AST
           </button>
         </div>
-        <div id="repoStatsBadge" class="hidden text-xs font-mono text-zinc-400 pl-1">
+        <div id="repoStatsBadge" class="hidden text-xs font-mono text-canvas-muted pl-2">
           <span id="statSummaryText">0 files indexed</span>
         </div>
       </div>
 
       <!-- Main Textarea -->
-      <div class="space-y-2">
-        <div class="flex items-center justify-between text-xs text-brand-muted">
-          <span id="promptLabel" class="font-semibold text-zinc-300">Describe your project idea in plain language</span>
-          <span class="text-zinc-500 font-mono text-[11px]">Free-form or technical specifications</span>
+      <div class="space-y-3">
+        <div class="flex items-center justify-between text-xs">
+          <span id="promptLabel" class="font-heading font-bold text-sm text-zinc-200">Describe your project idea in plain language</span>
+          <span class="text-canvas-faint font-mono text-xs">Free-form or technical specifications</span>
         </div>
-        <textarea id="mainInput" rows="5" placeholder="Example: A low-cost IoT energy monitoring system for residential apartment societies that uses ESP32 with CT current sensors to detect abnormal power spikes and alert residents..." class="w-full bg-brand-bg border border-brand-border focus:border-indigo-500/80 rounded-2xl p-4 text-sm text-brand-text placeholder:text-zinc-600 focus:outline-none resize-none leading-relaxed transition-all"></textarea>
+        <textarea id="mainInput" rows="5" placeholder="Example: A low-cost IoT energy monitoring system for residential apartment societies that uses ESP32 with CT current sensors to detect abnormal power spikes and alert residents..." class="w-full bg-canvas-bg border border-canvas-border focus:border-indigo-500 rounded-2xl p-5 text-sm text-canvas-text placeholder:text-zinc-600 focus:outline-none resize-none leading-relaxed transition-all"></textarea>
       </div>
 
-      <!-- Pre-set Chips & Submit -->
-      <div class="flex flex-wrap items-center justify-between gap-4 pt-1">
+      <!-- Suggestions & Submit Strip -->
+      <div class="flex flex-wrap items-center justify-between gap-4 pt-2">
         
-        <!-- Suggestion Chips -->
-        <div class="flex flex-wrap items-center gap-2">
+        <!-- Suggestions -->
+        <div class="flex flex-wrap items-center gap-2.5">
           <span class="text-xs text-zinc-500 font-medium">Quick sample:</span>
           
           <div id="ideaPresetChips" class="flex flex-wrap items-center gap-2">
-            <button onclick="fillIdea('iot')" class="text-xs text-zinc-400 hover:text-white border border-brand-border hover:border-zinc-600 bg-brand-bg px-3 py-1.5 rounded-xl transition">
+            <button onclick="fillIdea('iot')" class="text-xs text-canvas-muted hover:text-white border border-canvas-border hover:border-canvas-borderLight bg-canvas-bg px-3.5 py-1.5 rounded-xl transition font-medium">
               IoT Energy Auditing
             </button>
-            <button onclick="fillIdea('peer')" class="text-xs text-zinc-400 hover:text-white border border-brand-border hover:border-zinc-600 bg-brand-bg px-3 py-1.5 rounded-xl transition">
+            <button onclick="fillIdea('peer')" class="text-xs text-canvas-muted hover:text-white border border-canvas-border hover:border-canvas-borderLight bg-canvas-bg px-3.5 py-1.5 rounded-xl transition font-medium">
               AI Student Code Reviewer
             </button>
-            <button onclick="fillIdea('water')" class="text-xs text-zinc-400 hover:text-white border border-brand-border hover:border-zinc-600 bg-brand-bg px-3 py-1.5 rounded-xl transition">
+            <button onclick="fillIdea('water')" class="text-xs text-canvas-muted hover:text-white border border-canvas-border hover:border-canvas-borderLight bg-canvas-bg px-3.5 py-1.5 rounded-xl transition font-medium">
               Smart Water Metering
             </button>
           </div>
 
           <div id="codePresetChips" class="hidden flex flex-wrap items-center gap-2">
-            <button onclick="fillCode('token')" class="text-xs text-zinc-400 hover:text-white border border-brand-border hover:border-zinc-600 bg-brand-bg px-3 py-1.5 rounded-xl transition">
+            <button onclick="fillCode('token')" class="text-xs text-canvas-muted hover:text-white border border-canvas-border hover:border-canvas-borderLight bg-canvas-bg px-3.5 py-1.5 rounded-xl transition font-medium">
               Token Expired Error
             </button>
-            <button onclick="fillCode('checkout')" class="text-xs text-zinc-400 hover:text-white border border-brand-border hover:border-zinc-600 bg-brand-bg px-3 py-1.5 rounded-xl transition">
+            <button onclick="fillCode('checkout')" class="text-xs text-canvas-muted hover:text-white border border-canvas-border hover:border-canvas-borderLight bg-canvas-bg px-3.5 py-1.5 rounded-xl transition font-medium">
               Order Auth Verification
             </button>
           </div>
         </div>
 
         <!-- Submit Button -->
-        <button id="btnSubmit" onclick="runPipeline()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs px-6 py-2.5 rounded-xl transition flex items-center space-x-2 shadow-lg shadow-indigo-600/20">
+        <button id="btnSubmit" onclick="runPipeline()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-heading font-semibold text-xs px-7 py-3 rounded-xl transition flex items-center space-x-2 shadow-lg shadow-indigo-600/20">
           <span id="btnSubmitText">Validate Idea & Plan Roadmap</span>
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
@@ -190,32 +195,32 @@
 
     </section>
 
-    <!-- LOADING / COLLABORATION STATE -->
-    <section id="loadingState" class="hidden border border-brand-border bg-brand-surface rounded-3xl p-10 text-center space-y-4">
-      <div class="inline-flex p-3 rounded-2xl bg-indigo-500/10 text-indigo-400 animate-pulse">
-        <svg class="w-6 h-6 animate-spin" fill="none" viewBox="0 0 24 24">
+    <!-- LOADING STATE -->
+    <section id="loadingState" class="hidden border border-canvas-border bg-canvas-surface rounded-3xl p-12 text-center space-y-4">
+      <div class="inline-flex p-4 rounded-2xl bg-indigo-500/10 text-indigo-400 animate-pulse">
+        <svg class="w-7 h-7 animate-spin" fill="none" viewBox="0 0 24 24">
           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
           <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
         </svg>
       </div>
       <div>
-        <h3 id="loadingTitle" class="text-base font-semibold text-white">Agents collaborating in real time...</h3>
-        <p id="loadingSub" class="text-xs text-brand-muted mt-1 font-mono">Decomposing Problem -> Gathering Market Data -> Synthesizing Architecture</p>
+        <h3 id="loadingTitle" class="text-lg font-heading font-bold text-white">Agents collaborating in real time...</h3>
+        <p id="loadingSub" class="text-xs text-canvas-muted mt-1 font-mono">Decomposing Problem -> Gathering Market Data -> Synthesizing Architecture</p>
       </div>
       <div class="text-xs font-mono text-zinc-500" id="timerCount">0.0s elapsed</div>
     </section>
 
-    <!-- OUTPUT WORKSPACE (Spacious, Detailed & Non-Boxy) -->
-    <section id="resultsSection" class="hidden space-y-10">
+    <!-- EXPANSIVE RESULTS WORKSPACE -->
+    <section id="resultsSection" class="hidden space-y-16">
 
-      <!-- COLLAPSIBLE AGENT REASONING ACCORDION (Gemini / ChatGPT Style) -->
-      <div class="border border-brand-border/70 bg-brand-surface rounded-2xl overflow-hidden">
-        <button onclick="toggleTrace()" class="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-brand-card transition">
+      <!-- COLLAPSIBLE AGENT REASONING PROCESS -->
+      <div class="border border-canvas-border bg-canvas-surface rounded-2xl overflow-hidden shadow-sm">
+        <button onclick="toggleTrace()" class="w-full px-7 py-4 flex items-center justify-between text-left hover:bg-canvas-card transition">
           <div class="flex items-center space-x-3">
-            <div class="p-1.5 rounded-lg bg-zinc-800 text-zinc-300 font-mono text-xs font-bold">AI</div>
+            <span class="text-xs font-mono px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 font-bold">AI</span>
             <div>
-              <span class="text-xs font-semibold text-zinc-200">Agent Cooperative Reasoning</span>
-              <span id="traceSummary" class="ml-2 font-mono text-[11px] text-zinc-400">4 agents completed in 3.6s</span>
+              <span class="text-xs font-semibold text-zinc-200">Agent Cooperative Reasoning Process</span>
+              <span id="traceSummary" class="ml-3 font-mono text-xs text-zinc-400">4 agents completed in 3.6s</span>
             </div>
           </div>
           <svg id="chevronIcon" class="w-4 h-4 text-zinc-400 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -223,134 +228,134 @@
           </svg>
         </button>
 
-        <div id="traceContent" class="hidden border-t border-brand-border/60 p-5 space-y-2.5 bg-brand-bg/50">
-          <div id="traceTimeline" class="space-y-2 text-xs font-mono"></div>
+        <div id="traceContent" class="hidden border-t border-canvas-border p-6 space-y-3 bg-canvas-bg/60">
+          <div id="traceTimeline" class="space-y-2.5 text-xs font-mono"></div>
         </div>
       </div>
 
       <!-- ANALYTICS SUMMARY STRIP -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div class="p-4 rounded-2xl bg-brand-surface border border-brand-border/60 space-y-1">
-          <span class="text-[11px] font-mono text-zinc-500 uppercase">Feasibility Rating</span>
-          <div id="metricFeasibility" class="text-base font-bold text-white">High (92%)</div>
-          <div class="text-[11px] text-zinc-400">Grounded in technical constraints</div>
+        <div class="p-5 rounded-2xl bg-canvas-surface border border-canvas-border space-y-1">
+          <span class="text-xs font-mono text-zinc-500 uppercase tracking-wider">Feasibility Rating</span>
+          <div id="metricFeasibility" class="text-lg font-heading font-extrabold text-white">High (92%)</div>
+          <div class="text-xs text-canvas-muted">Grounded in engineering constraints</div>
         </div>
-        <div class="p-4 rounded-2xl bg-brand-surface border border-brand-border/60 space-y-1">
-          <span class="text-[11px] font-mono text-zinc-500 uppercase">Agent Latency</span>
-          <div id="metricLatency" class="text-base font-bold text-white">1,420ms</div>
-          <div class="text-[11px] text-zinc-400">Sub-second Groq inference</div>
+        <div class="p-5 rounded-2xl bg-canvas-surface border border-canvas-border space-y-1">
+          <span class="text-xs font-mono text-zinc-500 uppercase tracking-wider">Agent Latency</span>
+          <div id="metricLatency" class="text-lg font-heading font-extrabold text-white">1,420ms</div>
+          <div class="text-xs text-canvas-muted">Fast Groq cloud inference</div>
         </div>
-        <div class="p-4 rounded-2xl bg-brand-surface border border-brand-border/60 space-y-1">
-          <span class="text-[11px] font-mono text-zinc-500 uppercase">Architecture Route</span>
-          <div id="metricTrack" class="text-base font-bold text-white">Idea Track</div>
-          <div class="text-[11px] text-zinc-400">Pillar 1: Product Inception</div>
+        <div class="p-5 rounded-2xl bg-canvas-surface border border-canvas-border space-y-1">
+          <span class="text-xs font-mono text-zinc-500 uppercase tracking-wider">System Pipeline</span>
+          <div id="metricTrack" class="text-lg font-heading font-extrabold text-white">Idea Validation</div>
+          <div class="text-xs text-canvas-muted">Pillar 1: Product Inception</div>
         </div>
-        <div class="p-4 rounded-2xl bg-brand-surface border border-brand-border/60 space-y-1">
-          <span class="text-[11px] font-mono text-zinc-500 uppercase">Grounding State</span>
-          <div id="metricGrounding" class="text-base font-bold text-emerald-400">Verified</div>
-          <div class="text-[11px] text-zinc-400">Zero-hallucination verification</div>
+        <div class="p-5 rounded-2xl bg-canvas-surface border border-canvas-border space-y-1">
+          <span class="text-xs font-mono text-zinc-500 uppercase tracking-wider">Grounding State</span>
+          <div id="metricGrounding" class="text-lg font-heading font-extrabold text-emerald-400">Verified</div>
+          <div class="text-xs text-canvas-muted">Zero-hallucination verification pass</div>
         </div>
       </div>
 
-      <!-- DETAILED IDEA VALIDATION VIEW (Hero) -->
-      <div id="ideaView" class="space-y-8">
+      <!-- DETAILED IDEA VALIDATION VIEW (Expansive & Breathable) -->
+      <div id="ideaView" class="space-y-16">
         
-        <!-- 1. Executive Brief Card -->
-        <div class="p-8 rounded-3xl bg-brand-surface border border-brand-border/60 space-y-4">
-          <div class="flex flex-wrap items-center justify-between gap-3 border-b border-brand-border/60 pb-4">
-            <div>
+        <!-- 1. Executive Brief Section -->
+        <div class="p-8 sm:p-10 rounded-3xl bg-canvas-surface border border-canvas-border space-y-6 shadow-sm">
+          <div class="flex flex-wrap items-start justify-between gap-4 border-b border-canvas-border/80 pb-6">
+            <div class="space-y-1 max-w-2xl">
               <span class="text-xs font-mono uppercase text-indigo-400 tracking-wider font-semibold">Validated Project Title</span>
-              <h2 id="ideaProjectTitle" class="text-xl sm:text-2xl font-extrabold text-white mt-0.5 tracking-tight"></h2>
+              <h2 id="ideaProjectTitle" class="text-2xl sm:text-3xl font-heading font-extrabold text-white tracking-tight"></h2>
             </div>
-            <span class="text-xs font-mono text-zinc-400 border border-brand-border px-3 py-1 rounded-xl bg-brand-bg">
+            <span class="text-xs font-mono text-zinc-300 border border-canvas-border px-3.5 py-1.5 rounded-xl bg-canvas-card">
               Academic Minor Project Scope
             </span>
           </div>
 
-          <div class="space-y-1">
-            <span class="text-xs font-mono text-zinc-400 uppercase tracking-wider font-semibold">Problem Framing</span>
-            <p id="ideaProblemStatement" class="text-sm text-zinc-300 leading-relaxed"></p>
+          <div class="space-y-2">
+            <span class="text-xs font-mono text-zinc-400 uppercase tracking-wider font-semibold block">Problem Statement</span>
+            <p id="ideaProblemStatement" class="text-sm sm:text-base text-zinc-200 leading-relaxed"></p>
           </div>
 
-          <div class="pt-2 border-t border-brand-border/40">
+          <div class="pt-4 border-t border-canvas-border/60">
             <span class="text-xs font-mono text-zinc-400 uppercase tracking-wider font-semibold">Core Value Proposition:</span>
-            <span id="ideaCoreValue" class="text-sm text-zinc-100 font-medium ml-2"></span>
+            <span id="ideaCoreValue" class="text-sm sm:text-base text-white font-medium ml-2"></span>
           </div>
         </div>
 
-        <!-- 2. Target User Personas & Empathy Map -->
-        <div class="space-y-4">
-          <div class="flex items-center justify-between">
-            <h3 class="text-sm font-bold text-white uppercase tracking-wider font-mono">1. Target Personas & Empathy Breakdown</h3>
-            <span class="text-xs text-zinc-500">Who experiences this friction</span>
+        <!-- 2. Target User Personas Section -->
+        <div class="space-y-6">
+          <div class="border-b border-canvas-border/80 pb-3 flex items-baseline justify-between">
+            <h3 class="text-lg sm:text-xl font-heading font-bold text-white tracking-tight">1. Target Personas & Empathy Breakdown</h3>
+            <span class="text-xs text-canvas-muted font-normal">Who experiences this problem</span>
           </div>
-          <div id="personasContainer" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
+          <div id="personasContainer" class="grid grid-cols-1 md:grid-cols-3 gap-6"></div>
         </div>
 
-        <!-- 3. Existing Market Solutions & Competitor Intelligence -->
-        <div class="space-y-4">
-          <div class="flex items-center justify-between">
-            <h3 class="text-sm font-bold text-white uppercase tracking-wider font-mono">2. Market Intelligence & Existing Competitors</h3>
-            <span class="text-xs text-zinc-500">Grounded via Web Search Tool</span>
+        <!-- 3. Existing Market Solutions Section -->
+        <div class="space-y-6">
+          <div class="border-b border-canvas-border/80 pb-3 flex items-baseline justify-between">
+            <h3 class="text-lg sm:text-xl font-heading font-bold text-white tracking-tight">2. Market Intelligence & Existing Competitors</h3>
+            <span class="text-xs text-canvas-muted font-normal">Grounded via Web Search Tool</span>
           </div>
-          <div id="competitorsContainer" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
+          <div id="competitorsContainer" class="grid grid-cols-1 md:grid-cols-3 gap-6"></div>
         </div>
 
-        <!-- 4. Recommended Technology Architecture & Tradeoffs -->
-        <div class="space-y-4">
-          <div class="flex items-center justify-between">
-            <h3 class="text-sm font-bold text-white uppercase tracking-wider font-mono">3. Recommended Architecture & Technical Tradeoffs</h3>
-            <span class="text-xs text-zinc-500">Engineering rationale and alternatives</span>
+        <!-- 4. Recommended Technology Architecture Section -->
+        <div class="space-y-6">
+          <div class="border-b border-canvas-border/80 pb-3 flex items-baseline justify-between">
+            <h3 class="text-lg sm:text-xl font-heading font-bold text-white tracking-tight">3. Recommended Architecture & Technical Tradeoffs</h3>
+            <span class="text-xs text-canvas-muted font-normal">Engineering rationale and tradeoffs</span>
           </div>
-          <div id="techStackContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+          <div id="techStackContainer" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
         </div>
 
-        <!-- 5. 3-Phase Development Roadmap -->
-        <div class="space-y-4">
-          <div class="flex items-center justify-between">
-            <h3 class="text-sm font-bold text-white uppercase tracking-wider font-mono">4. Phased Milestone Roadmap</h3>
-            <span class="text-xs text-zinc-500">Chronological execution timeline</span>
+        <!-- 5. 3-Phase Milestone Roadmap Section -->
+        <div class="space-y-6">
+          <div class="border-b border-canvas-border/80 pb-3 flex items-baseline justify-between">
+            <h3 class="text-lg sm:text-xl font-heading font-bold text-white tracking-tight">4. Phased Milestone Roadmap</h3>
+            <span class="text-xs text-canvas-muted font-normal">Chronological execution timeline</span>
           </div>
-          <div id="roadmapContainer" class="space-y-3"></div>
+          <div id="roadmapContainer" class="space-y-6"></div>
         </div>
 
-        <!-- 6. Technical & Scope Risk Matrix -->
-        <div class="space-y-4">
-          <div class="flex items-center justify-between">
-            <h3 class="text-sm font-bold text-white uppercase tracking-wider font-mono">5. Technical Risk Mitigation Matrix</h3>
-            <span class="text-xs text-zinc-500">Anticipated bottlenecks and solutions</span>
+        <!-- 6. Technical & Scope Risk Mitigation Matrix Section -->
+        <div class="space-y-6">
+          <div class="border-b border-canvas-border/80 pb-3 flex items-baseline justify-between">
+            <h3 class="text-lg sm:text-xl font-heading font-bold text-white tracking-tight">5. Technical Risk Mitigation Matrix</h3>
+            <span class="text-xs text-canvas-muted font-normal">Anticipated bottlenecks and solutions</span>
           </div>
-          <div id="risksContainer" class="space-y-2.5"></div>
+          <div id="risksContainer" class="space-y-5"></div>
         </div>
 
-        <!-- 7. Academic Evaluation Defense Tips -->
-        <div class="p-6 rounded-3xl bg-brand-surface/60 border border-brand-border/60 space-y-3">
-          <div class="flex items-center justify-between">
-            <h3 class="text-xs font-mono font-bold text-zinc-300 uppercase tracking-wider">Evaluation & Viva Defense Tips</h3>
-            <span class="text-[11px] font-mono text-zinc-500">For presentation day</span>
+        <!-- 7. Academic Evaluation Defense Tips Section -->
+        <div class="p-8 sm:p-10 rounded-3xl bg-canvas-surface border border-canvas-border space-y-4">
+          <div class="flex items-center justify-between border-b border-canvas-border/80 pb-3">
+            <h3 class="text-base font-heading font-bold text-white">Academic Evaluation & Viva Defense Tips</h3>
+            <span class="text-xs font-mono text-zinc-400">For university presentation day</span>
           </div>
-          <ul id="evalTipsContainer" class="list-disc list-inside text-xs sm:text-sm text-zinc-300 space-y-1.5 leading-relaxed"></ul>
+          <ul id="evalTipsContainer" class="list-disc list-inside text-sm text-zinc-200 space-y-2 leading-relaxed pt-1"></ul>
         </div>
 
       </div>
 
       <!-- CODEBASE ANALYSIS VIEW (Pillar 2) -->
-      <div id="codeView" class="space-y-8 hidden">
+      <div id="codeView" class="space-y-12 hidden">
         <!-- Diagnosis Summary -->
-        <div class="p-6 sm:p-8 rounded-3xl bg-brand-surface border border-brand-border/60 space-y-3">
-          <div class="flex items-center justify-between border-b border-brand-border/60 pb-3">
-            <h3 class="text-base font-bold text-white">Codebase Fault Diagnosis Summary</h3>
+        <div class="p-8 sm:p-10 rounded-3xl bg-canvas-surface border border-canvas-border space-y-4">
+          <div class="flex items-center justify-between border-b border-canvas-border/80 pb-4">
+            <h3 class="text-xl font-heading font-bold text-white">Codebase Fault Diagnosis Summary</h3>
             <span id="codeCriticBadge" class="text-xs font-mono font-semibold px-3 py-1 rounded-xl border border-emerald-800 bg-emerald-950/40 text-emerald-300">
               [VERIFIED IN AST]
             </span>
           </div>
-          <p id="codeSummaryText" class="text-sm text-zinc-300 leading-relaxed"></p>
+          <p id="codeSummaryText" class="text-sm sm:text-base text-zinc-200 leading-relaxed"></p>
         </div>
 
         <!-- Ranked Candidates -->
-        <div class="space-y-4">
-          <h3 class="text-sm font-bold text-white uppercase tracking-wider font-mono">Ranked Candidate Locations</h3>
-          <div id="codeCandidatesContainer" class="space-y-4"></div>
+        <div class="space-y-6">
+          <h3 class="text-lg font-heading font-bold text-white">Ranked Candidate Locations</h3>
+          <div id="codeCandidatesContainer" class="space-y-6"></div>
         </div>
       </div>
 
@@ -375,8 +380,8 @@
       const btnText = document.getElementById('btnSubmitText');
 
       if (mode === 'idea') {
-        tabIdea.className = 'px-5 py-2 rounded-xl text-xs font-semibold transition bg-indigo-600 text-white shadow-md';
-        tabCode.className = 'px-5 py-2 rounded-xl text-xs font-semibold transition text-brand-muted hover:text-white';
+        tabIdea.className = 'px-6 py-2.5 rounded-xl text-xs font-heading font-bold transition bg-indigo-600 text-white shadow-md';
+        tabCode.className = 'px-6 py-2.5 rounded-xl text-xs font-heading font-bold transition text-canvas-muted hover:text-white';
         repoBar.classList.add('hidden');
         ideaChips.classList.remove('hidden');
         codeChips.classList.add('hidden');
@@ -384,8 +389,8 @@
         mainInput.placeholder = "Example: A low-cost IoT energy monitoring system for residential apartment societies that uses ESP32 with CT current sensors to detect abnormal power spikes and alert residents...";
         btnText.innerText = "Validate Idea & Plan Roadmap";
       } else {
-        tabCode.className = 'px-5 py-2 rounded-xl text-xs font-semibold transition bg-indigo-600 text-white shadow-md';
-        tabIdea.className = 'px-5 py-2 rounded-xl text-xs font-semibold transition text-brand-muted hover:text-white';
+        tabCode.className = 'px-6 py-2.5 rounded-xl text-xs font-heading font-bold transition bg-indigo-600 text-white shadow-md';
+        tabIdea.className = 'px-6 py-2.5 rounded-xl text-xs font-heading font-bold transition text-canvas-muted hover:text-white';
         repoBar.classList.remove('hidden');
         ideaChips.classList.add('hidden');
         codeChips.classList.remove('hidden');
@@ -524,13 +529,13 @@
 
       traces.forEach(t => {
         const row = document.createElement('div');
-        row.className = 'border-l-2 border-indigo-500/40 pl-3.5 py-1 flex items-start justify-between';
+        row.className = 'border-l-2 border-indigo-500/50 pl-4 py-1.5 flex items-start justify-between';
         row.innerHTML = `
           <div>
-            <span class="text-zinc-200 font-bold">[${t.agent_name}]</span>
-            <span class="text-zinc-400 text-[11px] ml-2">${t.action}</span>
+            <span class="text-white font-bold">[${t.agent_name}]</span>
+            <span class="text-canvas-muted text-xs ml-2">${t.action}</span>
           </div>
-          <span class="text-zinc-500 text-[10px] whitespace-nowrap ml-3">+${t.elapsed_ms}ms</span>
+          <span class="text-zinc-500 text-xs whitespace-nowrap ml-3">+${t.elapsed_ms}ms</span>
         `;
         container.appendChild(row);
       });
@@ -555,93 +560,129 @@
       document.getElementById('ideaProblemStatement').innerText = out.problem_statement || "";
       document.getElementById('ideaCoreValue').innerText = out.core_value_prop || "";
 
-      // 1. Personas
+      // 1. Personas: Spacious Profile Cards
       const personasContainer = document.getElementById('personasContainer');
       personasContainer.innerHTML = '';
       (out.target_personas || []).forEach(p => {
         const div = document.createElement('div');
-        div.className = 'p-5 rounded-2xl bg-brand-surface border border-brand-border/60 space-y-2';
+        div.className = 'p-6 rounded-3xl bg-canvas-surface border border-canvas-border space-y-4';
         div.innerHTML = `
-          <div class="text-xs font-mono font-bold text-indigo-400 uppercase tracking-wider">${p.persona}</div>
-          <div class="text-xs text-zinc-300 leading-relaxed"><span class="text-zinc-500 font-semibold">Pain Point:</span> ${p.pain_point}</div>
-          <div class="text-xs text-emerald-400/90 leading-relaxed"><span class="text-zinc-500 font-semibold">Benefit:</span> ${p.expected_benefit}</div>
+          <div>
+            <span class="text-xs font-mono font-bold text-indigo-400 uppercase tracking-wider block">Target Persona</span>
+            <h4 class="text-base font-heading font-bold text-white mt-1">${p.persona}</h4>
+          </div>
+          <div class="space-y-1.5 pt-1">
+            <span class="text-xs font-mono text-zinc-500 uppercase tracking-wider font-semibold block">Pain Point & Friction</span>
+            <p class="text-sm text-zinc-300 leading-relaxed">${p.pain_point}</p>
+          </div>
+          <div class="p-3.5 rounded-2xl bg-canvas-card border border-canvas-border/80 space-y-1">
+            <span class="text-xs font-mono text-emerald-400 uppercase font-semibold block">Key Expected Benefit</span>
+            <p class="text-xs text-zinc-200 leading-relaxed">${p.expected_benefit}</p>
+          </div>
         `;
         personasContainer.appendChild(div);
       });
 
-      // 2. Competitors
+      // 2. Competitors: Detailed Intelligence Cards
       const compContainer = document.getElementById('competitorsContainer');
       compContainer.innerHTML = '';
       (out.competitors || []).forEach(c => {
         const div = document.createElement('div');
-        div.className = 'p-5 rounded-2xl bg-brand-surface border border-brand-border/60 space-y-2';
+        div.className = 'p-6 rounded-3xl bg-canvas-surface border border-canvas-border space-y-4';
         div.innerHTML = `
-          <div class="flex items-center justify-between">
-            <span class="font-bold text-white text-xs">${c.name}</span>
-            <span class="text-[10px] font-mono text-zinc-500">Market Reference</span>
+          <div class="flex items-center justify-between border-b border-canvas-border/60 pb-3">
+            <h4 class="font-heading font-bold text-white text-base">${c.name}</h4>
+            <span class="text-xs font-mono text-zinc-500">Live Search Ref</span>
           </div>
-          <p class="text-xs text-zinc-400 leading-relaxed">${c.summary || ''}</p>
-          <div class="text-[11px] text-emerald-400/90 pt-1 border-t border-brand-border/40">
-            <span class="text-zinc-500 font-mono">Our Advantage:</span> ${c.gaps || 'Direct tailored scope'}
+          <p class="text-sm text-canvas-muted leading-relaxed">${c.summary || ''}</p>
+          <div class="p-3.5 rounded-2xl bg-canvas-card border border-canvas-border/80 space-y-1">
+            <span class="text-xs font-mono text-indigo-400 font-semibold uppercase block">Our Project Advantage</span>
+            <p class="text-xs text-zinc-200 leading-relaxed">${c.gaps || 'Directly tailored to requirements'}</p>
           </div>
         `;
         compContainer.appendChild(div);
       });
 
-      // 3. Tech Stack
+      // 3. Tech Stack: Spacious Architectural Cards with Tradeoffs
       const techContainer = document.getElementById('techStackContainer');
       techContainer.innerHTML = '';
       const stack = out.tech_stack || {};
       for (const [category, item] of Object.entries(stack)) {
         const div = document.createElement('div');
-        div.className = 'p-5 rounded-2xl bg-brand-surface border border-brand-border/60 space-y-2';
+        div.className = 'p-7 rounded-3xl bg-canvas-surface border border-canvas-border space-y-4';
         div.innerHTML = `
-          <div class="text-[10px] font-mono text-indigo-400 uppercase font-bold tracking-wider">${category}</div>
-          <div class="text-sm font-bold text-white font-mono">${item.choice || ''}</div>
-          <div class="text-xs text-zinc-300 leading-relaxed">${item.rationale || ''}</div>
-          <div class="text-[11px] text-amber-300/80 pt-1 border-t border-brand-border/40 font-mono">
-            Tradeoff: ${item.tradeoffs || 'Standard operational overhead'}
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-mono text-indigo-400 uppercase font-bold tracking-wider">${category}</span>
+            <span class="text-xs font-mono text-zinc-500">Architecture Decision</span>
+          </div>
+          <div class="text-base sm:text-lg font-mono font-bold text-white bg-canvas-card px-4 py-2 rounded-xl border border-canvas-border/70 inline-block">
+            ${item.choice || ''}
+          </div>
+          <div class="space-y-1">
+            <span class="text-xs font-mono text-zinc-400 uppercase font-semibold block">Rationale & Strengths</span>
+            <p class="text-sm text-zinc-300 leading-relaxed">${item.rationale || ''}</p>
+          </div>
+          <div class="p-4 rounded-2xl bg-canvas-bg border border-canvas-border space-y-1">
+            <span class="text-xs font-mono text-amber-300 uppercase font-semibold block">Technical Tradeoff to Watch</span>
+            <p class="text-xs text-zinc-400 leading-relaxed">${item.tradeoffs || 'Standard operational overhead'}</p>
           </div>
         `;
         techContainer.appendChild(div);
       }
 
-      // 4. Roadmap
+      // 4. Roadmap: Step-by-Step Chronological Workflow
       const roadmapContainer = document.getElementById('roadmapContainer');
       roadmapContainer.innerHTML = '';
       (out.phases || []).forEach(ph => {
         const div = document.createElement('div');
-        div.className = 'p-6 rounded-2xl bg-brand-surface border border-brand-border/60 space-y-2.5';
+        div.className = 'p-7 sm:p-8 rounded-3xl bg-canvas-surface border border-canvas-border space-y-5';
         div.innerHTML = `
-          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-brand-border/40 pb-2">
-            <span class="font-bold text-sm text-white">${ph.phase_name}</span>
-            <span class="text-xs font-mono text-zinc-400 border border-brand-border px-2.5 py-0.5 rounded-lg bg-brand-bg">${ph.duration_weeks}</span>
+          <div class="flex flex-wrap items-center justify-between gap-3 border-b border-canvas-border/80 pb-4">
+            <div>
+              <span class="text-xs font-mono text-indigo-400 uppercase font-semibold tracking-wider block">Milestone Step 0${ph.phase_number}</span>
+              <h4 class="font-heading font-extrabold text-lg text-white mt-0.5">${ph.phase_name}</h4>
+            </div>
+            <span class="text-xs font-mono text-zinc-300 border border-canvas-border px-3.5 py-1.5 rounded-xl bg-canvas-card font-medium">
+              ${ph.duration_weeks}
+            </span>
           </div>
-          <div class="text-xs text-zinc-300">
-            <span class="text-zinc-500 font-mono text-[11px] uppercase block mb-1 font-semibold">Deliverables:</span>
-            <ul class="list-disc list-inside space-y-1 text-zinc-300">
+
+          <div class="space-y-2">
+            <span class="text-xs font-mono text-zinc-400 uppercase tracking-wider font-semibold block">Core Deliverables & Tasks</span>
+            <ul class="list-disc list-inside space-y-1.5 text-sm text-zinc-200 leading-relaxed pl-1">
               ${(ph.deliverables || []).map(d => `<li>${d}</li>`).join('')}
             </ul>
           </div>
-          <div class="text-xs text-emerald-400/90 font-mono pt-2 border-t border-brand-border/40">
-            Exit Criteria: ${ph.exit_criteria}
+
+          <div class="p-4 rounded-2xl bg-emerald-950/25 border border-emerald-900/50 space-y-1">
+            <span class="text-xs font-mono text-emerald-400 uppercase font-semibold block">Tangible Exit Criteria</span>
+            <p class="text-xs sm:text-sm text-zinc-200 leading-relaxed">${ph.exit_criteria}</p>
           </div>
         `;
         roadmapContainer.appendChild(div);
       });
 
-      // 5. Risks
+      // 5. Risks: Spacious Scenario & Mitigation Layout
       const risksContainer = document.getElementById('risksContainer');
       risksContainer.innerHTML = '';
       (out.risks || []).forEach(r => {
         const div = document.createElement('div');
-        div.className = 'p-4 rounded-2xl bg-brand-surface border border-brand-border/60 flex flex-col sm:flex-row sm:items-center justify-between gap-2';
+        div.className = 'p-6 sm:p-7 rounded-3xl bg-canvas-surface border border-canvas-border space-y-4';
         div.innerHTML = `
-          <div class="space-y-1">
-            <div class="text-xs font-bold text-zinc-200">${r.risk}</div>
-            <div class="text-xs text-zinc-400"><span class="text-zinc-500 font-mono">Mitigation:</span> ${r.mitigation}</div>
+          <div class="flex flex-wrap items-start justify-between gap-3">
+            <div class="space-y-1 flex-1">
+              <span class="text-xs font-mono text-zinc-500 uppercase tracking-wider block">Potential Failure Scenario</span>
+              <h4 class="text-base font-heading font-bold text-white leading-snug">${r.risk}</h4>
+            </div>
+            <span class="text-xs font-mono px-3 py-1 rounded-xl border border-canvas-border bg-canvas-card text-zinc-300 whitespace-nowrap self-start">
+              ${r.category} Risk (${r.severity})
+            </span>
           </div>
-          <span class="text-[10px] font-mono px-2 py-0.5 rounded border border-brand-border text-zinc-400 self-start sm:self-auto">${r.category} Risk (${r.severity})</span>
+
+          <div class="p-4 rounded-2xl bg-canvas-bg border border-canvas-border/80 space-y-1">
+            <span class="text-xs font-mono text-indigo-400 font-semibold uppercase block">Engineered Mitigation Strategy</span>
+            <p class="text-sm text-zinc-300 leading-relaxed">${r.mitigation}</p>
+          </div>
         `;
         risksContainer.appendChild(div);
       });
@@ -663,10 +704,10 @@
       const critic = out.critic || {};
       const badge = document.getElementById('codeCriticBadge');
       if (critic.is_valid) {
-        badge.className = 'text-xs font-mono font-semibold px-3 py-1 rounded-xl border border-emerald-800 bg-emerald-950/40 text-emerald-300';
+        badge.className = 'text-xs font-mono font-semibold px-3.5 py-1.5 rounded-xl border border-emerald-800 bg-emerald-950/40 text-emerald-300';
         badge.innerText = '[VERIFIED IN AST]';
       } else {
-        badge.className = 'text-xs font-mono font-semibold px-3 py-1 rounded-xl border border-amber-800 bg-amber-950/40 text-amber-300';
+        badge.className = 'text-xs font-mono font-semibold px-3.5 py-1.5 rounded-xl border border-amber-800 bg-amber-950/40 text-amber-300';
         badge.innerText = '[NEEDS REVISION]';
       }
 
@@ -675,34 +716,34 @@
 
       (out.candidates || []).forEach(c => {
         const card = document.createElement('div');
-        card.className = 'p-6 rounded-3xl bg-brand-surface border border-brand-border/60 space-y-3';
+        card.className = 'p-7 sm:p-8 rounded-3xl bg-canvas-surface border border-canvas-border space-y-4';
         card.innerHTML = `
-          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-brand-border/40 pb-3">
-            <div class="flex items-center space-x-2 font-mono text-xs">
-              <span class="bg-indigo-950 border border-indigo-800 text-indigo-300 px-2 py-0.5 rounded-lg font-bold">#${c.rank}</span>
-              <span class="font-bold text-white text-sm">${c.symbol_name}</span>
-              <span class="text-zinc-400">in ${c.file_path}:${c.line_start}-${c.line_end}</span>
+          <div class="flex flex-wrap items-center justify-between gap-3 border-b border-canvas-border/60 pb-4">
+            <div class="flex items-center space-x-3 font-mono text-sm">
+              <span class="bg-indigo-950 border border-indigo-800 text-indigo-300 px-2.5 py-0.5 rounded-lg font-bold">#${c.rank}</span>
+              <span class="font-bold text-white text-base">${c.symbol_name}</span>
+              <span class="text-canvas-muted text-xs">in ${c.file_path}:${c.line_start}-${c.line_end}</span>
             </div>
-            <span class="font-mono text-[11px] text-zinc-400 border border-brand-border px-2 py-0.5 rounded">
+            <span class="font-mono text-xs text-zinc-400 border border-canvas-border px-3 py-1 rounded-xl">
               Confidence: ${c.confidence}
             </span>
           </div>
 
-          <div class="space-y-1">
-            <div class="text-[11px] font-mono text-zinc-500 uppercase">Root Cause Analysis</div>
-            <p class="text-xs sm:text-sm text-zinc-300 leading-relaxed">${c.root_cause_hypothesis}</p>
+          <div class="space-y-1.5">
+            <span class="text-xs font-mono text-zinc-400 uppercase font-semibold block">Root Cause Analysis</span>
+            <p class="text-sm sm:text-base text-zinc-200 leading-relaxed">${c.root_cause_hypothesis}</p>
           </div>
 
-          <div class="bg-brand-bg p-4 rounded-2xl border border-brand-border/60 space-y-1">
-            <div class="text-[11px] font-mono text-emerald-400 uppercase font-semibold">Suggested Fix Direction</div>
-            <p class="text-xs text-zinc-300 leading-relaxed">${c.suggested_fix}</p>
+          <div class="bg-canvas-bg p-5 rounded-2xl border border-canvas-border space-y-1.5">
+            <span class="text-xs font-mono text-emerald-400 uppercase font-semibold block">Suggested Fix Direction</span>
+            <p class="text-sm text-zinc-300 leading-relaxed">${c.suggested_fix}</p>
           </div>
         `;
         container.appendChild(card);
       });
     }
 
-    function resetCanvas() {
+    function resetWorkspace() {
       document.getElementById('mainInput').value = '';
       document.getElementById('heroSection').classList.remove('hidden');
       document.getElementById('resultsSection').classList.add('hidden');
@@ -728,7 +769,7 @@
         (out.phases || []).forEach(p => {
           md += `#### ${p.phase_name} (${p.duration_weeks})\n`;
           (p.deliverables || []).forEach(d => md += `- ${d}\n`);
-          md += `*Exit Criteria:* ${p.exit_criteria}\n\n`;
+          md += `Exit Criteria: ${p.exit_criteria}\n\n`;
         });
       } else {
         md += `## Codebase Diagnosis Summary\n${out.summary}\n\n`;
