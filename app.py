@@ -146,6 +146,7 @@ async def get_sample_repo_path():
     return JSONResponse(content={"path": str(SAMPLE_REPO_PATH).replace("\\", "/")})
 
 
+@app.get("/health")
 @app.get("/api/health")
 async def health_check():
     """Returns active model settings, runtime metrics, and rate-limit cooldown state."""

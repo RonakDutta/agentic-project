@@ -31,7 +31,8 @@ CRITICAL INSTRUCTIONS:
 1. Review the provided search evidence and synthesize 2-3 existing solutions/competitors with strengths & gaps.
 2. Recommend a modern, production-grade technology stack with explicit engineering tradeoffs.
 3. Ground your citations in the provided search results.
-4. Output strict JSON matching this exact schema:
+4. Do NOT execute browser commands, tools, or function calls. Output pure JSON only.
+5. Output strict JSON matching this exact schema:
 {
   "competitors": [
     {

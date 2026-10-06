@@ -223,57 +223,6 @@
       height: auto;
     }
 
-    /* Decision Simulator sliders (modern tactile fader) */
-    input[type="range"].sim-range {
-      -webkit-appearance: none;
-      appearance: none;
-      width: 100%;
-      height: 6px;
-      border-radius: 9999px;
-      background: #1a2234;
-      outline: none;
-      cursor: pointer;
-      transition: background 0.15s ease;
-    }
-    input[type="range"].sim-range:hover {
-      background: #232d44;
-    }
-    input[type="range"].sim-range::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      appearance: none;
-      width: 18px;
-      height: 18px;
-      border-radius: 9999px;
-      background: #3b82f6;
-      border: 2px solid #ffffff;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
-      cursor: grab;
-      transition: transform 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
-    }
-    input[type="range"].sim-range::-webkit-slider-thumb:hover {
-      background: #60a5fa;
-      transform: scale(1.15);
-      box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.25);
-    }
-    input[type="range"].sim-range::-webkit-slider-thumb:active {
-      cursor: grabbing;
-      transform: scale(1.2);
-    }
-    input[type="range"].sim-range::-moz-range-thumb {
-      width: 18px;
-      height: 18px;
-      border-radius: 9999px;
-      background: #3b82f6;
-      border: 2px solid #ffffff;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
-      cursor: grab;
-      transition: transform 0.15s ease, background-color 0.15s ease;
-    }
-    input[type="range"].sim-range::-moz-range-thumb:hover {
-      background: #60a5fa;
-      transform: scale(1.15);
-    }
-
     /* Chat agent avatar */
     .agent-avatar {
       width: 36px;
@@ -320,9 +269,8 @@
 
       <!-- Actions & Engine Indicator -->
       <div class="flex items-center space-x-2.5 text-xs font-mono shrink-0">
-        <span id="rateLimitChip" class="hidden sm:flex items-center gap-2 text-zinc-300 border border-borderSubtle bg-surface/80 px-3 py-1.5 rounded-full text-xs">
-          <span id="rateLimitDot" class="w-2 h-2 rounded-full bg-emerald-400 ring-2 ring-emerald-400/25"></span>
-          <span id="rateLimitText" class="uppercase tracking-wider font-semibold text-[10px]">Groq Online</span>
+        <span id="rateLimitChip" class="hidden sm:flex items-center text-zinc-300 border border-borderSubtle bg-surface px-2.5 py-1 rounded text-xs">
+          <span id="rateLimitText" class="font-semibold text-xs text-zinc-300">Groq Online</span>
         </span>
         <button id="btnExportTop" onclick="exportReport()" class="hidden text-white bg-blue-600 hover:bg-blue-500 px-3.5 py-1.5 rounded-lg font-medium transition">
           Export Brief (.md)
@@ -443,8 +391,8 @@
       
       <div class="flex flex-wrap items-center justify-between gap-4 border-b border-borderSubtle/60 pb-4">
         <div>
-          <h2 class="text-base sm:text-lg font-bold text-white tracking-tight">Behind the Scenes: How the Agents Worked</h2>
-          <p class="text-xs text-zinc-400 mt-0.5">Watch each specialist agent analyze the input sequentially, pause to record discoveries, and pass context forward.</p>
+          <h2 class="text-base sm:text-lg font-bold text-white tracking-tight">Agent Execution Steps</h2>
+          <p class="text-xs text-zinc-400 mt-0.5">Watch the multi-agent team analyze your input step by step.</p>
         </div>
         <div class="text-xs font-mono text-zinc-400 bg-canvas px-3 py-1.5 rounded-md border border-borderSubtle">
           Status: <span id="pipelineStatusText" class="text-zinc-200 font-semibold">Ready</span>
@@ -505,11 +453,11 @@
         <div class="bg-surface/60 border border-borderSubtle p-8 sm:p-10 rounded-lg space-y-6">
           <div class="flex flex-wrap items-start justify-between gap-4 border-b border-borderSubtle pb-6">
             <div class="space-y-1">
-              <span class="text-xs font-mono text-blue-400 uppercase tracking-wider font-semibold">Validated Engineering Concept</span>
+              <span class="text-xs font-mono text-blue-400 uppercase tracking-wider font-semibold">Project Overview</span>
               <h2 id="ideaProjectTitle" class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight"></h2>
             </div>
             <span class="text-xs font-mono text-zinc-400 border border-borderSubtle px-3 py-1.5 rounded-md bg-canvas">
-              13-Section Specification
+              Project Brief
             </span>
           </div>
 
@@ -524,12 +472,12 @@
           </div>
         </div>
 
-        <!-- 1. DETERMINISTIC FEASIBILITY SCORECARD (Task 9.5) -->
+        <!-- 1. FEASIBILITY SCORECARD -->
         <div class="bg-surface/60 border border-borderSubtle p-8 sm:p-10 rounded-lg space-y-6">
           <div class="flex flex-wrap items-start justify-between gap-4 border-b border-borderSubtle pb-4">
             <div>
-              <span class="text-xs font-mono text-blue-400 uppercase tracking-wider font-semibold">Deterministic Decision Engine</span>
-              <h3 class="text-xl font-bold text-white mt-1">Feasibility Decision Scorecard</h3>
+              <span class="text-xs font-mono text-blue-400 uppercase tracking-wider font-semibold">Evaluation</span>
+              <h3 class="text-xl font-bold text-white mt-1">Feasibility Scorecard</h3>
             </div>
             <div class="flex items-center space-x-3">
               <div id="scScoreNum" class="text-2xl font-extrabold font-mono text-white">0/100</div>
@@ -539,19 +487,19 @@
             </div>
           </div>
 
-          <!-- Academic Disclaimer Banner -->
-          <div class="p-3.5 rounded-md bg-blue-950/30 border border-blue-900/60 flex items-center space-x-3">
-            <svg class="w-4 h-4 text-blue-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <!-- Scorecard Note -->
+          <div class="p-3.5 rounded-md bg-canvas border border-borderSubtle flex items-center space-x-3">
+            <svg class="w-4 h-4 text-zinc-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
-            <p id="scDisclaimerText" class="text-xs font-mono text-blue-300"></p>
+            <p id="scDisclaimerText" class="text-xs text-zinc-400"></p>
           </div>
 
           <p id="scVerdictSummary" class="text-sm text-zinc-200 leading-relaxed italic"></p>
 
           <!-- 7-Category Breakdown Table -->
           <div class="space-y-2 pt-2">
-            <span class="text-xs font-mono text-zinc-400 uppercase font-semibold">7-Category Project Decision Rubric:</span>
+            <span class="text-xs font-mono text-zinc-400 uppercase font-semibold">Score Breakdown:</span>
             <div class="bg-surface/50 border border-borderSubtle rounded-lg overflow-hidden divide-y divide-borderSubtle" id="scCategoriesContainer"></div>
           </div>
 
@@ -562,61 +510,18 @@
               <div id="scStrengthsContainer" class="flex flex-wrap gap-2"></div>
             </div>
             <div class="space-y-2">
-              <span class="text-xs font-mono uppercase text-amber-400 font-semibold">Key Risks to Mitigate:</span>
+              <span class="text-xs font-mono uppercase text-amber-400 font-semibold">Key Risks:</span>
               <div id="scRisksContainer" class="flex flex-wrap gap-2"></div>
             </div>
           </div>
         </div>
 
-        <!-- INTERACTIVE DECISION SIMULATOR (deterministic what-if re-scoring) -->
-        <div id="decisionSimulator" class="bg-surface/70 border border-borderSubtle p-8 sm:p-10 rounded-xl space-y-6 relative overflow-hidden shadow-lg shadow-black/20">
-          <div class="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-cyan-500/0 via-cyan-500/60 to-cyan-500/0"></div>
-          <div class="flex flex-wrap items-start justify-between gap-3 border-b border-borderSubtle pb-5">
-            <div>
-              <div class="flex items-center space-x-2">
-                <span class="text-xs font-mono text-cyan-300 uppercase tracking-wider font-semibold">Interactive What-If Engine</span>
-                <span class="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-cyan-950/70 border border-cyan-700/60 text-cyan-300 uppercase font-semibold">Deterministic Rubric</span>
-              </div>
-              <h3 class="text-xl font-bold text-white mt-1">Decision Simulator: Stress-Test the Verdict</h3>
-              <p class="text-xs text-zinc-400 mt-1 max-w-2xl leading-relaxed">Unlike a chatbot's subjective opinion, this rubric is a live deterministic model. Drag any category slider to test how proposed mitigations affect the outcome: the projected verdict recomputes instantaneously using the exact multi-agent scoring rubric without extra LLM token usage.</p>
-            </div>
-            <div class="flex items-center space-x-3">
-              <div class="text-right">
-                <div class="text-[10px] font-mono text-zinc-500 uppercase tracking-wider">Projected Score</div>
-                <div id="simScoreNum" class="text-2xl font-extrabold font-mono text-white">0<span class="text-sm text-zinc-500">/100</span></div>
-              </div>
-              <span id="simVerdictBadge" class="px-3.5 py-1.5 rounded-lg text-xs font-mono font-bold uppercase bg-zinc-900 border border-zinc-700 text-zinc-300 shadow-sm">
-                ...
-              </span>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div id="simSlidersContainer" class="lg:col-span-2 space-y-4"></div>
-            <div class="space-y-4">
-              <div class="rounded-lg border border-borderSubtle bg-canvas/80 p-5 space-y-3">
-                <div class="text-[11px] font-mono text-zinc-400 uppercase font-semibold tracking-wider">Verdict Delta Analysis</div>
-                <div id="simDeltaBox" class="text-xs text-zinc-300 leading-relaxed">Move a slider to model a change.</div>
-              </div>
-              <div class="flex flex-col space-y-2">
-                <button onclick="simulateApplyGapFixes()" class="w-full text-xs font-semibold text-white bg-cyan-600 hover:bg-cyan-500 border border-cyan-500/40 px-4 py-2.5 rounded-lg shadow-sm transition">
-                  Auto-apply top gap fixes
-                </button>
-                <button onclick="resetSimulator()" class="w-full text-xs font-semibold text-zinc-300 hover:text-white border border-borderSubtle hover:border-zinc-500 bg-surface px-4 py-2.5 rounded-lg transition">
-                  Reset to agent baseline
-                </button>
-              </div>
-              <p class="text-[11px] font-mono text-zinc-500 leading-relaxed">Projected verdicts use the same thresholds as the backend engine: 75+ GO, 50+ PIVOT, below NO-GO. Rubric disclaimer applies.</p>
-            </div>
-          </div>
-        </div>
-
-        <!-- 2. ADVERSARIAL KILL AGENT & EVIDENCE RECONCILER (Task 9.3) -->
+        <!-- 2. RISKS & FINAL VERDICT -->
         <div class="bg-surface/60 border border-borderSubtle p-8 sm:p-10 rounded-lg space-y-6">
           <div class="border-b border-borderSubtle pb-4 flex flex-wrap items-center justify-between gap-2">
             <div>
-              <span class="text-xs font-mono text-red-400 uppercase tracking-wider font-semibold">Adversarial Stress-Testing</span>
-              <h3 class="text-xl font-bold text-white mt-1">Devil's Advocate (Kill Agent) & Reconciler</h3>
+              <span class="text-xs font-mono text-red-400 uppercase tracking-wider font-semibold">Risk Analysis</span>
+              <h3 class="text-xl font-bold text-white mt-1">Risks & Final Verdict</h3>
             </div>
             <span id="recVerdictBadge" class="text-xs font-mono px-3 py-1 rounded-md bg-canvas border border-borderSubtle text-zinc-300">
               Verdict Pending
@@ -626,51 +531,51 @@
           <!-- Bear Case Alert -->
           <div class="p-6 rounded-lg bg-red-950/20 border border-red-900/50 space-y-2">
             <div class="flex items-center justify-between">
-              <span class="text-xs font-mono font-bold text-red-400 uppercase tracking-wider">Critical Failure Stress-Test (Bear Case)</span>
-              <span class="text-xs font-mono text-zinc-400">Why this idea might fail</span>
+              <span class="text-xs font-mono font-bold text-red-400 uppercase tracking-wider">Worst-Case Scenario</span>
+              <span class="text-xs text-zinc-400">Why this idea might struggle</span>
             </div>
             <p id="killBearCaseSummary" class="text-sm text-zinc-200 leading-relaxed"></p>
           </div>
 
           <!-- Fatal Flaws Cards -->
           <div class="space-y-3">
-            <span class="text-xs font-mono text-zinc-400 uppercase font-semibold">Identified Fatal Flaws & Empirical Tests:</span>
+            <span class="text-xs font-mono text-zinc-400 uppercase font-semibold">Identified Fatal Flaws:</span>
             <div id="fatalFlawsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
           </div>
 
           <!-- Incumbent Threats List -->
           <div class="space-y-2 pt-2">
-            <span class="text-xs font-mono text-zinc-400 uppercase font-semibold">Incumbent Replication Threats:</span>
+            <span class="text-xs font-mono text-zinc-400 uppercase font-semibold">Competitor & Replication Threats:</span>
             <ul id="incumbentThreatsContainer" class="list-disc list-inside space-y-1.5 pl-2"></ul>
           </div>
 
-          <!-- Dialectical Reconciliation Box -->
+          <!-- Balanced Reconciliation Box -->
           <div class="p-6 rounded-lg bg-canvas/80 border border-blue-900/50 space-y-4">
             <div class="border-b border-borderSubtle/60 pb-3 flex items-center justify-between">
-              <span class="text-xs font-mono font-bold text-blue-400 uppercase tracking-wider">Impartial Systems Arbiter Synthesis</span>
-              <span class="text-xs text-zinc-500 font-mono">Thesis vs Antithesis</span>
+              <span class="text-xs font-mono font-bold text-blue-400 uppercase tracking-wider">Balanced Final Verdict</span>
+              <span class="text-xs text-zinc-500 font-mono">Pros & Cons</span>
             </div>
             <p id="recSynthesisRationale" class="text-sm text-zinc-200 leading-relaxed"></p>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
               <div class="space-y-1.5">
-                <span class="text-[11px] font-mono text-emerald-400 uppercase font-semibold">Non-Negotiable Success Preconditions:</span>
+                <span class="text-[11px] font-mono text-emerald-400 uppercase font-semibold">Must-Have Steps to Succeed:</span>
                 <ul id="recPreconditionsContainer" class="list-disc list-inside space-y-1 pl-2"></ul>
               </div>
               <div class="space-y-1.5">
-                <span class="text-[11px] font-mono text-amber-400 uppercase font-semibold">Key Architectural Tradeoffs:</span>
+                <span class="text-[11px] font-mono text-amber-400 uppercase font-semibold">Key Tradeoffs:</span>
                 <ul id="recTradeoffsContainer" class="list-disc list-inside space-y-1 pl-2"></ul>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- 3. METAGPT-STYLE PRODUCT REQUIREMENTS DOCUMENT & MERMAID MODELS (Task 9.4) -->
+        <!-- 3. PRODUCT REQUIREMENTS & ARCHITECTURE -->
         <div class="bg-surface/60 border border-borderSubtle p-8 sm:p-10 rounded-lg space-y-6">
           <div class="border-b border-borderSubtle pb-4 flex flex-wrap items-center justify-between gap-2">
             <div>
-              <span class="text-xs font-mono text-blue-400 uppercase tracking-wider font-semibold">MetaGPT Product Specification</span>
-              <h3 class="text-xl font-bold text-white mt-1">Product Requirements Document (PRD) & Architecture</h3>
+              <span class="text-xs font-mono text-blue-400 uppercase tracking-wider font-semibold">Product Plan</span>
+              <h3 class="text-xl font-bold text-white mt-1">Product Requirements & Architecture</h3>
             </div>
             <span class="text-xs font-mono text-zinc-400 border border-borderSubtle px-3 py-1 rounded-md bg-canvas">
               User Stories & Mermaid
@@ -817,32 +722,31 @@
 
         <div class="space-y-5">
           <div class="border-b border-borderSubtle pb-3 flex items-baseline justify-between">
-            <h3 class="text-base sm:text-lg font-bold text-white">Ranked Fault Candidates & Educational Pattern Comparisons</h3>
+            <h3 class="text-base sm:text-lg font-bold text-white">Suspected Bugs & Suggested Fixes</h3>
             <span class="text-xs text-zinc-500">AST symbols matched against query</span>
           </div>
           <div id="codeCandidatesContainer" class="space-y-6"></div>
         </div>
       </div>
 
-      <!-- CONVERSATIONAL FOLLOW-UP (Persistent Session Memory with Specialist Routing) -->
+      <!-- CONVERSATIONAL FOLLOW-UP -->
       <div class="bg-surface/70 border border-borderSubtle p-8 sm:p-10 rounded-xl space-y-6 shadow-lg shadow-black/20">
         <div class="flex flex-wrap items-center justify-between gap-4 border-b border-borderSubtle pb-4">
           <div>
             <div class="flex items-center space-x-2.5">
-              <h3 class="text-base sm:text-lg font-bold text-white">Interactive Co-Pilot Chat</h3>
-              <span class="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-blue-950/70 border border-blue-700/60 text-blue-300 uppercase font-semibold">Specialist Interrogation</span>
+              <h3 class="text-base sm:text-lg font-bold text-white">Project Chat</h3>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-surface border border-borderSubtle text-blue-300 uppercase font-semibold">Ask an Agent</span>
             </div>
-            <p class="text-xs text-zinc-400 mt-1 leading-relaxed">Address a specific specialist agent with <span class="font-mono text-blue-300 font-semibold">@agent</span> (e.g. <span class="font-mono text-blue-300">@kill</span>, <span class="font-mono text-blue-300">@market</span>, <span class="font-mono text-blue-300">@scorecard</span>), or query naturally. Agents respond directly from persisted session evidence.</p>
+            <p class="text-xs text-zinc-400 mt-1 leading-relaxed">Ask any question, or target a specialist directly with <span class="font-mono text-blue-300 font-semibold">@agent</span> (e.g. <span class="font-mono text-blue-300">@kill</span>, <span class="font-mono text-blue-300">@market</span>, <span class="font-mono text-blue-300">@architect</span>).</p>
           </div>
-          <span class="text-xs font-mono text-blue-400 border border-borderSubtle px-3 py-1.5 rounded-full bg-canvas/80 flex items-center gap-2">
-            <span class="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse"></span>
-            Session Memory Active
+          <span class="text-xs font-mono text-zinc-400 border border-borderSubtle px-2.5 py-1 rounded bg-canvas">
+            Session Active
           </span>
         </div>
 
-        <!-- Direct Agent Interrogation Chips -->
+        <!-- Direct Agent Chips -->
         <div class="flex flex-wrap items-center gap-2">
-          <span class="text-xs text-zinc-500 font-medium shrink-0">Interrogate:</span>
+          <span class="text-xs text-zinc-500 font-medium shrink-0">Agents:</span>
           <div id="directAgentChips" class="flex flex-wrap items-center gap-2"></div>
         </div>
 
@@ -925,10 +829,10 @@
     };
 
     const IDEA_AGENTS = [
-      { id: 'node_0', name: 'Idea Decomposer', role: 'Task Planner & Scope', desc: 'Decomposes problem & MVP scope' },
-      { id: 'node_1', name: 'Market Intelligence', role: 'Competitor Intelligence', desc: 'Live market analysis & tech stack' },
-      { id: 'node_2', name: 'Adversarial Kill Agent', role: "Devil's Advocate Critic", desc: 'Stress-tests fatal flaws & risks' },
-      { id: 'node_3', name: 'Scorecard & Roadmap', role: 'Deterministic Scorer', desc: '100-point rubric & delivery roadmap' }
+      { id: 'node_0', name: 'Product Lead', role: 'Scope & Personas', desc: 'Clarifies problem and MVP scope' },
+      { id: 'node_1', name: 'Market Analyst', role: 'Competitors & Tech', desc: 'Rivals, differentiators and tech stack' },
+      { id: 'node_2', name: "Devil's Advocate", role: 'Risks & Fatal Flaws', desc: 'Identifies critical risks and failure modes' },
+      { id: 'node_3', name: 'Score & Roadmap', role: 'Verdict & Milestones', desc: 'Feasibility score and delivery plan' }
     ];
 
     const CODE_AGENTS = [
@@ -986,15 +890,15 @@
       if (!container) return;
       container.innerHTML = '';
       const chips = mode === 'idea' ? [
-        { label: 'Analyze top competitors', prompt: 'Who are the closest market competitors to this idea?' },
-        { label: 'Success preconditions', prompt: 'What are the non-negotiable preconditions for success?' },
-        { label: 'Explain User Story US-01', prompt: 'Explain User Story US-01 and its acceptance criteria in detail.' },
-        { label: 'Technical bottlenecks', prompt: 'What are the top 3 architectural bottlenecks in this design?' }
+        { label: 'Competitors & rivals', prompt: 'Who are the closest market competitors to this idea?' },
+        { label: 'Risks & flaws', prompt: '@kill why will this project fail and what are the main fatal flaws?' },
+        { label: 'Tech stack rationale', prompt: '@architect explain the database and backend choices.' },
+        { label: 'Must-have steps', prompt: 'What are the key preconditions needed to succeed?' }
       ] : [
         { label: 'Where is auth verified?', prompt: 'Where is customer authentication verified in the codebase?' },
         { label: 'What calls that function?', prompt: 'What functions call the authentication handler?' },
-        { label: 'What is the blast radius?', prompt: 'What is the blast radius and risk if I modify it?' },
-        { label: 'Show flow trace', prompt: 'Show me the end-to-end request flow for login and checkout.' }
+        { label: 'What could break?', prompt: 'What is the blast radius and risk if I modify it?' },
+        { label: 'Trace request flow', prompt: 'Show me the end-to-end request flow for login and checkout.' }
       ];
 
       chips.forEach(c => {
@@ -1349,7 +1253,7 @@
 
             const loaderCard = document.createElement('div');
             loaderCard.id = 'activeAgentStepLoader';
-            loaderCard.className = 'border border-blue-500/50 bg-blue-950/20 p-5 rounded-lg flex items-center space-x-3.5 animate-pulse';
+            loaderCard.className = 'border border-borderSubtle bg-surface/60 p-4 rounded-lg flex items-center space-x-3';
             loaderCard.innerHTML = `
               <div class="w-8 h-8 rounded-md bg-blue-600/30 border border-blue-500 flex items-center justify-center shrink-0">
                 <svg class="w-4 h-4 text-blue-400 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -1624,9 +1528,6 @@
       document.getElementById('scDisclaimerText').innerText = disclaimerVal;
       document.getElementById('scVerdictSummary').innerText = sc.verdict_summary || 'Evaluated against the 7-category project rubric.';
 
-      // NOVELTY: interactive what-if Decision Simulator (deterministic, no LLM calls)
-      renderDecisionSimulator(sc);
-
       // 7-category rubric table
       const catTableBody = document.getElementById('scCategoriesContainer');
       catTableBody.innerHTML = '';
@@ -1640,8 +1541,8 @@
               <span class="text-xs font-bold text-white font-mono">${escapeHtml(cat.category_name)}</span>
               <span class="text-[11px] font-mono text-zinc-400">(${cat.score} / ${cat.max_score} pts)</span>
             </div>
-            <div class="w-36 sm:w-44 bg-slate-900/90 h-2 rounded-full border border-borderSubtle/60 overflow-hidden">
-              <div class="bg-gradient-to-r from-blue-500 to-indigo-500 h-2 rounded-full score-bar" data-w="${pct}" style="width: 0%"></div>
+            <div class="w-36 sm:w-44 bg-slate-900/90 h-2 rounded border border-borderSubtle/60 overflow-hidden">
+              <div class="bg-blue-600 h-2 rounded score-bar" data-w="${pct}" style="width: 0%"></div>
             </div>
           </div>
           <p class="text-xs text-zinc-300 leading-relaxed">${escapeHtml(cat.rationale || '')}</p>
@@ -2145,40 +2046,26 @@
 
       const thinkingCard = document.createElement('div');
       thinkingCard.id = 'followupThinkingCard';
-      thinkingCard.className = 'bg-surface/50 border border-blue-900/40 p-5 rounded-lg space-y-2.5 animate-pulse max-w-2xl';
+      thinkingCard.className = 'bg-surface/50 border border-borderSubtle p-4 rounded-lg space-y-1.5 max-w-2xl';
       thinkingCard.innerHTML = `
-        <div class="flex items-center space-x-2 text-xs font-mono text-blue-400">
-          <svg class="w-4 h-4 animate-spin text-blue-400" fill="none" viewBox="0 0 24 24">
+        <div class="flex items-center space-x-2 text-xs font-mono text-zinc-400">
+          <svg class="w-3.5 h-3.5 animate-spin text-blue-400" fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
           </svg>
-          <span class="font-bold uppercase tracking-wider">Multi-Agent Reasoning in Progress...</span>
-          <span id="followupThinkingTimer" class="text-zinc-500 text-[11px] font-mono">(0.4s)</span>
-        </div>
-        <div id="followupThinkingStep" class="text-xs text-zinc-300 font-mono pl-3 border-l-2 border-blue-500/50">
-          Retrieving repository context and active session state...
+          <span class="font-medium text-zinc-300">Agent responding...</span>
+          <span id="followupThinkingTimer" class="text-zinc-500 text-[11px] font-mono">(0.2s)</span>
         </div>
       `;
       thread.appendChild(thinkingCard);
       thinkingCard.scrollIntoView({ behavior: 'smooth' });
 
       const thinkingStartTime = Date.now();
-      let thinkingStepIdx = 0;
-      const thinkingSteps = [
-        "Retrieving repository context and active session state...",
-        "Resolving symbol references and inspecting AST / architecture...",
-        "Synthesizing recommendations, tradeoffs, and educational guidance..."
-      ];
-
       const thinkingInterval = setInterval(() => {
         const sec = ((Date.now() - thinkingStartTime) / 1000).toFixed(1);
         const timerEl = document.getElementById('followupThinkingTimer');
         if (timerEl) timerEl.innerText = `(${sec}s)`;
-
-        thinkingStepIdx = (thinkingStepIdx + 1) % thinkingSteps.length;
-        const stepEl = document.getElementById('followupThinkingStep');
-        if (stepEl) stepEl.innerText = thinkingSteps[thinkingStepIdx];
-      }, 700);
+      }, 500);
 
       try {
         const repoPath = document.getElementById('repoPathInput') ? document.getElementById('repoPathInput').value.trim() : null;
@@ -2197,7 +2084,7 @@
 
         const [res] = await Promise.all([
           fetchPromise,
-          new Promise(r => setTimeout(r, 1200))
+          new Promise(r => setTimeout(r, 600))
         ]);
 
         if (!res.ok) {
@@ -2215,7 +2102,6 @@
         const existingThinking = document.getElementById('followupThinkingCard');
         if (existingThinking) existingThinking.remove();
 
-        const totalThinkingSec = ((Date.now() - thinkingStartTime) / 1000).toFixed(1);
         const agentName = data.agent_name || 'Technical Co-Pilot';
         const badgeClass = getSpecialistBadgeClass(agentName);
         const avatarClass = getAgentAvatarClass(agentName);
@@ -2229,29 +2115,14 @@
             <div class="flex items-center space-x-2.5">
               <div class="agent-avatar ${avatarClass}">${escapeHtml(getAgentInitials(agentName))}</div>
               <div>
-                <span class="text-xs font-mono font-bold px-2.5 py-0.5 rounded-lg border ${badgeClass}">
+                <span class="text-xs font-mono font-bold px-2.5 py-0.5 rounded border ${badgeClass}">
                   ${escapeHtml(agentName)}
                 </span>
                 <div class="text-[11px] text-zinc-500 mt-0.5">${escapeHtml(data.action_taken || 'Response')}</div>
               </div>
             </div>
-            <span class="text-[11px] font-mono text-zinc-500">${data.direct_agent ? 'Direct Interrogation' : 'Domain Specialist'}</span>
+            <span class="text-[11px] font-mono text-zinc-500">${data.direct_agent ? '@' + escapeHtml(data.direct_agent) : 'Specialist'}</span>
           </div>
-
-          <details class="bg-canvas/70 border border-borderSubtle rounded-md p-3 text-xs text-zinc-400 group">
-            <summary class="cursor-pointer font-mono font-medium flex items-center justify-between select-none hover:text-zinc-200">
-              <span class="flex items-center space-x-2">
-                <svg class="w-3.5 h-3.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
-                </svg>
-                <span>Reasoning Process (${totalThinkingSec}s)</span>
-              </span>
-              <span class="text-[10px] text-zinc-500 group-open:rotate-180 transition-transform">▼</span>
-            </summary>
-            <div class="mt-2.5 pt-2 border-t border-borderSubtle/50 text-zinc-300 leading-relaxed italic">
-              "${escapeHtml(data.thinking || 'Evaluated query context against system architecture constraints.')}"
-            </div>
-          </details>
 
           <div class="prose-chat reply-body">${parsedMarkdown}</div>
 
@@ -2310,20 +2181,20 @@
     // NOVELTY #2: Direct Agent Interrogation chips
     // ------------------------------------------------------------------
     const IDEA_DIRECT_AGENTS = [
-      { key: 'decomposer', name: 'Idea Decomposer', blurb: 'Problem brief & MVP scope' },
-      { key: 'market', name: 'Market Research', blurb: 'Competitors & positioning' },
-      { key: 'kill', name: 'Kill Agent', blurb: "Devil's advocate critique" },
-      { key: 'arbiter', name: 'Arbiter', blurb: 'Thesis vs antithesis synthesis' },
-      { key: 'scorecard', name: 'Scorecard', blurb: 'Deterministic rubric score' },
-      { key: 'prd', name: 'PRD Writer', blurb: 'User stories & requirements' },
-      { key: 'roadmap', name: 'Roadmap', blurb: 'Phases, risks & milestones' },
-      { key: 'architect', name: 'Architect', blurb: 'Tech stack & tradeoffs' }
+      { key: 'kill', name: "Devil's Advocate", blurb: "Risks & fatal flaws" },
+      { key: 'market', name: 'Market Analyst', blurb: 'Competitors & gaps' },
+      { key: 'architect', name: 'Systems Architect', blurb: 'Tech stack & choices' },
+      { key: 'scorecard', name: 'Feasibility Scorer', blurb: 'Score & rubric' },
+      { key: 'prd', name: 'Product Manager', blurb: 'User stories & requirements' },
+      { key: 'roadmap', name: 'Roadmap Planner', blurb: 'Phases & milestones' },
+      { key: 'arbiter', name: 'Decision Arbiter', blurb: 'Tradeoffs & verdict' },
+      { key: 'decomposer', name: 'Product Lead', blurb: 'Problem & MVP scope' }
     ];
 
     const CODE_DIRECT_AGENTS = [
-      { key: 'code', name: 'AST Specialist', blurb: 'Symbols, faults & fix patterns' },
-      { key: 'risk', name: 'Risk Auditor', blurb: 'Blast radius & callers' },
-      { key: 'architect', name: 'Architect', blurb: 'Flow & architecture guidance' }
+      { key: 'code', name: 'Code Reviewer', blurb: 'Bug diagnosis & patterns' },
+      { key: 'risk', name: 'Security Auditor', blurb: 'Blast radius & callers' },
+      { key: 'architect', name: 'Systems Architect', blurb: 'Architecture & flow' }
     ];
 
     function getActiveAgentList() {
@@ -2486,139 +2357,7 @@
     }
 
     // ------------------------------------------------------------------
-    // NOVELTY #1: Decision Simulator (deterministic what-if re-scoring)
-    // ------------------------------------------------------------------
-    function projectVerdict(score) {
-      if (score >= 75) return 'GO';
-      if (score >= 50) return 'PIVOT';
-      return 'NO-GO';
-    }
-
-    function verdictBadgeClass(verdict) {
-      if (verdict === 'GO') return 'px-3 py-1 rounded-md text-xs font-mono font-bold uppercase bg-emerald-950/60 border border-emerald-800 text-emerald-300';
-      if (verdict === 'PIVOT') return 'px-3 py-1 rounded-md text-xs font-mono font-bold uppercase bg-amber-950/60 border border-amber-800 text-amber-300';
-      return 'px-3 py-1 rounded-md text-xs font-mono font-bold uppercase bg-rose-950/60 border border-rose-800 text-rose-300';
-    }
-
-    function renderDecisionSimulator(sc) {
-      const wrap = document.getElementById('decisionSimulator');
-      const container = document.getElementById('simSlidersContainer');
-      if (!wrap || !container) return;
-      const categories = (sc && sc.categories) || [];
-      if (!categories.length) {
-        wrap.classList.add('hidden');
-        return;
-      }
-      wrap.classList.remove('hidden');
-      wrap.dataset.baseline = JSON.stringify(categories);
-      container.innerHTML = '';
-
-      categories.forEach((cat, idx) => {
-        const row = document.createElement('div');
-        row.className = 'bg-canvas/70 border border-borderSubtle rounded-lg p-4 space-y-2';
-        row.innerHTML = `
-          <div class="flex flex-wrap items-center justify-between gap-2">
-            <div class="flex items-center space-x-2">
-              <span class="text-xs font-bold text-white font-mono">${escapeHtml(cat.category_name)}</span>
-              ${((cat.gaps || []).length) ? `<span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-950/50 border border-amber-800/70 text-amber-300">${(cat.gaps || []).length} gap${(cat.gaps || []).length > 1 ? 's' : ''}</span>` : ''}
-            </div>
-            <div class="flex items-center space-x-2">
-              <span id="simVal_${idx}" class="text-xs font-mono font-bold text-cyan-300">${cat.score}</span>
-              <span class="text-[11px] font-mono text-zinc-500">/ ${cat.max_score}</span>
-            </div>
-          </div>
-          <input type="range" class="sim-range" id="simRange_${idx}" min="0" max="${cat.max_score}" value="${cat.score}" step="1"
-            oninput="updateSimScore()">
-          <div class="flex items-center justify-between text-[10px] font-mono text-zinc-600">
-            <span>Agent-basis: ${cat.score}/${cat.max_score}</span>
-            <span>${escapeHtml((cat.rationale || '').slice(0, 70))}${(cat.rationale || '').length > 70 ? '...' : ''}</span>
-          </div>
-        `;
-        container.appendChild(row);
-      });
-
-      updateSimScore();
-    }
-
-    function updateSimScore() {
-      const wrap = document.getElementById('decisionSimulator');
-      if (!wrap || !wrap.dataset.baseline) return;
-      const categories = JSON.parse(wrap.dataset.baseline);
-
-      let total = 0;
-      let baselineTotal = 0;
-      categories.forEach((cat, idx) => {
-        const range = document.getElementById(`simRange_${idx}`);
-        const current = range ? (parseInt(range.value, 10) || cat.score) : cat.score;
-        total += current;
-        baselineTotal += cat.score;
-        const valEl = document.getElementById(`simVal_${idx}`);
-        if (valEl) {
-          valEl.innerText = current;
-          valEl.className = `text-xs font-mono font-bold ${current > cat.score ? 'text-emerald-300' : current < cat.score ? 'text-rose-300' : 'text-cyan-300'}`;
-        }
-      });
-
-      const scoreEl = document.getElementById('simScoreNum');
-      const verdictEl = document.getElementById('simVerdictBadge');
-      const deltaEl = document.getElementById('simDeltaBox');
-      if (!scoreEl || !verdictEl || !deltaEl) return;
-
-      const projectedVerdict = projectVerdict(total);
-      const baselineVerdict = projectVerdict(baselineTotal);
-      const delta = total - baselineTotal;
-
-      scoreEl.innerHTML = `${total}<span class="text-sm text-zinc-500">/100</span>`;
-      scoreEl.classList.remove('score-pulse');
-      void scoreEl.offsetWidth; // restart animation
-      scoreEl.classList.add('score-pulse');
-
-      verdictEl.innerText = projectedVerdict;
-      verdictEl.className = verdictBadgeClass(projectedVerdict);
-
-      let deltaText;
-      if (delta === 0) {
-        deltaText = `Matches the agent baseline (${baselineTotal}/100, ${baselineVerdict}). Drag a slider to model your fixes.`;
-      } else if (delta > 0) {
-        deltaText = `<span class="text-emerald-300 font-bold">+${delta} points</span> versus agent baseline (${baselineTotal}/100).`;
-      } else {
-        deltaText = `<span class="text-rose-300 font-bold">${delta} points</span> versus agent baseline (${baselineTotal}/100).`;
-      }
-      if (projectedVerdict !== baselineVerdict) {
-        deltaText += `<br><span class="mt-1.5 inline-block text-[11px] font-mono px-2 py-0.5 rounded-lg bg-blue-950/60 border border-blue-800 text-blue-300">Verdict flip: ${baselineVerdict} → ${projectedVerdict}</span>`;
-      } else if (delta !== 0) {
-        deltaText += `<br><span class="text-[11px] text-zinc-500">Verdict unchanged at ${projectedVerdict}.</span>`;
-      }
-      deltaEl.innerHTML = deltaText;
-    }
-
-    function simulateApplyGapFixes() {
-      const wrap = document.getElementById('decisionSimulator');
-      if (!wrap || !wrap.dataset.baseline) return;
-      const categories = JSON.parse(wrap.dataset.baseline);
-      categories.forEach((cat, idx) => {
-        const range = document.getElementById(`simRange_${idx}`);
-        if (!range) return;
-        const gaps = cat.gaps || [];
-        const target = gaps.length ? Math.max(parseInt(range.value, 10) || cat.score, Math.round(cat.max_score * 0.8)) : cat.score;
-        range.value = Math.min(target, cat.max_score);
-      });
-      updateSimScore();
-    }
-
-    function resetSimulator() {
-      const wrap = document.getElementById('decisionSimulator');
-      if (!wrap || !wrap.dataset.baseline) return;
-      const categories = JSON.parse(wrap.dataset.baseline);
-      categories.forEach((cat, idx) => {
-        const range = document.getElementById(`simRange_${idx}`);
-        if (range) range.value = cat.score;
-      });
-      updateSimScore();
-    }
-
-    // ------------------------------------------------------------------
-    // Engine health / rate-limit status chip
+    // Engine health / status
     // ------------------------------------------------------------------
     async function refreshEngineHealth() {
       try {
@@ -2626,20 +2365,19 @@
         if (!res.ok) return;
         const data = await res.json();
         const chip = document.getElementById('rateLimitChip');
-        const dot = document.getElementById('rateLimitDot');
         const text = document.getElementById('rateLimitText');
-        if (!chip || !dot || !text) return;
+        if (!chip || !text) return;
         chip.classList.remove('hidden');
         const rl = data.rate_limits || {};
         if (rl.all_rate_limited) {
-          dot.className = 'w-2 h-2 rounded-full bg-rose-400 ring-2 ring-rose-400/40 animate-pulse';
-          text.innerText = 'Groq: Rate Limited';
+          text.innerText = 'Groq: Cooling';
+          chip.className = 'hidden sm:flex items-center text-rose-300 border border-rose-900 bg-surface px-2.5 py-1 rounded text-xs font-mono';
         } else if (Object.keys(rl.cooldowns || {}).length > 0) {
-          dot.className = 'w-2 h-2 rounded-full bg-amber-400 ring-2 ring-amber-400/40';
-          text.innerText = `Groq: ${Object.keys(rl.cooldowns).length} Model(s) Cooling`;
+          text.innerText = 'Groq: Cooling';
+          chip.className = 'hidden sm:flex items-center text-amber-300 border border-amber-900 bg-surface px-2.5 py-1 rounded text-xs font-mono';
         } else {
-          dot.className = 'w-2 h-2 rounded-full bg-emerald-400 ring-2 ring-emerald-400/25';
           text.innerText = 'Groq Online';
+          chip.className = 'hidden sm:flex items-center text-zinc-300 border border-borderSubtle bg-surface px-2.5 py-1 rounded text-xs font-mono';
         }
       } catch (e) {
         /* health chip is best-effort */

@@ -32,7 +32,8 @@ CRITICAL INSTRUCTIONS:
 2. Formulate 2-3 specific target user personas (Role, Pain Point, Benefit).
 3. Identify core technical and operational assumptions.
 4. List the essential MVP features needed for a working proof-of-concept.
-5. Output strict JSON matching this exact schema:
+5. Do NOT call tools or browser commands. Output pure JSON only.
+6. Output strict JSON matching this exact schema:
 {
   "project_title": "Concise, professional title for the project",
   "problem_statement": "2-3 sentences articulating the exact problem, current shortcomings, and why it matters.",

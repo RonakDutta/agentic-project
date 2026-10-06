@@ -264,22 +264,22 @@ class ConversationalFollowupEngine:
     }
 
     DIRECT_AGENT_PROFILES: Dict[str, Dict[str, str]] = {
-        "decomposer": {"name": "Idea Decomposer", "role": "Product & Idea Decomposition Agent"},
-        "market": {"name": "Market Research Specialist", "role": "Competitive Intelligence & Market Positioning"},
-        "kill": {"name": "Adversarial Kill Agent", "role": "Devil's Advocate & Stress-Testing Auditor"},
-        "arbiter": {"name": "Impartial Systems Arbiter", "role": "Evidence Reconciliation Specialist"},
-        "scorecard": {"name": "Deterministic Decision Scorer", "role": "100-Point Feasibility Scorecard Engine"},
-        "prd": {"name": "Lead Product Manager", "role": "PRD & Product Requirements Specialist"},
-        "roadmap": {"name": "Roadmap & Delivery Planner", "role": "Milestone & Sprint Architect"},
-        "architect": {"name": "Lead Systems Architect", "role": "Production Stack & Infrastructure Architect"},
-        "risk": {"name": "Risk & Security Auditor", "role": "Change Impact & Blast Radius Analyzer"},
-        "code": {"name": "Code Review & AST Specialist", "role": "Fault Localization & Call Graph Analyzer"},
+        "decomposer": {"name": "Product Lead", "role": "Idea & Feature Scope"},
+        "market": {"name": "Market Analyst", "role": "Competitors & Positioning"},
+        "kill": {"name": "Devil's Advocate", "role": "Risks & Fatal Flaws"},
+        "arbiter": {"name": "Decision Arbiter", "role": "Verdict & Tradeoffs"},
+        "scorecard": {"name": "Feasibility Scorer", "role": "Score & Rubric Breakdown"},
+        "prd": {"name": "Product Manager", "role": "Requirements & User Stories"},
+        "roadmap": {"name": "Roadmap Planner", "role": "Phases & Delivery Milestones"},
+        "architect": {"name": "Systems Architect", "role": "Tech Stack & Infrastructure"},
+        "risk": {"name": "Security & Risk Auditor", "role": "Blast Radius & Code Safety"},
+        "code": {"name": "Code Reviewer", "role": "Bug Diagnosis & Fixes"},
     }
 
     @classmethod
     def _extract_direct_agent(cls, query: str) -> Optional[str]:
-        """Detects '@agent <question>' mentions (e.g. '@kill why will this fail?')."""
-        match = re.match(r"\s*@([a-zA-Z_-]+)\b", query)
+        """Detects '@agent <question>' mentions anywhere in the query."""
+        match = re.search(r"@([a-zA-Z_-]+)\b", query)
         if not match:
             return None
         return cls.DIRECT_AGENT_ALIASES.get(match.group(1).lower())
@@ -301,130 +301,157 @@ class ConversationalFollowupEngine:
         ctx: Dict[str, Any],
         codebase_index: Optional[CodebaseIndex],
     ) -> Dict[str, Any]:
-        """Answers as the explicitly addressed specialist agent, deterministically from stored evidence."""
+        """Answers as the explicitly addressed specialist agent, directly addressing the question with domain evidence."""
+        if not ctx and session.active_entities.get("final_output"):
+            ctx = session.active_entities["final_output"]
+
         profile = self.DIRECT_AGENT_PROFILES.get(agent_key, self.DIRECT_AGENT_PROFILES["architect"])
         agent_name = profile["name"]
         agent_role = profile["role"]
-        question = re.sub(r"^\s*@[a-zA-Z_-]+\b", "", resolved_query).strip() or "Direct agent interrogation"
+        question = re.sub(r"@[a-zA-Z_-]+\b", "", resolved_query).strip() or "General inquiry regarding your findings."
 
-        sections: List[str] = []
+        evidence_snippets: List[str] = []
+        referenced_symbols: List[str] = []
+        referenced_files: List[str] = []
+
+        proj_title = ctx.get("project_title") or session.active_entities.get("project_title", "Current Project")
+        prob_stmt = ctx.get("problem_statement", "")
+
         if agent_key == "kill":
             kill = ctx.get("kill_report", {})
             if kill:
-                sections.append(f"**Bear Case**: {kill.get('bear_case_summary', 'Adversarial stress-test complete.')}")
+                if kill.get("bear_case_summary"):
+                    evidence_snippets.append(f"Bear Case: {kill['bear_case_summary']}")
                 for f in kill.get("fatal_flaws", []):
                     if isinstance(f, dict):
-                        sections.append(
-                            f"- **{f.get('title', 'Flaw')} ({f.get('severity', 'HIGH')})**: {f.get('argument', '')}"
-                        )
-                        if f.get("mitigation_test") or f.get("counter_evidence"):
-                            sections.append(f"  * Validation test: {f.get('mitigation_test') or f.get('counter_evidence')}")
+                        evidence_snippets.append(f"- Flaw ({f.get('title', 'Risk')}): {f.get('argument', '')}")
+                        if f.get("counter_evidence"):
+                            evidence_snippets.append(f"  Validation/Evidence: {f.get('counter_evidence')}")
                 for t in kill.get("incumbent_threats", [])[:3]:
-                    sections.append(f"- Incumbent threat: {t}")
-        elif agent_key == "scorecard":
-            sc = ctx.get("scorecard", {})
-            if sc:
-                sections.append(
-                    f"**Score**: {sc.get('total_score', ctx.get('feasibility_score', 0))}/100 - `{sc.get('verdict', ctx.get('feasibility_verdict', ''))}`"
-                )
-                sections.append(f"> *{sc.get('rubric_disclaimer', 'Feasibility score based on the defined project rubric.')}*")
-                for cat in sc.get("categories", []):
-                    if isinstance(cat, dict):
-                        sections.append(
-                            f"- **{cat.get('category_name')}: {cat.get('score')}/{cat.get('max_score')}** - {cat.get('rationale', '')}"
-                        )
-        elif agent_key == "prd":
-            prd = ctx.get("prd", {})
-            if prd:
-                sections.append(f"**Product Vision**: {prd.get('product_vision', '')}")
-                for s in prd.get("user_stories", []):
-                    if isinstance(s, dict):
-                        sections.append(
-                            f"- **{s.get('story_id', 'US')} ({s.get('persona', 'User')})**: I want to {s.get('want', '')} so that {s.get('so_that', '')}."
-                        )
-                for fr in prd.get("functional_requirements", [])[:5]:
-                    if isinstance(fr, dict):
-                        sections.append(f"- **{fr.get('req_id', 'FR')} ({fr.get('priority', '')})**: {fr.get('title', '')}")
-        elif agent_key == "roadmap":
-            for p in ctx.get("phases", []):
-                if isinstance(p, dict):
-                    deliverables = ", ".join(p.get("deliverables", [])[:3])
-                    sections.append(
-                        f"- **Phase {p.get('phase_number')}: {p.get('phase_name')}** ({p.get('duration_weeks', '')}) - Deliverables: {deliverables or 'N/A'}. Exit: {p.get('exit_criteria', '')}"
-                    )
-            for r in ctx.get("risks", [])[:4]:
-                if isinstance(r, dict):
-                    sections.append(f"- Risk [{r.get('category')} / {r.get('severity')}]: {r.get('risk', '')} → *Mitigation*: {r.get('mitigation', '')}")
+                    evidence_snippets.append(f"- Threat: {t}")
+                for tr in kill.get("distribution_traps", [])[:2]:
+                    evidence_snippets.append(f"- Distribution trap: {tr}")
         elif agent_key == "market":
             for c in ctx.get("competitors", []):
                 if isinstance(c, dict):
-                    sections.append(f"- **{c.get('name', 'Competitor')}**: {c.get('summary', '')} (Our gap advantage: {c.get('gaps', c.get('weaknesses', ''))})")
+                    evidence_snippets.append(f"- {c.get('name', 'Competitor')}: {c.get('summary', '')} (Advantage: {c.get('advantages', '')}; Gap: {c.get('gaps', '')})")
             for d in ctx.get("key_differentiators", [])[:3]:
-                sections.append(f"- Differentiator: {d}")
-        elif agent_key == "arbiter":
-            rec = ctx.get("reconciliation", {})
-            if rec:
-                sections.append(f"**Synthesis Verdict**: `{rec.get('verdict', '')}` - {rec.get('synthesis_rationale', '')}")
-                for m in rec.get("must_have_mitigations", []):
-                    sections.append(f"- Non-negotiable precondition: {m}")
-                for t in rec.get("key_tradeoffs", []):
-                    sections.append(f"- Tradeoff: {t}")
+                evidence_snippets.append(f"- Differentiator: {d}")
         elif agent_key == "architect":
             for cat, item in (ctx.get("tech_stack", {}) or {}).items():
                 if isinstance(item, dict):
-                    sections.append(f"- **{cat.title()}**: `{item.get('choice', '')}` - {item.get('rationale', '')} (Tradeoffs: {item.get('tradeoffs', '')})")
+                    evidence_snippets.append(f"- {cat.title()}: {item.get('choice', '')} (Rationale: {item.get('rationale', '')}; Tradeoffs: {item.get('tradeoffs', '')})")
+        elif agent_key == "scorecard":
+            sc = ctx.get("scorecard", {})
+            if sc:
+                evidence_snippets.append(f"Feasibility Score: {sc.get('total_score', 0)}/100 ({sc.get('verdict', '')})")
+                for cat in sc.get("categories", []):
+                    if isinstance(cat, dict):
+                        evidence_snippets.append(f"- {cat.get('category_name')}: {cat.get('score')}/{cat.get('max_score')} ({cat.get('rationale', '')})")
+                if sc.get("key_strengths"):
+                    evidence_snippets.append(f"Strengths: {', '.join(sc.get('key_strengths'))}")
+                if sc.get("key_risks"):
+                    evidence_snippets.append(f"Risks: {', '.join(sc.get('key_risks'))}")
+        elif agent_key == "prd":
+            prd = ctx.get("prd", {})
+            if prd:
+                evidence_snippets.append(f"Product Vision: {prd.get('product_vision', '')}")
+                for s in prd.get("user_stories", [])[:4]:
+                    if isinstance(s, dict):
+                        evidence_snippets.append(f"- Story {s.get('story_id')}: As a {s.get('persona')}, I want {s.get('want')} so that {s.get('so_that')}")
+        elif agent_key == "roadmap":
+            for p in ctx.get("phases", []):
+                if isinstance(p, dict):
+                    evidence_snippets.append(f"- Phase {p.get('phase_number')}: {p.get('phase_name')} ({p.get('duration_weeks')}) - Deliverables: {', '.join(p.get('deliverables', []))}")
+            for r in ctx.get("risks", [])[:3]:
+                if isinstance(r, dict):
+                    evidence_snippets.append(f"- Risk: {r.get('risk')} (Mitigation: {r.get('mitigation')})")
+        elif agent_key == "arbiter":
+            rec = ctx.get("reconciliation", {})
+            if rec:
+                evidence_snippets.append(f"Verdict: {rec.get('verdict', '')} - {rec.get('synthesis_rationale', '')}")
+                if rec.get("must_have_mitigations"):
+                    evidence_snippets.append(f"Must-Have Mitigations: {', '.join(rec.get('must_have_mitigations'))}")
+                if rec.get("key_tradeoffs"):
+                    evidence_snippets.append(f"Tradeoffs: {', '.join(rec.get('key_tradeoffs'))}")
         elif agent_key == "decomposer":
             if ctx:
-                sections.append(f"**Project**: {ctx.get('project_title', 'Active project')}")
-                sections.append(f"**Problem**: {ctx.get('problem_statement', '')}")
-                sections.append(f"**Core Value Prop**: {ctx.get('core_value_prop', '')}")
-                for f in ctx.get("mvp_features", [])[:5]:
-                    sections.append(f"- MVP feature: {f}")
+                evidence_snippets.append(f"Problem: {prob_stmt}")
+                evidence_snippets.append(f"Value Proposition: {ctx.get('core_value_prop', '')}")
+                for f in ctx.get("mvp_features", [])[:4]:
+                    evidence_snippets.append(f"- MVP Feature: {f}")
+        elif agent_key == "code":
+            for c in ctx.get("candidates", [])[:3]:
+                if isinstance(c, dict):
+                    sym = c.get("symbol_name", "")
+                    if sym:
+                        referenced_symbols.append(sym)
+                    if c.get("file_path"):
+                        referenced_files.append(c.get("file_path"))
+                    evidence_snippets.append(f"- Code Issue in `{sym}` ({c.get('file_path')}): {c.get('why_problematic', '')}")
         elif agent_key == "risk":
             if codebase_index is not None:
                 target = session.active_entities.get("last_symbol")
                 if target:
                     impact_agent = ChangeImpactAgent(codebase_index=codebase_index)
                     impact_res = impact_agent.analyze_impact(target_symbol=target)
-                    sections.append(
-                        f"**Blast radius for `{target}`**: {impact_res.risk_level} ({impact_res.blast_radius_score}/100) with {len(impact_res.direct_callers)} direct callers."
-                    )
-                    for r in impact_res.recommendations:
-                        sections.append(f"- {r}")
-            if not sections:
+                    referenced_symbols.append(target)
+                    if impact_res.target_file:
+                        referenced_files.append(impact_res.target_file)
+                    evidence_snippets.append(f"Blast radius for `{target}`: {impact_res.risk_level} ({impact_res.blast_radius_score}/100)")
+            if not evidence_snippets:
                 for flaw in (ctx.get("kill_report", {}) or {}).get("fatal_flaws", [])[:3]:
                     if isinstance(flaw, dict):
-                        sections.append(f"- **{flaw.get('title', 'Risk')} ({flaw.get('severity', 'HIGH')})**: {flaw.get('argument', '')}")
-        elif agent_key == "code":
-            for c in ctx.get("candidates", [])[:3]:
-                if isinstance(c, dict):
-                    sections.append(
-                        f"- **#{c.get('rank', 1)} `{c.get('symbol_name')}`** ({c.get('file_path', '')}:{c.get('line_start')}-{c.get('line_end')}) - {c.get('why_problematic', c.get('root_cause_hypothesis', ''))}"
-                    )
-                    if c.get("recommended_pattern") or c.get("correct_code"):
-                        sections.append(f"\n**Recommended pattern**:\n```python\n{c.get('recommended_pattern') or c.get('correct_code')}\n```")
+                        evidence_snippets.append(f"- Risk: {flaw.get('title')}: {flaw.get('argument')}")
 
-        if sections:
-            answer = (
-                f"### {agent_name} (direct interrogation)\n\n"
-                + "\n".join(sections)
-                + f"\n\n*Answering your question: “{question}” from the persisted session evidence above.*"
-            )
-        else:
-            answer = (
-                f"### {agent_name} (direct interrogation)\n\n"
-                f"I don't have persisted evidence for this domain in the current session yet. "
-                f"Run the full multi-agent pipeline first, then ask me again.\n\n"
-                f"*Question received: “{question}”*"
-            )
+        # Attempt tailored response via LLM in specialist's voice
+        evidence_text = "\n".join(evidence_snippets) if evidence_snippets else "No prior pipeline run evidence available."
+        prompt_system = (
+            f"You are the {agent_name} ({agent_role}). The user addressed you directly using @{agent_key}.\n"
+            f"Directly answer their question from your specialist perspective.\n\n"
+            f"Guidelines:\n"
+            f"- Answer the user's specific question directly, concisely, and practically.\n"
+            f"- Use simple, clear, everyday English that anyone can easily understand.\n"
+            f"- Ground your points firmly in the project findings provided below.\n"
+            f"- Do NOT use robotic boilerplate or artificial preambles.\n"
+            f"- Format with clean markdown (2-3 short paragraphs or bullet points)."
+        )
+        user_content = (
+            f"Project: {proj_title}\n"
+            f"Context: {prob_stmt}\n\n"
+            f"Specialist Findings:\n{evidence_text}\n\n"
+            f"User Question: {question}"
+        )
+
+        answer = ""
+        try:
+            answer = self.llm.generate(
+                messages=[
+                    {"role": "system", "content": prompt_system},
+                    {"role": "user", "content": user_content},
+                ],
+                temperature=0.3,
+                max_tokens=500,
+            ).strip()
+        except Exception as err:
+            logger.info(f"[FollowupEngine] Direct agent LLM call fell back ({err}). Grounding from evidence.")
+            if evidence_snippets:
+                answer = f"**{agent_name} Findings for '{question}'**:\n\n" + "\n\n".join(evidence_snippets[:4])
+            else:
+                answer = (
+                    f"I don't have saved project findings yet. "
+                    f"Please submit an idea or code check first, then ask me again!"
+                )
 
         turn = session.add_turn(
             user_query=raw_query,
             agent_name=agent_name,
             agent_role=agent_role,
             answer=answer,
-            action_taken=f"Directly interrogated {agent_name} on '{question[:60]}'",
-            thinking=f"User explicitly addressed @{agent_key}; responding deterministically from persisted session evidence with zero LLM quota.",
+            action_taken=f"Answered @{agent_key} query about '{question[:50]}'",
+            thinking=f"{agent_name} evaluated project context and answered the user query.",
+            referenced_symbols=referenced_symbols,
+            referenced_files=referenced_files,
         )
         return {
             "status": "ok",
@@ -435,6 +462,7 @@ class ConversationalFollowupEngine:
             "thinking": turn.thinking,
             "session_id": session.session_id,
             "referenced_symbols": turn.referenced_symbols,
+            "referenced_files": turn.referenced_files,
             "active_entities": session.active_entities,
             "direct_agent": agent_key,
         }
@@ -452,8 +480,8 @@ class ConversationalFollowupEngine:
         resolved_query = session.resolve_anaphora(query)
         q_lower = resolved_query.lower()
 
-        # Validated pipeline output (used by deterministic specialist routers)
-        ctx = context_override if isinstance(context_override, dict) else {}
+        # Validated pipeline output (used by specialist routers)
+        ctx = context_override if isinstance(context_override, dict) and context_override else (session.active_entities.get("final_output") or {})
 
         # 2. Check if repo index is available
         codebase_index = None

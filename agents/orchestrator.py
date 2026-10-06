@@ -208,6 +208,8 @@ class OrchestratorAgent:
         try:
             session = session_manager.get_or_create_session(state.session_id, repo_path)
             if state.final_output:
+                session.active_entities["final_output"] = state.final_output
+                session.active_entities["project_title"] = state.final_output.get("project_title", "")
                 if state.final_output.get("type") == "codebase_analysis":
                     candidates = state.final_output.get("candidates", [])
                     symbols = [c.get("symbol_name") for c in candidates if c.get("symbol_name")]

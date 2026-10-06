@@ -24,8 +24,8 @@ def _parse_model_chain() -> list:
     else:
         chain = [
             os.getenv("PRIMARY_MODEL", "openai/gpt-oss-120b"),
-            os.getenv("FAST_MODEL", "openai/gpt-oss-20b"),
-            os.getenv("CODE_MODEL", "qwen/qwen3.8-27b"),
+            os.getenv("FAST_MODEL", "qwen/qwen3.8-27b"),
+            os.getenv("CODE_MODEL", "openai/gpt-oss-20b"),
         ]
     # Deduplicate while preserving order
     seen = set()

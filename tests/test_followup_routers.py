@@ -209,3 +209,58 @@ def test_code_followup_deterministic_routers():
     assert "verify_token" in res["answer"]
     assert "auth.py:8-24" in res["answer"]
     assert "Recommended Pattern" in res["answer"]
+
+
+def test_direct_agent_interrogation():
+    """Verifies that @agent mentions route directly to the named specialist without error."""
+    mock_context = {
+        "type": "idea_validation",
+        "project_title": "IoT Energy Auditor",
+        "problem_statement": "Residential energy waste from unmonitored power spikes.",
+        "core_value_prop": "Real-time circuit-level power spike detection using ESP32 CT sensors.",
+        "kill_report": {
+            "bear_case_summary": "Unreliable LoRaWAN coverage in dense residential buildings.",
+            "fatal_flaws": [
+                {
+                    "title": "Breaker Box Regulations",
+                    "category": "Regulatory",
+                    "severity": "Critical",
+                    "argument": "Requires licensed electricians to install inside mains panel.",
+                    "counter_evidence": "Homeowners cannot self-install safely."
+                }
+            ],
+            "incumbent_threats": ["Utilities already deploy smart meters."]
+        },
+        "competitors": [{"name": "Sense", "summary": "ML energy monitor", "advantages": "Brand", "gaps": "Expensive"}],
+        "tech_stack": {"backend": {"choice": "FastAPI", "rationale": "High throughput", "tradeoffs": "None"}}
+    }
+
+    # Interrogate @kill
+    res_kill = orchestrator.answer_followup(
+        query="@kill why is installation risky?",
+        context=mock_context,
+        session_id="test_direct_sess",
+    )
+    assert res_kill["status"] == "ok"
+    assert res_kill["direct_agent"] == "kill"
+    assert len(res_kill["answer"]) > 10
+
+    # Interrogate @market
+    res_mkt = orchestrator.answer_followup(
+        query="@market who are our rivals?",
+        context=mock_context,
+        session_id="test_direct_sess",
+    )
+    assert res_mkt["status"] == "ok"
+    assert res_mkt["direct_agent"] == "market"
+    assert len(res_mkt["answer"]) > 10
+
+    # Interrogate @architect
+    res_arch = orchestrator.answer_followup(
+        query="@architect why FastAPI?",
+        context=mock_context,
+        session_id="test_direct_sess",
+    )
+    assert res_arch["status"] == "ok"
+    assert res_arch["direct_agent"] == "architect"
+    assert len(res_arch["answer"]) > 10

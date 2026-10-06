@@ -39,9 +39,11 @@ def test_app_endpoints():
     assert inspect_data["summary"]["total_chunks"] >= 4
     print(f"      AST inspection succeeded: {inspect_data['summary']['total_files']} files, {inspect_data['summary']['total_chunks']} chunks.")
 
-    print("[4/4] Testing GET /api/health...")
+    print("[4/4] Testing GET /api/health and GET /health...")
     res = client.get("/api/health")
     assert res.status_code == 200
+    res_alias = client.get("/health")
+    assert res_alias.status_code == 200
     health_data = res.json()
     assert health_data["status"] == "online"
     print(f"      Health check: {health_data['status']} with model {health_data['model']}")

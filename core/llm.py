@@ -265,10 +265,17 @@ class LLMClient:
                     raise RuntimeError("All models exhausted on Groq. Activating deterministic fallback.")
 
             except (APIError, ValueError) as e:
+                err_str = str(e).lower()
                 logger.warning(f"[LLMClient] Groq API or content issue on {current_model}: {e}")
                 last_error = e
+
+                # If model failed due to tool invocation or JSON validation quirks, cooldown it for 60s
+                if "tool_use_failed" in err_str or "json_validate_failed" in err_str or "tool choice is none" in err_str:
+                    logger.info(f"[LLMClient] Placing {current_model} on cooldown due to model-specific quirk ({e}).")
+                    self._mark_rate_limited(current_model, cooldown_seconds=60.0)
+
                 candidates = self._get_candidate_models()
-                next_candidates = [m for m in candidates if m not in attempted_models]
+                next_candidates = [m for m in candidates if m not in attempted_models and time.time() >= self._model_cooldowns.get(m, 0)]
                 if next_candidates:
                     current_model = next_candidates[0]
                     attempted_models.add(current_model)
@@ -330,6 +337,8 @@ class LLMClient:
             except Exception:
                 pass
             fixed = re.sub(r",\s*([\]}])", r"\1", txt)
+            # Repair malformed keys missing colons like {"title","category": -> {"title": "", "category":
+            fixed = re.sub(r'([{\[,])\s*"([a-zA-Z0-9_-]+)"\s*,\s*"', r'\1 "\2": "", "', fixed)
             try:
                 parsed = json.loads(fixed)
                 if isinstance(parsed, dict):
