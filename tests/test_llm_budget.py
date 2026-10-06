@@ -235,3 +235,46 @@ def test_generate_records_budget_and_cleans_output():
     # The plain-language rules ride along on every call.
     sent = transport.raw.calls[0]["messages"]
     assert any("plain-english-rules" in str(m.get("content", "")) for m in sent)
+
+
+# --------------------------------------------------------------------- #
+# Truncated structured output (Groq json_validate_failed)
+# --------------------------------------------------------------------- #
+
+def _validation_error():
+    import httpx
+    from groq import APIError
+    msg = (
+        'Error code: 400 - {"error": {"message": "Failed to generate JSON.", '
+        '"code": "json_validate_failed"}}'
+    )
+    req = httpx.Request("POST", "https://api.groq.com/openai/v1/chat/completions")
+    return APIError(msg, request=req, body={"error": {"code": "json_validate_failed"}})
+
+
+class TruncatingRawCreate(FakeRawCreate):
+    """Fails the first structured call the way Groq does when JSON is cut off."""
+
+    def create(self, **kwargs):
+        self.calls.append(kwargs)
+        if len(self.calls) == 1:
+            raise _validation_error()
+        return FakeRawResponse("", self.headers)
+
+
+def test_json_truncation_retries_with_bigger_budget():
+    client = make_client()
+    raw = TruncatingRawCreate(fake_headers(remaining_tokens=7000, reset_tokens="60s"))
+    client.client = SimpleNamespace(
+        chat=SimpleNamespace(completions=SimpleNamespace(with_raw_response=raw))
+    )
+
+    out = client.generate([{"role": "user", "content": "List competitors"}], json_mode=True)
+
+    assert out
+    assert len(raw.calls) == 2
+    first, second = raw.calls[0]["max_tokens"], raw.calls[1]["max_tokens"]
+    assert second == min(first + 1024, settings.max_tokens_cap)
+    assert second > first
+    # Truncation is a budget problem, not a quota problem: no cooldown.
+    assert client._get_candidate_models()[0] not in client.get_rate_limit_status()["cooldowns"]

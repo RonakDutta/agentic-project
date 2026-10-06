@@ -383,7 +383,7 @@ class LLMClient:
         styled.insert(0, {"role": "system", "content": PLAIN_LANGUAGE_RULES})
         return styled
 
-    def _mark_rate_limited(self, model: str, cooldown_seconds: float) -> None:
+    def _mark_rate_limited(self, model: str, cooldown_seconds: float, reason: str = "Rate limit") -> None:
         """Places a model on cooldown and logs the transition once to prevent log spam."""
         now = time.time()
         self._model_cooldowns[model] = now + cooldown_seconds
@@ -391,7 +391,7 @@ class LLMClient:
         if now - last_logged >= cooldown_seconds:
             self._logged_rate_limits[model] = now
             logger.warning(
-                f"[LLMClient] Rate limit on {model}. Placed on cooldown for {int(cooldown_seconds)}s."
+                f"[LLMClient] {reason} on {model}. Placed on cooldown for {int(cooldown_seconds)}s."
             )
 
     def _cooldown_from_error(
@@ -596,10 +596,27 @@ class LLMClient:
                 logger.warning(f"[LLMClient] Groq API or content issue on {current_model}: {e}")
                 last_error = e
 
+                if "json_validate_failed" in err_str:
+                    # Structured output was cut off mid-JSON: the answer budget
+                    # was too small, not the model. Retry with a larger budget
+                    # instead of failing over with the same small budget
+                    # (which would fail the exact same way on the next model).
+                    bigger = min(base_max_tokens + 1024, settings.max_tokens_cap)
+                    if bigger > base_max_tokens:
+                        base_max_tokens = bigger
+                        attempted_models.clear()
+                        logger.info(
+                            f"[LLMClient] JSON output truncated on {current_model}. "
+                            f"Retrying with {base_max_tokens} max tokens."
+                        )
+                        time.sleep(min(backoff, 2.0))
+                        backoff *= 2
+                        continue
+
                 # If model failed due to tool invocation or JSON validation quirks, cooldown it for 60s
                 if "tool_use_failed" in err_str or "json_validate_failed" in err_str or "tool choice is none" in err_str:
                     logger.info(f"[LLMClient] Placing {current_model} on cooldown due to model-specific quirk ({e}).")
-                    self._mark_rate_limited(current_model, cooldown_seconds=60.0)
+                    self._mark_rate_limited(current_model, cooldown_seconds=60.0, reason="Model quirk")
 
                 if response_format is not None and len(attempted_models) >= len(candidates):
                     # Every model refused structured output: retry once in plain text.

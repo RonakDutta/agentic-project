@@ -124,6 +124,9 @@ class MarketTechStackAgent:
                     {"role": "user", "content": user_prompt},
                 ],
                 temperature=0.2,
+                # This schema is large (competitors + stack + code pitfall):
+                # reserve room so Groq does not truncate the JSON mid-object.
+                max_tokens=3000,
             )
         except Exception as err:
             trace.append(f"LLM market analysis note ({err}). Using live search citations fallback.")
@@ -132,8 +135,9 @@ class MarketTechStackAgent:
                 "competitors": [
                     {
                         "name": comp_names[0],
-                        "strengths": "Established market presence and existing user base.",
-                        "weaknesses": "Higher licensing costs and less domain-specific integration.",
+                        "summary": "Established market presence and existing user base.",
+                        "advantages": "Established market presence and existing user base.",
+                        "gaps": "Higher licensing costs and less domain-specific integration.",
                     }
                 ],
                 "tech_stack": {
