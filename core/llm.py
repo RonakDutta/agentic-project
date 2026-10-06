@@ -210,8 +210,10 @@ class LLMClient:
         backoff = settings.pace_seconds
         last_error = None
         current_model = target_model
+        attempted_models = {current_model}
+        max_attempts = max(settings.retry_attempts, len(self._get_candidate_models()))
 
-        while attempts < settings.retry_attempts:
+        while attempts < max_attempts:
             attempts += 1
             start_time = time.time()
             try:
@@ -246,17 +248,17 @@ class LLMClient:
             except RateLimitError as e:
                 err_msg = str(e)
                 last_error = e
-                if "otpm" in err_msg.lower() or "reduce max_tokens" in err_msg.lower() or "output tokens" in err_msg.lower():
-                    max_tok = min(max_tok, 400)
-
                 cooldown = self._cooldown_from_error(err_msg, default=60.0)
                 self._mark_rate_limited(current_model, cooldown_seconds=cooldown)
 
                 # Route immediately to the next healthy model in the chain
-                next_model = self._get_healthy_model()
-                if next_model and next_model != current_model:
+                candidates = self._get_candidate_models()
+                remaining = [m for m in candidates if m not in attempted_models and time.time() >= self._model_cooldowns.get(m, 0)]
+                if remaining:
+                    next_model = remaining[0]
                     logger.info(f"[LLMClient] Falling back from {current_model} to {next_model}.")
                     current_model = next_model
+                    attempted_models.add(current_model)
                     time.sleep(0.25)
                 else:
                     logger.warning("[LLMClient] All models exhausted on Groq. Activating deterministic fallback.")
@@ -265,10 +267,12 @@ class LLMClient:
             except (APIError, ValueError) as e:
                 logger.warning(f"[LLMClient] Groq API or content issue on {current_model}: {e}")
                 last_error = e
-                candidates = self._get_candidate_models(current_model)
-                next_candidates = [m for m in candidates if m != current_model]
+                candidates = self._get_candidate_models()
+                next_candidates = [m for m in candidates if m not in attempted_models]
                 if next_candidates:
                     current_model = next_candidates[0]
+                    attempted_models.add(current_model)
+                    logger.info(f"[LLMClient] Rotated to next candidate model {current_model}.")
                 elif response_format is not None:
                     response_format = None
                 time.sleep(min(backoff, 2.0))
@@ -281,7 +285,7 @@ class LLMClient:
                 backoff *= 2
 
         raise RuntimeError(
-            f"Failed to generate response after {settings.retry_attempts} attempts. Last error: {last_error}"
+            f"Failed to generate response after {max_attempts} attempts. Last error: {last_error}"
         )
 
     def generate_json(
@@ -315,20 +319,51 @@ class LLMClient:
                 max_tokens=max_tokens,
             )
 
-        try:
-            return json.loads(raw_text)
-        except json.JSONDecodeError:
-            # Fallback markdown code fence extraction
-            cleaned = raw_text.strip()
-            if "```json" in cleaned:
-                cleaned = cleaned.split("```json")[1].split("```")[0].strip()
-            elif "```" in cleaned:
-                cleaned = cleaned.split("```")[1].split("```")[0].strip()
-            elif "{" in cleaned and "}" in cleaned:
-                start = cleaned.find("{")
-                end = cleaned.rfind("}") + 1
-                cleaned = cleaned[start:end]
-            return json.loads(cleaned.strip())
+        def _try_parse(txt: str) -> Optional[Dict[str, Any]]:
+            txt = txt.strip()
+            if not txt:
+                return None
+            try:
+                parsed = json.loads(txt)
+                if isinstance(parsed, dict):
+                    return parsed
+            except Exception:
+                pass
+            fixed = re.sub(r",\s*([\]}])", r"\1", txt)
+            try:
+                parsed = json.loads(fixed)
+                if isinstance(parsed, dict):
+                    return parsed
+            except Exception:
+                pass
+            return None
+
+        # 1. Direct parse
+        res = _try_parse(raw_text)
+        if res is not None:
+            return res
+
+        # 2. Markdown fence / bracket extraction
+        cleaned = raw_text.strip()
+        if "```json" in cleaned:
+            extracted = cleaned.split("```json", 1)[1].split("```", 1)[0].strip()
+            res = _try_parse(extracted)
+            if res is not None:
+                return res
+        if "```" in cleaned:
+            extracted = cleaned.split("```", 1)[1].split("```", 1)[0].strip()
+            res = _try_parse(extracted)
+            if res is not None:
+                return res
+        if "{" in cleaned and "}" in cleaned:
+            start = cleaned.find("{")
+            end = cleaned.rfind("}") + 1
+            extracted = cleaned[start:end]
+            res = _try_parse(extracted)
+            if res is not None:
+                return res
+
+        return json.loads(raw_text)
 
     def get_metrics(self) -> Dict[str, Any]:
         return {

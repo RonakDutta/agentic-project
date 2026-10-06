@@ -25,8 +25,7 @@ def _parse_model_chain() -> list:
         chain = [
             os.getenv("PRIMARY_MODEL", "openai/gpt-oss-120b"),
             os.getenv("FAST_MODEL", "openai/gpt-oss-20b"),
-            "llama-3.3-70b-versatile",
-            "llama-3.1-8b-instant",
+            os.getenv("CODE_MODEL", "qwen/qwen3.8-27b"),
         ]
     # Deduplicate while preserving order
     seen = set()
@@ -46,15 +45,15 @@ class Settings:
     # Models (model_chain is the ordered rate-limit fallback rotation)
     primary_model: str = os.getenv("PRIMARY_MODEL", "openai/gpt-oss-120b")
     fast_model: str = os.getenv("FAST_MODEL", "openai/gpt-oss-20b")
-    code_model: str = os.getenv("CODE_MODEL", "qwen/qwen3-32b")
+    code_model: str = os.getenv("CODE_MODEL", "qwen/qwen3.8-27b")
     model_chain: list = field(default_factory=_parse_model_chain)
 
     # Execution limits (tuned for Groq free-tier rate limit guardrails)
-    max_tokens_per_req: int = int(os.getenv("MAX_TOKENS_PER_REQ", "750"))
-    max_tokens_cap: int = int(os.getenv("MAX_TOKENS_CAP", "800"))
+    max_tokens_per_req: int = int(os.getenv("MAX_TOKENS_PER_REQ", "2500"))
+    max_tokens_cap: int = int(os.getenv("MAX_TOKENS_CAP", "4096"))
     context_token_budget: int = int(os.getenv("CONTEXT_TOKEN_BUDGET", "2500"))
     temperature: float = float(os.getenv("TEMPERATURE", "0.2"))
-    request_timeout_seconds: int = int(os.getenv("REQUEST_TIMEOUT_SECONDS", "20"))
+    request_timeout_seconds: int = int(os.getenv("REQUEST_TIMEOUT_SECONDS", "25"))
     retry_attempts: int = int(os.getenv("RETRY_ATTEMPTS", "3"))
 
     # Inter-call pacing (seconds, jittered) to smooth RPM bursts across agents

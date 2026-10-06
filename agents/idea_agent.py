@@ -97,13 +97,34 @@ class IdeaDecompositionAgent:
 
         trace.append(f"Decomposition complete: Title '{json_output.get('project_title')}' generated.")
 
+        target_personas = json_output.get("target_personas") or []
+        if not isinstance(target_personas, list) or len(target_personas) == 0:
+            target_personas = [
+                {"persona": "Primary Operator", "pain_point": "Manual bottlenecks and lack of real-time insights.", "expected_benefit": "Automated workflow and operational visibility."}
+            ]
+
+        mvp_features = json_output.get("mvp_features") or json_output.get("features") or []
+        if not isinstance(mvp_features, list):
+            mvp_features = [str(mvp_features)]
+        if len(mvp_features) < 2:
+            clean_title = json_output.get("project_title") or "Core System"
+            mvp_features = [
+                f"{clean_title} data ingestion and telemetry pipeline",
+                f"{clean_title} automated analysis and anomaly trigger engine",
+                f"{clean_title} interactive operations dashboard and export service",
+            ]
+
+        core_value = json_output.get("core_value_prop") or (
+            f"Automated intelligence and streamlined operations for {json_output.get('project_title', 'modern workloads')}."
+        )
+
         return DecomposedIdea(
             raw_idea=raw_idea,
             project_title=json_output.get("project_title", "Engineering Project"),
-            problem_statement=json_output.get("problem_statement", ""),
-            target_personas=json_output.get("target_personas", []),
-            core_value_prop=json_output.get("core_value_prop", ""),
-            key_assumptions=json_output.get("key_assumptions", []),
-            mvp_features=json_output.get("mvp_features", []),
+            problem_statement=json_output.get("problem_statement", raw_idea),
+            target_personas=target_personas,
+            core_value_prop=core_value,
+            key_assumptions=json_output.get("key_assumptions", ["System endpoints are accessible.", "Domain data schemas are consistent."]),
+            mvp_features=mvp_features,
             trace=trace,
         )

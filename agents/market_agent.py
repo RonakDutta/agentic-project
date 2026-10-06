@@ -158,10 +158,28 @@ class MarketTechStackAgent:
 
         pitfall = json_output.get("implementation_pitfall") or default_pitfall
 
+        tech_stack = json_output.get("tech_stack") or {}
+        if not isinstance(tech_stack, dict):
+            tech_stack = {}
+        defaults = {
+            "backend": {"choice": "FastAPI (Python 3.11+)", "rationale": "High-concurrency async ASGI performance and automatic OpenAPI schemas.", "tradeoffs": "Requires async database drivers for optimal throughput."},
+            "frontend": {"choice": "React + Tailwind CSS", "rationale": "Component reusability, rapid design prototyping, and responsive dashboards.", "tradeoffs": "Adds bundle size and requires a modern client build pipeline."},
+            "database": {"choice": "PostgreSQL", "rationale": "ACID compliance, relational integrity, and rich JSON / time-series support.", "tradeoffs": "Requires dedicated connection pooling under heavy spikes."},
+        }
+        for k, v in defaults.items():
+            if k not in tech_stack or not tech_stack[k]:
+                tech_stack[k] = v
+
+        competitors = json_output.get("competitors") or []
+        if not competitors:
+            competitors = [
+                {"name": "Industry Benchmark Platform", "summary": "Standard commercial offering in this domain.", "advantages": "Broad brand awareness.", "gaps": "High subscription fee and limited custom automation."}
+            ]
+
         return MarketAnalysis(
-            competitors=json_output.get("competitors", []),
-            tech_stack=json_output.get("tech_stack", {}),
-            key_differentiators=json_output.get("key_differentiators", []),
+            competitors=competitors,
+            tech_stack=tech_stack,
+            key_differentiators=json_output.get("key_differentiators", ["Automated end-to-end intelligence.", "Transparent extensible architecture."]),
             citations=citations,
             trace=trace,
             implementation_pitfall=pitfall,

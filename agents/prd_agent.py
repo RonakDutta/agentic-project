@@ -269,16 +269,21 @@ class PRDAgent:
                 )
             )
 
-        if not functional_reqs:
-            for idx, feat in enumerate(decomposed.mvp_features, 1):
-                functional_reqs.append(
-                    FunctionalRequirement(
-                        req_id=f"FR-0{idx}",
-                        title=feat[:30],
-                        description=feat,
-                        priority="Must Have" if idx <= 2 else "Should Have",
+        if len(functional_reqs) < 2:
+            existing_titles = {f.title.lower() for f in functional_reqs}
+            for idx, feat in enumerate(decomposed.mvp_features, start=len(functional_reqs) + 1):
+                title = feat[:30]
+                if title.lower() not in existing_titles:
+                    functional_reqs.append(
+                        FunctionalRequirement(
+                            req_id=f"FR-0{idx}",
+                            title=title,
+                            description=feat,
+                            priority="Must Have" if idx <= 2 else "Should Have",
+                        )
                     )
-                )
+                if len(functional_reqs) >= 3:
+                    break
 
         nfrs = res.get("non_functional_requirements", {
             "performance": "Sub-500ms p95 API response times on standard requests.",

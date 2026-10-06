@@ -820,6 +820,17 @@ class ConversationalFollowupEngine:
             disclaimer = sc.get("rubric_disclaimer", ctx.get("rubric_disclaimer", "Feasibility score based on defined project rubric."))
             # Scorecard serializes categories as a list of {category_name, score, max_score, criteria_met, gaps, rationale}.
             categories = sc.get("categories", [])
+            if not categories and isinstance(sc.get("category_breakdown"), dict):
+                categories = [
+                    {
+                        "category_name": k.replace("_", " ").title(),
+                        "score": v.get("score", 0),
+                        "max_score": v.get("max_points", 0),
+                        "rationale": v.get("rationale", ""),
+                    }
+                    for k, v in sc["category_breakdown"].items()
+                    if isinstance(v, dict)
+                ]
             strengths = sc.get("key_strengths", [])
             risks = sc.get("key_risks", [])
             actions = sc.get("recommended_actions", [])
