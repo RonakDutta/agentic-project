@@ -43,3 +43,7 @@ data/cache/
 # Testing & Logs
 .pytest_cache/
 *.log
+
+# React app
+web/react-app/node_modules/
+web/react-app/dist/
