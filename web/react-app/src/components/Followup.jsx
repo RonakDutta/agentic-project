@@ -276,7 +276,7 @@ export default function Followup({ pillar, messages, thinkingStart, sendError, o
         </div>
       </div>
 
-      <div className="relative bg-canvas border border-borderSubtle focus-within:border-blue-500 rounded-lg p-3.5">
+      <div className="relative bg-canvas border border-borderSubtle focus-within:border-zinc-500 rounded-lg p-3.5">
         {menu.open && (
           <div className="mention-menu" role="listbox" aria-label="Agent suggestions">
             {menu.items.map((a, idx) => (

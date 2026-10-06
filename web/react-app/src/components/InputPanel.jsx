@@ -81,7 +81,7 @@ export default function InputPanel({
           placeholder={isIdea
             ? 'What problem are you solving? Who is it for? What is your solution...'
             : 'Paste an exception traceback or ask about code structure (e.g. ValueError in verify_token)...'}
-          className="w-full bg-canvas/70 border border-borderSubtle focus:border-blue-500 rounded-lg p-4 text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none resize-none leading-relaxed"
+          className="w-full bg-canvas/70 border border-borderSubtle focus:border-zinc-500 rounded-lg p-4 text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none resize-none leading-relaxed"
         />
         {errorHint && <p className="text-xs text-rose-300">{errorHint}</p>}
       </div>
