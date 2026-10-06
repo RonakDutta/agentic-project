@@ -176,9 +176,18 @@ export default function Followup({ pillar, messages, thinkingStart, sendError, o
     onSend(q)
   }
 
+  // Auto-scroll only when a new message lands in the tab being viewed.
+  // (Switching tabs swaps the message list, which must not yank the page.)
+  const prevThreadRef = useRef({ pillar, length: messages.length })
   useEffect(() => {
-    threadRef.current?.lastElementChild?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages.length, thinkingStart])
+    const prev = prevThreadRef.current
+    const samePillar = prev.pillar === pillar
+    const grew = messages.length > prev.length
+    prevThreadRef.current = { pillar, length: messages.length }
+    if (samePillar && (grew || thinkingStart)) {
+      threadRef.current?.lastElementChild?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    }
+  }, [messages.length, thinkingStart, pillar])
 
   return (
     <div className="panel p-8 sm:p-10 space-y-6">
