@@ -278,3 +278,33 @@ def test_json_truncation_retries_with_bigger_budget():
     assert second > first
     # Truncation is a budget problem, not a quota problem: no cooldown.
     assert client._get_candidate_models()[0] not in client.get_rate_limit_status()["cooldowns"]
+
+
+class TimeoutOnceRawCreate(FakeRawCreate):
+    """First call hangs past the client timeout, then the next model answers."""
+
+    def create(self, **kwargs):
+        import httpx
+        from groq import APITimeoutError
+        self.calls.append(kwargs)
+        if len(self.calls) == 1:
+            raise APITimeoutError(request=httpx.Request("POST", "https://api.groq.com/openai/v1/chat/completions"))
+        return FakeRawResponse("", self.headers)
+
+
+def test_slow_model_timeout_rotates_without_cooldown():
+    client = make_client()
+    raw = TimeoutOnceRawCreate(fake_headers(remaining_tokens=7000, reset_tokens="60s"))
+    client.client = SimpleNamespace(
+        chat=SimpleNamespace(completions=SimpleNamespace(with_raw_response=raw))
+    )
+
+    out = client.generate([{"role": "user", "content": "Explain the sensor"}])
+
+    assert out
+    assert len(raw.calls) == 2
+    # A timeout spends no quota but the slow model is skipped for a while,
+    # so the retry must go to a different model immediately.
+    assert raw.calls[1]["model"] != raw.calls[0]["model"]
+    slow = raw.calls[0]["model"]
+    assert slow in client.get_rate_limit_status()["cooldowns"]

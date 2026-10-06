@@ -62,6 +62,8 @@ export default function App() {
 
   const runStartRef = useRef({ idea: null, code: null })
   const runIdRef = useRef({ idea: 0, code: 0 })
+  const abortRef = useRef({})
+  const timeoutRef = useRef({})
   const pillarRef = useRef(pillar)
   pillarRef.current = pillar
 
@@ -136,6 +138,36 @@ export default function App() {
   }
 
   /* ---------------- workflow ---------------- */
+  function stopRun() {
+    // User-initiated stop (not an error): invalidate the loop first so any
+    // late fetch or reveal step becomes a no-op, then release everything the
+    // run owned. Nothing is left behind: no timers, no loaders, no locks.
+    const thisPillar = pillar
+    runIdRef.current[thisPillar] += 1
+    clearTimeout(timeoutRef.current[thisPillar])
+    timeoutRef.current[thisPillar] = null
+    try {
+      abortRef.current[thisPillar]?.abort()
+    } catch { /* already settled */ }
+    abortRef.current[thisPillar] = null
+    const started = runStartRef.current[thisPillar] || Date.now()
+    const elapsed = `(${((Date.now() - started) / 1000).toFixed(1)}s - Stopped)`
+    setPillars((prev) => {
+      const nodes = [...prev[thisPillar].nodes]
+      const workingIdx = nodes.findIndex((n) => n === 'working')
+      if (workingIdx >= 0) nodes[workingIdx] = 'waiting'
+      return {
+        ...prev,
+        [thisPillar]: {
+          ...prev[thisPillar], isRunning: false, loader: null, nodes, runError: null,
+          finalElapsed: elapsed,
+          statusText: 'Stopped by you', statusClass: 'text-zinc-400 font-semibold',
+        },
+      }
+    })
+    setRunBusy(false)
+  }
+
   async function executeWorkflow() {
     const thisPillar = pillar
     const query = pillars[thisPillar].prompt.trim()
@@ -157,9 +189,11 @@ export default function App() {
     }))
 
     const abortController = new AbortController()
+    abortRef.current[thisPillar] = abortController
     const timeoutId = setTimeout(() => {
       abortController.abort(new Error('Request timed out after 150 seconds. The free-tier engine may be rate-limited; please retry.'))
     }, 150000)
+    timeoutRef.current[thisPillar] = timeoutId
     const startTime = Date.now()
 
     const alive = () => runIdRef.current[thisPillar] === runId
@@ -340,6 +374,7 @@ export default function App() {
           errorHint={errorHint}
           running={runBusy}
           onRun={executeWorkflow}
+          onStop={stopRun}
         />
 
         <Pipeline

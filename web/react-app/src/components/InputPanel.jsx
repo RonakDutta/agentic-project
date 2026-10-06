@@ -18,7 +18,7 @@ export default function InputPanel({
   pillar, onSelectPillar,
   prompt, onPromptChange,
   repoPath, onRepoPathChange, repoBadge, onLoadSample, onInspectRepo, inspecting,
-  errorHint, running, onRun,
+  errorHint, running, onRun, onStop,
 }) {
   const isIdea = pillar === 'idea'
   return (
@@ -81,7 +81,7 @@ export default function InputPanel({
           placeholder={isIdea
             ? 'What problem are you solving? Who is it for? What is your solution...'
             : 'Paste an exception traceback or ask about code structure (e.g. ValueError in verify_token)...'}
-          className="w-full bg-canvas/70 border border-borderSubtle focus:border-zinc-500 rounded-lg p-4 text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none resize-none leading-relaxed"
+          className="w-full bg-canvas/70 border border-borderSubtle rounded-lg p-4 text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none resize-none leading-relaxed"
         />
         {errorHint && <p className="text-xs text-rose-300">{errorHint}</p>}
       </div>
@@ -104,6 +104,11 @@ export default function InputPanel({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
           </svg>
         </button>
+        {running && (
+          <button onClick={onStop} aria-label="Stop the running pipeline" className="btn btn-quiet">
+            <span>Stop</span>
+          </button>
+        )}
       </div>
     </section>
   )

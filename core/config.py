@@ -70,7 +70,10 @@ class Settings:
     small_prompt_tokens: int = int(os.getenv("SMALL_PROMPT_TOKENS", "600"))
     # How long one request may wait for a rate-limit window to refill before the
     # agents fall back to their built-in grounded answers.
-    max_wait_seconds: float = float(os.getenv("MAX_WAIT_SECONDS", "25"))
+    max_wait_seconds: float = float(os.getenv("MAX_WAIT_SECONDS", "12"))
+    # How long a model that timed out (too slow, quota untouched) is skipped
+    # so later agent steps rotate immediately instead of hanging again.
+    slow_model_cooldown_seconds: float = float(os.getenv("SLOW_MODEL_COOLDOWN_SECONDS", "180"))
 
     # Plain-language output: ask the model for everyday wording and strip filler.
     plain_language: bool = os.getenv("PLAIN_LANGUAGE", "1") not in ("0", "false", "False")

@@ -102,10 +102,13 @@ class MarketTechStackAgent:
             for r in search_results
         ]
 
+        # Keep the prompt inside the free token window: long search abstracts
+        # are the biggest TPM cost, so each snippet is clipped short. Full
+        # text stays in `citations` for the report.
         evidence_text = "\n".join(
-            f"Source [{i+1}] {r.title} ({r.url}):\n{r.snippet}"
+            f"Source [{i+1}] {r.title} ({r.url}):\n{r.snippet[:350]}"
             for i, r in enumerate(search_results)
-        )
+        )[:2500]
 
         # 2. Synthesize with LLM
         trace.append("Synthesizing competitive matrix and architectural tradeoffs...")

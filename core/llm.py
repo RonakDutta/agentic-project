@@ -27,7 +27,7 @@ import time
 from collections import OrderedDict
 from typing import Any, Dict, List, Optional, Tuple
 
-from groq import Groq, RateLimitError, APIError
+from groq import Groq, RateLimitError, APIError, APITimeoutError
 from core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -589,6 +589,25 @@ class LLMClient:
                 cooldown = self._cooldown_from_error(str(e), headers=error_headers, default=60.0)
                 self._mark_rate_limited(current_model, cooldown_seconds=cooldown)
                 # The next loop pass moves to whichever model still holds budget.
+                continue
+
+            except APITimeoutError as e:
+                # The model was too slow, not out of quota: skip it for a while
+                # so the next agent steps rotate immediately instead of burning
+                # the full request timeout on every call. No quota was spent.
+                last_error = e
+                logger.warning(
+                    f"[LLMClient] Request timed out on {current_model} after "
+                    f"{settings.request_timeout_seconds}s (slow model, quota untouched). "
+                    f"Skipping it for {int(settings.slow_model_cooldown_seconds)}s."
+                )
+                self._mark_rate_limited(
+                    current_model,
+                    cooldown_seconds=settings.slow_model_cooldown_seconds,
+                    reason="Too slow",
+                )
+                time.sleep(min(backoff, 2.0))
+                backoff *= 2
                 continue
 
             except (APIError, ValueError) as e:

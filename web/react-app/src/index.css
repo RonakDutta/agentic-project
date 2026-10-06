@@ -12,3 +12,10 @@
   --color-borderLight: #26334f;
   --color-accent: #3b82f6;
 }
+
+/* Input fields never change border or show outlines when focused, active,
+   or clicked. Keyboard users still get the button focus ring. */
+input:focus, input:active, textarea:focus, textarea:active {
+  outline: none !important;
+  box-shadow: none !important;
+}
