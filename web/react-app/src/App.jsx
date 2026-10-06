@@ -191,8 +191,8 @@ export default function App() {
     const abortController = new AbortController()
     abortRef.current[thisPillar] = abortController
     const timeoutId = setTimeout(() => {
-      abortController.abort(new Error('Request timed out after 150 seconds. The free-tier engine may be rate-limited; please retry.'))
-    }, 150000)
+      abortController.abort(new Error('Request timed out after 300 seconds. The free-tier engine may be rate-limited; please retry or press Stop.'))
+    }, 300000)
     timeoutRef.current[thisPillar] = timeoutId
     const startTime = Date.now()
 
