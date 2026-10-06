@@ -3,11 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Agentic Co-Pilot | Idea Validation & Codebase Intelligence</title>
+  <title>Project Review Assistant | Idea Validation & Codebase Analysis</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
   <script>
@@ -16,8 +13,9 @@
       theme: {
         extend: {
           fontFamily: {
-            sans: ['"Plus Jakarta Sans"', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
-            mono: ['"JetBrains Mono"', 'monospace'],
+            // The plain system stack: no web font download, no unusual typeface.
+            sans: ['-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', '"Helvetica Neue"', 'Arial', 'sans-serif'],
+            mono: ['ui-monospace', 'SFMono-Regular', 'Consolas', '"Liberation Mono"', 'monospace'],
           },
           colors: {
             canvas: '#080a10',
@@ -33,22 +31,37 @@
     }
   </script>
   <style>
+    :root {
+      --bg: #0b0e14;
+      --panel: #10141c;
+      --panel-2: #0c1017;
+      --line: #1d2431;
+      --line-soft: #171d28;
+      --text: #e6eaf1;
+      --muted: #8c96a8;
+      --accent: #4f8cff;
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+    }
     html {
       scroll-behavior: smooth;
     }
     body {
-      background-color: #080a10;
-      color: #f1f4fb;
-      font-family: 'Plus Jakarta Sans', sans-serif;
-      line-height: 1.6;
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      line-height: 1.65;
+      letter-spacing: normal;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
     }
     :focus-visible {
-      outline: 2px solid #3b82f6;
+      outline: 2px solid var(--accent);
       outline-offset: 2px;
       border-radius: 2px;
     }
     button, a, input, textarea {
-      transition-property: color, background-color, border-color, opacity, transform;
+      transition-property: color, background-color, border-color, opacity;
       transition-duration: 150ms;
       transition-timing-function: ease-out;
     }
@@ -60,23 +73,143 @@
         transition-duration: 0.01ms !important;
       }
     }
-    pre, code {
-      font-family: 'JetBrains Mono', monospace;
+    pre, code, kbd {
+      font-family: var(--font-mono);
     }
     ::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
+      width: 8px;
+      height: 8px;
     }
     ::-webkit-scrollbar-track {
       background: transparent;
     }
     ::-webkit-scrollbar-thumb {
-      background: #1e293b;
-      border-radius: 9999px;
+      background: #232b39;
+      border-radius: 6px;
     }
     ::-webkit-scrollbar-thumb:hover {
-      background: #334155;
+      background: #334052;
     }
+
+    /* ------------------------------------------------------------------ *
+     * Small design system: panels, section titles, quiet labels, buttons.
+     * Deliberately flat: no gradients, no glow, no animated dots or pills.
+     * ------------------------------------------------------------------ */
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+    }
+    .subpanel {
+      background: var(--panel-2);
+      border-radius: 8px;
+    }
+    .section-title {
+      font-size: 1.05rem;
+      font-weight: 650;
+      color: #ffffff;
+      letter-spacing: 0;
+    }
+    .section-sub {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .rule {
+      border-top: 1px solid var(--line-soft);
+    }
+    .label {
+      display: block;
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .label.is-accent { color: #7aa7ff; }
+    .label.is-good { color: #56c596; }
+    .label.is-warn { color: #e2b35e; }
+    .label.is-risk { color: #ef7b83; }
+    .label.is-inline { display: inline; margin-bottom: 0; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 10px 18px;
+      border-radius: 7px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .btn-primary { background: #2f6fe4; color: #fff; }
+    .btn-primary:hover { background: #3b7cf0; }
+    .btn-quiet {
+      background: var(--panel-2);
+      color: #a6b0c2;
+      border-color: var(--line);
+    }
+    .btn-quiet:hover { color: #fff; border-color: #2c3644; }
+    .btn-quiet[disabled] { opacity: 0.6; cursor: not-allowed; }
+
+    .chip {
+      font-size: 0.75rem;
+      color: #98a3b5;
+      background: var(--panel-2);
+      border: 1px solid var(--line-soft);
+      padding: 6px 11px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .chip:hover { color: #fff; border-color: #2c3644; }
+    .chip.is-active { color: #fff; background: #1c2c4d; border-color: #2a4272; }
+
+    .tag {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 4px 8px;
+      border-radius: 5px;
+      background: #151b26;
+      color: #9fb0c8;
+    }
+    .tag.good { color: #6fd3a6; background: #10241d; }
+    .tag.warn { color: #e7bf74; background: #241d10; }
+    .tag.risk { color: #f1959c; background: #261114; }
+    .tag.info { color: #8fb4ff; background: #101a2e; }
+
+    .tabs {
+      display: flex;
+      gap: 22px;
+      border-bottom: 1px solid var(--line-soft);
+    }
+    .tab {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #7f8899;
+      padding: 8px 0 10px;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      cursor: pointer;
+    }
+    .tab:hover { color: #d8dee9; }
+    .tab.is-active { color: #fff; border-bottom-color: var(--accent); }
+    .callout { border-radius: 8px; padding: 22px 24px; }
+    .callout-risk { background: #1a1215; }
+    .callout-note { background: #0f1524; }
+
+    /* Read labels as normal UI text instead of machine-style output. */
+    [class*="font-mono"][class*="uppercase"] {
+      font-family: var(--font-sans) !important;
+      text-transform: none !important;
+      letter-spacing: 0 !important;
+    }
+    [class*="tracking-widest"], [class*="tracking-wider"] { letter-spacing: 0 !important; }
+
+    /* ------------------------------------------------------------------ *
+     * Chat typography
+     * ------------------------------------------------------------------ */
 
     /* Clean Markdown Chat Typography */
     .prose-chat {
@@ -108,13 +241,13 @@
       margin-bottom: 0.25rem;
     }
     .prose-chat code {
-      font-family: 'JetBrains Mono', monospace;
+      font-family: var(--font-mono);
       font-size: 0.8rem;
-      background: rgba(15, 23, 42, 0.9);
-      border: 1px solid #1e293b;
+      background: #12161f;
+      border: 1px solid #1e2430;
       padding: 0.15rem 0.4rem;
       border-radius: 0.25rem;
-      color: #93c5fd;
+      color: #9ec3ff;
     }
     .prose-chat pre {
       background: #06080e;
@@ -140,12 +273,12 @@
       border: 1px solid #1e293b;
     }
     .prose-chat th {
-      background: #0f172a;
-      color: #94a3b8;
+      background: #12161f;
+      color: #9aa4b6;
       text-align: left;
       padding: 0.5rem 0.75rem;
-      border-bottom: 1px solid #1e293b;
-      font-family: 'JetBrains Mono', monospace;
+      border-bottom: 1px solid #1e2430;
+      font-weight: 600;
     }
     .prose-chat td {
       padding: 0.5rem 0.75rem;
@@ -225,56 +358,42 @@
 
     /* Chat agent avatar */
     .agent-avatar {
-      width: 36px;
-      height: 36px;
-      border-radius: 8px;
+      width: 34px;
+      height: 34px;
+      border-radius: 6px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-family: 'JetBrains Mono', monospace;
+      font-family: var(--font-sans);
       font-weight: 700;
-      font-size: 11px;
-      border: 1px solid;
+      font-size: 12px;
       flex-shrink: 0;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
     }
-
-    @keyframes scorePulse {
-      0% { transform: scale(1); }
-      40% { transform: scale(1.07); }
-      100% { transform: scale(1); }
-    }
-    .score-pulse { animation: scorePulse 0.45s ease-out; }
   </style>
 </head>
 <body class="min-h-screen flex flex-col font-sans selection:bg-blue-900 selection:text-white bg-canvas text-slate-100">
 
   <!-- Top Navigation Header -->
-  <header class="border-b border-borderSubtle bg-canvas/85 backdrop-blur-md sticky top-0 z-50">
+  <header class="border-b border-borderSubtle bg-canvas sticky top-0 z-50">
     <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
       
       <!-- Brand & Project Identity -->
-      <div class="flex items-center space-x-3 min-w-0">
-        <div class="w-9 h-9 rounded-md border border-blue-500/50 bg-blue-950/50 flex items-center justify-center shrink-0">
-          <svg class="w-4 h-4 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="square" stroke-linejoin="miter" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-          </svg>
-        </div>
+      <div class="flex items-center gap-3 min-w-0">
+        <svg class="w-5 h-5 text-blue-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+        </svg>
         <div class="min-w-0">
-          <div class="font-extrabold tracking-tight text-white text-base leading-tight">Agentic Co-Pilot</div>
-          <div class="text-[10px] font-mono text-zinc-500 uppercase tracking-widest hidden sm:block">Supervisory Multi-Agent Team</div>
+          <div class="text-white text-[15px] font-semibold leading-tight">Project Review Assistant</div>
+          <div class="text-[11px] text-zinc-500 leading-tight hidden sm:block">Reviews your idea or your code, one step at a time</div>
         </div>
-        <span class="text-xs text-zinc-400 hidden lg:inline border-l border-borderSubtle pl-3">Idea Validation & Codebase Intelligence</span>
       </div>
 
-      <!-- Actions & Engine Indicator -->
-      <div class="flex items-center space-x-2.5 text-xs font-mono shrink-0">
-        <span id="rateLimitChip" class="hidden sm:flex items-center text-zinc-300 border border-borderSubtle bg-surface px-2.5 py-1 rounded text-xs">
-          <span id="rateLimitText" class="font-semibold text-xs text-zinc-300">Groq Online</span>
+      <!-- Status & export -->
+      <div class="flex items-center gap-3 shrink-0">
+        <span id="rateLimitChip" class="hidden sm:flex items-center text-xs text-zinc-400">
+          <span id="rateLimitText" class="font-medium text-zinc-300">AI engine ready</span>
         </span>
-        <button id="btnExportTop" onclick="exportReport()" class="hidden text-white bg-blue-600 hover:bg-blue-500 px-3.5 py-1.5 rounded-lg font-medium transition">
-          Export Brief (.md)
-        </button>
+        <button id="btnExportTop" onclick="exportReport()" class="hidden btn btn-quiet">Download report (.md)</button>
       </div>
 
     </div>
@@ -283,48 +402,32 @@
   <!-- Main Container -->
   <main class="flex-1 max-w-6xl w-full mx-auto px-6 py-10 space-y-12">
 
-    <!-- WORKBENCH INPUT PANEL -->
-    <section class="bg-surface/60 backdrop-blur-sm border border-borderSubtle rounded-lg p-6 sm:p-8 space-y-6">
-      
-      <!-- Mode Switcher -->
-      <div class="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-borderSubtle/60">
-        
-        <div class="flex items-center space-x-2 bg-canvas/90 p-1.5 rounded-lg border border-borderSubtle">
-          <button id="btnModeIdea" onclick="selectPillar('idea')" class="px-5 py-2.5 rounded-md text-xs font-semibold transition bg-blue-600 text-white">
-            Validate an Idea
-          </button>
-          <button id="btnModeCode" onclick="selectPillar('code')" class="px-5 py-2.5 rounded-md text-xs font-semibold transition text-zinc-400 hover:text-white">
-            Find Code Bugs
-          </button>
-        </div>
+    <!-- INPUT PANEL -->
+    <section class="panel p-6 sm:p-8 space-y-6">
 
-        <div class="text-xs text-zinc-400">
-          <span id="modeDescription">Startup idea feasibility, market research & architecture</span>
+      <!-- Mode tabs -->
+      <div class="flex flex-wrap items-end justify-between gap-4">
+        <div class="tabs">
+          <button id="btnModeIdea" onclick="selectPillar('idea')" class="tab is-active">Review an idea</button>
+          <button id="btnModeCode" onclick="selectPillar('code')" class="tab">Review code</button>
         </div>
-
+        <div class="text-xs text-zinc-500 pb-2">
+          <span id="modeDescription">Feasibility, market research and architecture</span>
+        </div>
       </div>
 
-      <!-- Codebase Analysis Target Row (Visible in Code Mode Only) -->
-      <div id="codeTargetSection" class="hidden space-y-3 bg-canvas/80 p-4 rounded-lg border border-borderSubtle">
-        <div class="flex flex-wrap items-center justify-between gap-2">
-          <div class="flex items-center space-x-2">
-            <span class="text-xs font-mono text-zinc-400 uppercase font-semibold">Repository Target:</span>
-            <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-blue-950/60 border border-blue-900 text-blue-300">Read-Only AST Mode</span>
-          </div>
-          <div class="flex items-center space-x-2 text-xs font-mono">
-            <button onclick="loadSampleRepo()" class="text-blue-400 hover:text-blue-300 border border-borderSubtle bg-surface px-3 py-1.5 rounded-md transition">
-              Load Demo Repo
-            </button>
-            <button onclick="inspectRepo()" id="btnInspectAST" class="text-zinc-300 hover:text-white border border-borderSubtle bg-surface px-3 py-1.5 rounded-md transition">
-              Scan Files
-            </button>
-            <span id="repoStatsBadge" class="hidden text-zinc-400 text-xs px-2.5 py-1 bg-surface rounded-md border border-borderSubtle">
-              0 files scanned
-            </span>
+      <!-- Codebase scan row (code mode only) -->
+      <div id="codeTargetSection" class="hidden space-y-3 subpanel p-4">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <span class="label is-inline">Repository to scan (read only, nothing is edited)</span>
+          <div class="flex items-center gap-2">
+            <button onclick="loadSampleRepo()" class="chip">Load demo project</button>
+            <button onclick="inspectRepo()" id="btnInspectAST" class="chip">Scan files</button>
+            <span id="repoStatsBadge" class="hidden text-xs text-zinc-500">0 files scanned</span>
           </div>
         </div>
 
-        <div class="flex items-center space-x-3 bg-surface p-2.5 rounded-md border border-borderSubtle">
+        <div class="flex items-center gap-3 bg-canvas/70 p-2.5 rounded-md border border-borderSubtle">
           <svg class="w-4 h-4 text-zinc-500 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
           </svg>
@@ -332,51 +435,37 @@
         </div>
       </div>
 
-      <!-- Main Input Textarea -->
+      <!-- Main input -->
       <div class="space-y-2">
         <div class="flex items-center justify-between text-xs">
-          <label id="inputLabel" class="font-semibold text-zinc-200">Describe your startup or project idea:</label>
-          <span class="text-zinc-500 text-[11px]">Type freely or pick a sample below</span>
+          <label id="inputLabel" class="font-semibold text-zinc-200">Describe your startup or project idea</label>
+          <span class="text-zinc-500 text-[11px]">Write it in your own words, or pick a sample below</span>
         </div>
-        <textarea id="mainPrompt" rows="4" placeholder="What problem are you solving? Who is it for? What is your solution..." class="w-full bg-canvas/90 border border-borderSubtle focus:border-blue-500 rounded-lg p-4 text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none resize-none leading-relaxed"></textarea>
-        <p id="inputErrorHint" class="hidden text-xs font-mono text-rose-300"></p>
+        <textarea id="mainPrompt" rows="4" placeholder="What problem are you solving? Who is it for? What is your solution..." class="w-full bg-canvas/70 border border-borderSubtle focus:border-blue-500 rounded-lg p-4 text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none resize-none leading-relaxed"></textarea>
+        <p id="inputErrorHint" class="hidden text-xs text-rose-300"></p>
       </div>
 
-      <!-- Action Row: Starter Presets + Run Button -->
-      <div class="flex flex-wrap items-center justify-between gap-4 pt-1">
-        
-        <!-- Starter Chips -->
+      <!-- Samples + submit -->
+      <div class="flex flex-wrap items-center justify-between gap-4">
+
         <div class="flex flex-wrap items-center gap-2">
-          <span class="text-xs text-zinc-500">Quick sample:</span>
-          
+          <span class="text-xs text-zinc-500">Try an example:</span>
+
           <div id="ideaChips" class="flex flex-wrap items-center gap-2">
-            <button onclick="setPrompt('iot')" class="text-xs text-zinc-400 hover:text-white border border-borderSubtle hover:border-zinc-600 bg-canvas/80 px-3 py-1.5 rounded-md transition">
-              IoT Energy Spike Monitor
-            </button>
-            <button onclick="setPrompt('peer')" class="text-xs text-zinc-400 hover:text-white border border-borderSubtle hover:border-zinc-600 bg-canvas/80 px-3 py-1.5 rounded-md transition">
-              AI Student Code Reviewer
-            </button>
-            <button onclick="setPrompt('water')" class="text-xs text-zinc-400 hover:text-white border border-borderSubtle hover:border-zinc-600 bg-canvas/80 px-3 py-1.5 rounded-md transition">
-              Smart Water Meter
-            </button>
+            <button onclick="setPrompt('iot')" class="chip">IoT Energy Spike Monitor</button>
+            <button onclick="setPrompt('peer')" class="chip">AI Student Code Reviewer</button>
+            <button onclick="setPrompt('water')" class="chip">Smart Water Meter</button>
           </div>
 
           <div id="codeChips" class="hidden flex flex-wrap items-center gap-2">
-            <button onclick="setPrompt('token_err')" class="text-xs text-zinc-400 hover:text-white border border-borderSubtle hover:border-zinc-600 bg-canvas/80 px-3 py-1.5 rounded-md transition">
-              Token Expired Bug
-            </button>
-            <button onclick="setPrompt('auth_flow')" class="text-xs text-zinc-400 hover:text-white border border-borderSubtle hover:border-zinc-600 bg-canvas/80 px-3 py-1.5 rounded-md transition">
-              Order Auth Flow
-            </button>
-            <button onclick="setPrompt('blast')" class="text-xs text-zinc-400 hover:text-white border border-borderSubtle hover:border-zinc-600 bg-canvas/80 px-3 py-1.5 rounded-md transition">
-              Blast Radius Check
-            </button>
+            <button onclick="setPrompt('token_err')" class="chip">Token Expired Bug</button>
+            <button onclick="setPrompt('auth_flow')" class="chip">Order Auth Flow</button>
+            <button onclick="setPrompt('blast')" class="chip">Blast Radius Check</button>
           </div>
         </div>
 
-        <!-- Submit Button -->
-        <button id="btnRun" onclick="executeWorkflow()" aria-label="Run the multi-agent pipeline" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs px-6 py-3 rounded-lg flex items-center space-x-2">
-          <span id="btnRunText">Run Multi-Agent Pipeline (4 Agents)</span>
+        <button id="btnRun" onclick="executeWorkflow()" aria-label="Run the four-agent review" class="btn btn-primary ml-auto">
+          <span id="btnRunText">Run the 4-agent review</span>
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
           </svg>
@@ -386,30 +475,30 @@
 
     </section>
 
-    <!-- BEHIND THE SCENES: HOW THE AGENTS WORKED (Sequential Timeline with Shimmer Loader) -->
-    <section class="bg-surface/40 border border-borderSubtle/80 rounded-lg p-6 sm:p-8 space-y-6">
-      
-      <div class="flex flex-wrap items-center justify-between gap-4 border-b border-borderSubtle/60 pb-4">
+    <!-- EXECUTION STEPS -->
+    <section class="panel p-6 sm:p-8 space-y-6">
+
+      <div class="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h2 class="text-base sm:text-lg font-bold text-white tracking-tight">Agent Execution Steps</h2>
-          <p class="text-xs text-zinc-400 mt-0.5">Watch the multi-agent team analyze your input step by step.</p>
+          <h2 class="section-title">How the review works</h2>
+          <p class="section-sub">Four agents read your input one after another. Each step is shown as soon as it finishes.</p>
         </div>
-        <div class="text-xs font-mono text-zinc-400 bg-canvas px-3 py-1.5 rounded-md border border-borderSubtle">
+        <div class="text-xs text-zinc-400 pt-1">
           Status: <span id="pipelineStatusText" class="text-zinc-200 font-semibold">Ready</span>
           <span id="pipelineTimer" class="ml-2 text-zinc-500"></span>
         </div>
       </div>
 
-      <!-- Quick Progress Strip (4 Core Evaluation 1 Agents) -->
+      <!-- Progress strip (one card per agent) -->
       <div id="agentNodesStrip" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
 
-      <!-- Detailed Agent Storyboard (Revealed sequentially with pause and loader) -->
+      <!-- Detailed storyboard (revealed one step at a time) -->
       <div id="agentStepsDetail" class="space-y-4 pt-2"></div>
 
-      <!-- Expandable Raw Logs Toggle -->
-      <div id="traceAccordion" class="hidden pt-2 border-t border-borderSubtle/60">
-        <button onclick="toggleTraceLog()" class="text-xs font-mono text-zinc-400 hover:text-white flex items-center space-x-1">
-          <span id="traceLogCount">View raw timestamp records</span>
+      <!-- Timing log -->
+      <div id="traceAccordion" class="hidden pt-2 rule">
+        <button onclick="toggleTraceLog()" class="text-xs text-zinc-400 hover:text-white flex items-center gap-1.5">
+          <span id="traceLogCount">Show timing log</span>
           <svg id="traceChevron" class="w-3.5 h-3.5 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
           </svg>
@@ -419,30 +508,26 @@
 
     </section>
 
-    <!-- FULL PROJECT BREAKDOWN -->
+    <!-- FULL REPORT -->
     <section id="outputArea" class="hidden space-y-12">
 
-      <!-- Metrics Strip -->
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div class="bg-surface/50 border border-borderSubtle p-5 rounded-lg space-y-1 relative overflow-hidden">
-          <div class="absolute left-0 top-0 bottom-0 w-0.5 bg-emerald-500/70"></div>
-          <div class="text-[11px] font-mono text-zinc-500 uppercase">Fact Verification</div>
-          <div id="kpiGrounding" class="text-base font-bold text-emerald-400">100% Grounded</div>
+      <!-- Summary strip -->
+      <div class="panel grid grid-cols-2 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-borderSubtle">
+        <div class="p-5 space-y-1">
+          <div class="label">Overall score</div>
+          <div id="kpiTrack" class="text-lg font-semibold text-white">Pending</div>
         </div>
-        <div class="bg-surface/50 border border-borderSubtle p-5 rounded-lg space-y-1 relative overflow-hidden">
-          <div class="absolute left-0 top-0 bottom-0 w-0.5 bg-blue-500/70"></div>
-          <div class="text-[11px] font-mono text-zinc-500 uppercase">Response Time</div>
-          <div id="kpiLatency" class="text-base font-bold text-white">0ms</div>
+        <div class="p-5 space-y-1">
+          <div class="label">Time taken</div>
+          <div id="kpiLatency" class="text-lg font-semibold text-white">0 seconds</div>
         </div>
-        <div class="bg-surface/50 border border-borderSubtle p-5 rounded-lg space-y-1 relative overflow-hidden">
-          <div class="absolute left-0 top-0 bottom-0 w-0.5 bg-cyan-500/70"></div>
-          <div class="text-[11px] font-mono text-zinc-500 uppercase">Feasibility Rating</div>
-          <div id="kpiTrack" class="text-base font-bold text-cyan-300">Idea Track</div>
+        <div class="p-5 space-y-1">
+          <div class="label">Agents that ran</div>
+          <div id="kpiRevisions" class="text-lg font-semibold text-white">4 of 4</div>
         </div>
-        <div class="bg-surface/50 border border-borderSubtle p-5 rounded-lg space-y-1 relative overflow-hidden">
-          <div class="absolute left-0 top-0 bottom-0 w-0.5 bg-violet-500/70"></div>
-          <div class="text-[11px] font-mono text-zinc-500 uppercase">Self-Correction</div>
-          <div id="kpiRevisions" class="text-base font-bold text-white">0 Retries Needed</div>
+        <div class="p-5 space-y-1">
+          <div class="label">Diagrams produced</div>
+          <div id="kpiGrounding" class="text-lg font-semibold text-white">3</div>
         </div>
       </div>
 
@@ -450,88 +535,81 @@
       <div id="ideaView" class="space-y-12">
         
         <!-- Executive Briefing Header -->
-        <div class="bg-surface/60 border border-borderSubtle p-8 sm:p-10 rounded-lg space-y-6">
+        <div class="panel p-8 sm:p-10 space-y-6">
           <div class="flex flex-wrap items-start justify-between gap-4 border-b border-borderSubtle pb-6">
             <div class="space-y-1">
-              <span class="text-xs font-mono text-blue-400 uppercase tracking-wider font-semibold">Project Overview</span>
-              <h2 id="ideaProjectTitle" class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight"></h2>
+              <span class="label is-accent">Project overview</span>
+              <h2 id="ideaProjectTitle" class="text-2xl sm:text-3xl font-semibold text-white tracking-tight"></h2>
             </div>
-            <span class="text-xs font-mono text-zinc-400 border border-borderSubtle px-3 py-1.5 rounded-md bg-canvas">
-              Project Brief
-            </span>
           </div>
 
           <div class="space-y-2">
-            <span class="text-xs font-mono text-zinc-400 uppercase font-semibold">Problem Statement</span>
+            <span class="label">Problem Statement</span>
             <p id="ideaProblemStatement" class="text-sm sm:text-base text-zinc-200 leading-relaxed"></p>
           </div>
 
-          <div class="pt-4 border-t border-borderSubtle/60">
-            <span class="text-xs font-mono text-zinc-400 uppercase font-semibold">Core Value Proposition:</span>
-            <span id="ideaCoreValue" class="text-sm sm:text-base text-white font-medium ml-2"></span>
+          <div class="rule pt-4">
+            <span class="label">Why this idea is worth building</span>
+            <p id="ideaCoreValue" class="text-sm sm:text-base text-white font-medium"></p>
           </div>
         </div>
 
         <!-- 1. FEASIBILITY SCORECARD -->
-        <div class="bg-surface/60 border border-borderSubtle p-8 sm:p-10 rounded-lg space-y-6">
+        <div class="panel p-8 sm:p-10 space-y-6">
           <div class="flex flex-wrap items-start justify-between gap-4 border-b border-borderSubtle pb-4">
             <div>
-              <span class="text-xs font-mono text-blue-400 uppercase tracking-wider font-semibold">Evaluation</span>
+              <span class="label is-accent">Evaluation</span>
               <h3 class="text-xl font-bold text-white mt-1">Feasibility Scorecard</h3>
             </div>
             <div class="flex items-center space-x-3">
-              <div id="scScoreNum" class="text-2xl font-extrabold font-mono text-white">0/100</div>
-              <span id="scVerdictBadge" class="px-3 py-1 rounded-md text-xs font-mono font-bold uppercase bg-emerald-950/60 border border-emerald-800 text-emerald-300">
-                GO
-              </span>
+              <div id="scScoreNum" class="text-2xl font-semibold text-white">0/100</div>
+              <span id="scVerdictBadge" class="tag good">GO</span>
             </div>
           </div>
 
           <!-- Scorecard Note -->
-          <div class="p-3.5 rounded-md bg-canvas border border-borderSubtle flex items-center space-x-3">
+          <div class="subpanel p-3.5 flex items-center gap-3">
             <svg class="w-4 h-4 text-zinc-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
             <p id="scDisclaimerText" class="text-xs text-zinc-400"></p>
           </div>
 
-          <p id="scVerdictSummary" class="text-sm text-zinc-200 leading-relaxed italic"></p>
+          <p id="scVerdictSummary" class="text-sm text-zinc-200 leading-relaxed"></p>
 
           <!-- 7-Category Breakdown Table -->
           <div class="space-y-2 pt-2">
-            <span class="text-xs font-mono text-zinc-400 uppercase font-semibold">Score Breakdown:</span>
-            <div class="bg-surface/50 border border-borderSubtle rounded-lg overflow-hidden divide-y divide-borderSubtle" id="scCategoriesContainer"></div>
+            <span class="label">Score Breakdown:</span>
+            <div class="subpanel overflow-hidden divide-y divide-borderSubtle" id="scCategoriesContainer"></div>
           </div>
 
           <!-- Strengths & Key Risks Tags -->
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 border-t border-borderSubtle/60">
             <div class="space-y-2">
-              <span class="text-xs font-mono uppercase text-emerald-400 font-semibold">Key Strengths:</span>
+              <span class="label is-good">Key Strengths:</span>
               <div id="scStrengthsContainer" class="flex flex-wrap gap-2"></div>
             </div>
             <div class="space-y-2">
-              <span class="text-xs font-mono uppercase text-amber-400 font-semibold">Key Risks:</span>
+              <span class="label is-warn">Key Risks:</span>
               <div id="scRisksContainer" class="flex flex-wrap gap-2"></div>
             </div>
           </div>
         </div>
 
         <!-- 2. RISKS & FINAL VERDICT -->
-        <div class="bg-surface/60 border border-borderSubtle p-8 sm:p-10 rounded-lg space-y-6">
+        <div class="panel p-8 sm:p-10 space-y-6">
           <div class="border-b border-borderSubtle pb-4 flex flex-wrap items-center justify-between gap-2">
             <div>
-              <span class="text-xs font-mono text-red-400 uppercase tracking-wider font-semibold">Risk Analysis</span>
+              <span class="label is-risk">Risk Analysis</span>
               <h3 class="text-xl font-bold text-white mt-1">Risks & Final Verdict</h3>
             </div>
-            <span id="recVerdictBadge" class="text-xs font-mono px-3 py-1 rounded-md bg-canvas border border-borderSubtle text-zinc-300">
-              Verdict Pending
-            </span>
+            <span id="recVerdictBadge" class="tag">Verdict pending</span>
           </div>
 
           <!-- Bear Case Alert -->
-          <div class="p-6 rounded-lg bg-red-950/20 border border-red-900/50 space-y-2">
+          <div class="callout callout-risk space-y-2">
             <div class="flex items-center justify-between">
-              <span class="text-xs font-mono font-bold text-red-400 uppercase tracking-wider">Worst-Case Scenario</span>
+              <span class="label is-risk">Worst-Case Scenario</span>
               <span class="text-xs text-zinc-400">Why this idea might struggle</span>
             </div>
             <p id="killBearCaseSummary" class="text-sm text-zinc-200 leading-relaxed"></p>
@@ -539,31 +617,31 @@
 
           <!-- Fatal Flaws Cards -->
           <div class="space-y-3">
-            <span class="text-xs font-mono text-zinc-400 uppercase font-semibold">Identified Fatal Flaws:</span>
+            <span class="label">Identified Fatal Flaws:</span>
             <div id="fatalFlawsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
           </div>
 
           <!-- Incumbent Threats List -->
           <div class="space-y-2 pt-2">
-            <span class="text-xs font-mono text-zinc-400 uppercase font-semibold">Competitor & Replication Threats:</span>
+            <span class="label">Competitor & Replication Threats:</span>
             <ul id="incumbentThreatsContainer" class="list-disc list-inside space-y-1.5 pl-2"></ul>
           </div>
 
           <!-- Balanced Reconciliation Box -->
-          <div class="p-6 rounded-lg bg-canvas/80 border border-blue-900/50 space-y-4">
+          <div class="callout callout-note space-y-4">
             <div class="border-b border-borderSubtle/60 pb-3 flex items-center justify-between">
-              <span class="text-xs font-mono font-bold text-blue-400 uppercase tracking-wider">Balanced Final Verdict</span>
-              <span class="text-xs text-zinc-500 font-mono">Pros & Cons</span>
+              <span class="label is-accent">Balanced Final Verdict</span>
+              <span class="text-xs text-zinc-500">Pros and cons</span>
             </div>
             <p id="recSynthesisRationale" class="text-sm text-zinc-200 leading-relaxed"></p>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
               <div class="space-y-1.5">
-                <span class="text-[11px] font-mono text-emerald-400 uppercase font-semibold">Must-Have Steps to Succeed:</span>
+                <span class="label is-good">Must-Have Steps to Succeed:</span>
                 <ul id="recPreconditionsContainer" class="list-disc list-inside space-y-1 pl-2"></ul>
               </div>
               <div class="space-y-1.5">
-                <span class="text-[11px] font-mono text-amber-400 uppercase font-semibold">Key Tradeoffs:</span>
+                <span class="label is-warn">Key Tradeoffs:</span>
                 <ul id="recTradeoffsContainer" class="list-disc list-inside space-y-1 pl-2"></ul>
               </div>
             </div>
@@ -571,70 +649,58 @@
         </div>
 
         <!-- 3. PRODUCT REQUIREMENTS & ARCHITECTURE -->
-        <div class="bg-surface/60 border border-borderSubtle p-8 sm:p-10 rounded-lg space-y-6">
+        <div class="panel p-8 sm:p-10 space-y-6">
           <div class="border-b border-borderSubtle pb-4 flex flex-wrap items-center justify-between gap-2">
             <div>
-              <span class="text-xs font-mono text-blue-400 uppercase tracking-wider font-semibold">Product Plan</span>
-              <h3 class="text-xl font-bold text-white mt-1">Product Requirements & Architecture</h3>
+              <span class="label is-accent">Product plan</span>
+              <h3 class="text-xl font-bold text-white mt-1">Product requirements and architecture</h3>
             </div>
-            <span class="text-xs font-mono text-zinc-400 border border-borderSubtle px-3 py-1 rounded-md bg-canvas">
-              User Stories & Mermaid
-            </span>
           </div>
 
           <!-- Product Vision & Audience -->
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div class="bg-surface/50 border border-borderSubtle p-5 rounded-lg space-y-1">
-              <span class="text-[11px] font-mono text-zinc-400 uppercase font-semibold">Product Vision</span>
+            <div class="subpanel p-5 space-y-1">
+              <span class="label">Product Vision</span>
               <p id="prdVisionText" class="text-xs sm:text-sm text-zinc-200 leading-relaxed"></p>
             </div>
-            <div class="bg-surface/50 border border-borderSubtle p-5 rounded-lg space-y-1">
-              <span class="text-[11px] font-mono text-zinc-400 uppercase font-semibold">Target Audience Profile</span>
+            <div class="subpanel p-5 space-y-1">
+              <span class="label">Target Audience Profile</span>
               <p id="prdAudienceText" class="text-xs sm:text-sm text-zinc-200 leading-relaxed"></p>
             </div>
           </div>
 
           <!-- User Stories -->
           <div class="space-y-3 pt-2">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-mono text-zinc-400 uppercase font-semibold">Formal User Stories (with Acceptance Criteria):</span>
-              <span class="text-xs text-zinc-500 font-mono">Agile Epics</span>
-            </div>
+<span class="label">User stories, with acceptance criteria</span>
             <div id="userStoriesContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
           </div>
 
           <!-- Functional Requirements Table -->
           <div class="space-y-3 pt-2">
-            <span class="text-xs font-mono text-zinc-400 uppercase font-semibold">Functional Requirements Matrix:</span>
-            <div class="bg-surface/50 border border-borderSubtle rounded-lg overflow-hidden divide-y divide-borderSubtle" id="functionalReqsContainer"></div>
+            <span class="label">Functional requirements</span>
+            <div class="subpanel overflow-hidden divide-y divide-borderSubtle" id="functionalReqsContainer"></div>
           </div>
 
           <!-- Non-Functional Requirements Grid -->
           <div class="space-y-2 pt-2">
-            <span class="text-xs font-mono text-zinc-400 uppercase font-semibold">Non-Functional Requirements:</span>
+            <span class="label">Non-functional requirements</span>
             <div id="nonFunctionalReqsContainer" class="grid grid-cols-2 sm:grid-cols-4 gap-3"></div>
           </div>
 
           <!-- Interactive Mermaid Architecture Models -->
           <div class="space-y-3 pt-4 border-t border-borderSubtle/60">
             <div class="flex flex-wrap items-center justify-between gap-3">
-              <span class="text-xs font-mono text-zinc-300 uppercase font-semibold">Architectural Models (Mermaid.js):</span>
-              <div class="flex items-center border-b border-borderSubtle w-full sm:w-auto">
-                <button id="tabMermaid_architecture" onclick="switchMermaidTab('architecture')" class="px-3.5 py-2 text-xs font-semibold text-white border-b-2 border-blue-500 -mb-px">
-                  System Architecture
-                </button>
-                <button id="tabMermaid_component" onclick="switchMermaidTab('component')" class="px-3.5 py-2 text-xs font-semibold text-zinc-400 hover:text-white border-b-2 border-transparent -mb-px">
-                  Component Topology
-                </button>
-                <button id="tabMermaid_dataflow" onclick="switchMermaidTab('dataflow')" class="px-3.5 py-2 text-xs font-semibold text-zinc-400 hover:text-white border-b-2 border-transparent -mb-px">
-                  Dataflow Sequence
-                </button>
+              <span class="label">Architectural Models (Mermaid.js):</span>
+              <div class="tabs w-full sm:w-auto">
+                <button id="tabMermaid_architecture" onclick="switchMermaidTab('architecture')" class="tab is-active">System architecture</button>
+                <button id="tabMermaid_component" onclick="switchMermaidTab('component')" class="tab">Component map</button>
+                <button id="tabMermaid_dataflow" onclick="switchMermaidTab('dataflow')" class="tab">Data flow</button>
               </div>
             </div>
 
             <!-- Mermaid Render Container -->
-            <div id="mermaidContainer" class="bg-canvas/90 border border-borderSubtle rounded-lg p-4 min-h-[160px] flex items-center justify-center">
-              <span class="text-xs font-mono text-zinc-500">Diagram will render upon completion.</span>
+            <div id="mermaidContainer" class="subpanel p-4 min-h-[160px] flex items-center justify-center">
+              <span class="text-xs text-zinc-500">The diagram appears here once the review finishes.</span>
             </div>
           </div>
         </div>
@@ -652,9 +718,9 @@
         <div class="space-y-4">
           <div class="border-b border-borderSubtle pb-3 flex items-baseline justify-between">
             <h3 class="text-base sm:text-lg font-bold text-white">Competitors & Market Research</h3>
-            <span class="text-xs text-zinc-500">Live search references & differentiators</span>
+            <span class="text-xs text-zinc-500">Who else solves this, and how we differ</span>
           </div>
-          <div class="bg-surface/50 border border-borderSubtle rounded-lg overflow-hidden">
+          <div class="subpanel overflow-hidden">
             <div id="competitorsContainer" class="divide-y divide-borderSubtle"></div>
           </div>
         </div>
@@ -663,9 +729,9 @@
         <div class="space-y-4">
           <div class="border-b border-borderSubtle pb-3 flex items-baseline justify-between">
             <h3 class="text-base sm:text-lg font-bold text-white">Recommended Tech Stack</h3>
-            <span class="text-xs text-zinc-500">Production choices & engineering tradeoffs</span>
+            <span class="text-xs text-zinc-500">What we would use in production, and why</span>
           </div>
-          <div class="bg-surface/50 border border-borderSubtle rounded-lg overflow-hidden">
+          <div class="subpanel overflow-hidden">
             <div id="techStackContainer" class="divide-y divide-borderSubtle"></div>
           </div>
         </div>
@@ -674,7 +740,7 @@
         <div class="space-y-5">
           <div class="border-b border-borderSubtle pb-3 flex items-baseline justify-between">
             <h3 class="text-base sm:text-lg font-bold text-white">Development Roadmap & Major Risks</h3>
-            <span class="text-xs text-zinc-500">Timeline & failure stress-test</span>
+            <span class="text-xs text-zinc-500">Timeline, and what could go wrong</span>
           </div>
 
           <!-- Milestone Roadmap -->
@@ -682,18 +748,18 @@
 
           <!-- Technical Risks Table -->
           <div class="space-y-2 pt-2">
-            <span class="text-xs font-mono text-zinc-400 uppercase font-semibold">Identified Vulnerabilities & Mitigations</span>
-            <div class="bg-surface/50 border border-borderSubtle rounded-lg overflow-hidden">
+            <span class="label">Identified Vulnerabilities & Mitigations</span>
+            <div class="subpanel overflow-hidden">
               <div id="risksContainer" class="divide-y divide-borderSubtle"></div>
             </div>
           </div>
         </div>
 
         <!-- 8. Strategic Implementation Takeaways -->
-        <div class="bg-surface/60 border border-borderSubtle p-8 rounded-lg space-y-3">
+        <div class="panel p-8 space-y-3">
           <div class="flex items-center justify-between border-b border-borderSubtle pb-3">
-            <h3 class="text-sm font-bold text-white uppercase tracking-wider font-mono">Strategic Implementation Takeaways</h3>
-            <span class="text-xs font-mono text-zinc-500">Key guidelines for deployment and technical evaluation</span>
+            <h3 class="section-title">What to do next</h3>
+            <span class="text-xs text-zinc-500">Practical steps before you build</span>
           </div>
           <ul id="evalTipsContainer" class="list-disc list-inside text-sm text-zinc-200 space-y-2 leading-relaxed pt-1"></ul>
         </div>
@@ -702,19 +768,15 @@
 
       <!-- CODEBASE ANALYSIS VIEW (Task 9.2 Educational Comparison & Read-Only Guidance) -->
       <div id="codeView" class="space-y-8 hidden">
-        <div class="bg-surface/60 border border-borderSubtle p-8 rounded-lg space-y-4">
+        <div class="panel p-8 space-y-4">
           <div class="flex flex-wrap items-center justify-between gap-3 border-b border-borderSubtle pb-4">
             <div>
               <h3 class="text-xl font-bold text-white">Codebase Diagnosis Summary</h3>
-              <p class="text-xs text-zinc-400 mt-0.5">AST-based fault localization and root-cause analysis.</p>
+              <p class="text-xs text-zinc-400 mt-0.5">Where the bug probably is, and why.</p>
             </div>
             <div class="flex items-center space-x-2">
-              <span class="text-xs font-mono font-bold px-3 py-1 rounded-md border border-blue-800 bg-blue-950/60 text-blue-300">
-                Read-Only: Hypothesis & Fix Direction (No Automated Edits)
-              </span>
-              <span id="codeCriticBadge" class="text-xs font-mono font-semibold px-3 py-1 rounded-md border border-emerald-800 bg-emerald-950/40 text-emerald-300">
-                [VERIFIED IN AST]
-              </span>
+              <span class="tag info">Read only: we suggest a fix, we never edit your files</span>
+              <span id="codeCriticBadge" class="tag good">Checked against your source</span>
             </div>
           </div>
           <p id="codeSummaryText" class="text-sm sm:text-base text-zinc-200 leading-relaxed"></p>
@@ -723,42 +785,36 @@
         <div class="space-y-5">
           <div class="border-b border-borderSubtle pb-3 flex items-baseline justify-between">
             <h3 class="text-base sm:text-lg font-bold text-white">Suspected Bugs & Suggested Fixes</h3>
-            <span class="text-xs text-zinc-500">AST symbols matched against query</span>
+            <span class="text-xs text-zinc-500">Matched against the files you scanned</span>
           </div>
           <div id="codeCandidatesContainer" class="space-y-6"></div>
         </div>
       </div>
 
       <!-- CONVERSATIONAL FOLLOW-UP -->
-      <div class="bg-surface/70 border border-borderSubtle p-8 sm:p-10 rounded-xl space-y-6 shadow-lg shadow-black/20">
+      <div class="panel p-8 sm:p-10 space-y-6">
         <div class="flex flex-wrap items-center justify-between gap-4 border-b border-borderSubtle pb-4">
           <div>
-            <div class="flex items-center space-x-2.5">
-              <h3 class="text-base sm:text-lg font-bold text-white">Project Chat</h3>
-              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-surface border border-borderSubtle text-blue-300 uppercase font-semibold">Ask an Agent</span>
-            </div>
-            <p class="text-xs text-zinc-400 mt-1 leading-relaxed">Ask any question, or target a specialist directly with <span class="font-mono text-blue-300 font-semibold">@agent</span> (e.g. <span class="font-mono text-blue-300">@kill</span>, <span class="font-mono text-blue-300">@market</span>, <span class="font-mono text-blue-300">@architect</span>).</p>
+            <h3 class="text-base sm:text-lg font-bold text-white">Ask a follow-up question</h3>
+            <p class="text-xs text-zinc-400 mt-1 leading-relaxed">Ask anything about the result, or talk to one specialist directly by starting your message with <span class="text-blue-300 font-semibold">@kill</span>, <span class="text-blue-300 font-semibold">@market</span> or <span class="text-blue-300 font-semibold">@architect</span>.</p>
           </div>
-          <span class="text-xs font-mono text-zinc-400 border border-borderSubtle px-2.5 py-1 rounded bg-canvas">
-            Session Active
-          </span>
         </div>
 
         <!-- Direct Agent Chips -->
         <div class="flex flex-wrap items-center gap-2">
-          <span class="text-xs text-zinc-500 font-medium shrink-0">Agents:</span>
+          <span class="text-xs text-zinc-500 font-medium shrink-0">Talk to one agent:</span>
           <div id="directAgentChips" class="flex flex-wrap items-center gap-2"></div>
         </div>
 
         <!-- Conversation Stream -->
         <div id="followupThread" class="space-y-4"></div>
-        <div id="followupEmptyState" class="fade-soft border border-dashed border-borderSubtle rounded-lg p-6 text-center">
+        <div id="followupEmptyState" class="fade-soft subpanel p-6 text-center">
           <p class="text-xs text-zinc-500 leading-relaxed">No questions yet. Ask anything about the validated idea, or address a specialist directly by typing <span class="font-mono text-blue-300">@</span> in the input below.</p>
         </div>
 
         <!-- Quick Prompts with Dynamic Specialist Routing -->
         <div class="flex flex-wrap items-center gap-2 pt-1">
-          <span class="text-xs text-zinc-500 font-medium">Quick ask:</span>
+          <span class="text-xs text-zinc-500 font-medium">Common questions:</span>
           <div id="followupQuickChips" class="flex flex-wrap items-center gap-2"></div>
         </div>
 
@@ -774,7 +830,7 @@
               <kbd class="px-1.5 py-0.5 rounded bg-surface border border-borderSubtle text-zinc-400 text-[10px]">Shift + Enter</kbd>
               <span>for new line</span>
             </span>
-            <button id="btnSendFollowup" onclick="sendFollowup()" aria-label="Send follow-up question" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs px-5 py-2.5 rounded-md flex items-center space-x-2">
+            <button id="btnSendFollowup" onclick="sendFollowup()" aria-label="Send follow-up question" class="btn btn-primary py-2.5">
               <span id="btnFollowupText">Send</span>
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
@@ -789,9 +845,9 @@
   </main>
 
   <footer class="border-t border-borderSubtle/70">
-    <div class="max-w-6xl mx-auto px-6 py-6 flex flex-wrap items-center justify-between gap-3 text-[11px] font-mono text-zinc-600">
-      <span>Agentic AI Co-Pilot / AST-RAG Multi-Agent System</span>
-      <span>Deterministic layer: AST parser, call graph, rubric engine, programmatic critic</span>
+    <div class="max-w-6xl mx-auto px-6 py-6 flex flex-wrap items-center justify-between gap-3 text-[11px] text-zinc-600">
+      <span>Project Review Assistant</span>
+      <span>Idea checks and code checks, with a written report you can download</span>
     </div>
   </footer>
 
@@ -809,8 +865,8 @@
         prompt: '',
         chatHtml: '',
         storyboardHtml: '',
-        statusText: 'Pipeline Ready',
-        statusClass: 'text-zinc-500 font-mono text-xs',
+        statusText: 'Ready to review',
+        statusClass: 'text-zinc-500 text-xs',
         timerText: '(0.0s)',
         hasOutput: false
       },
@@ -821,8 +877,8 @@
         prompt: '',
         chatHtml: '',
         storyboardHtml: '',
-        statusText: 'Pipeline Ready',
-        statusClass: 'text-zinc-500 font-mono text-xs',
+        statusText: 'Ready to review',
+        statusClass: 'text-zinc-500 text-xs',
         timerText: '(0.0s)',
         hasOutput: false
       }
@@ -872,11 +928,11 @@
       agents.forEach((ag, idx) => {
         const card = document.createElement('div');
         card.id = ag.id;
-        card.className = 'border border-borderSubtle bg-canvas/70 p-4 rounded-lg space-y-1.5 transition-all';
+        card.className = 'subpanel p-4 space-y-1.5';
         card.innerHTML = `
-          <div class="flex items-center justify-between text-[11px] font-mono text-zinc-500">
-            <span>Agent 0${idx + 1}</span>
-            <span class="status-badge text-zinc-600 uppercase font-semibold">Idle</span>
+          <div class="flex items-center justify-between text-[11px] text-zinc-500">
+            <span>Agent ${idx + 1} of ${agents.length}</span>
+            <span class="status-badge text-zinc-500 font-semibold">Waiting</span>
           </div>
           <div class="font-bold text-xs sm:text-sm text-zinc-100">${ag.name}</div>
           <p class="text-[11px] text-zinc-400 leading-snug">${ag.desc}</p>
@@ -903,7 +959,7 @@
 
       chips.forEach(c => {
         const btn = document.createElement('button');
-        btn.className = 'text-xs text-zinc-400 hover:text-white border border-borderSubtle hover:border-zinc-600 bg-canvas px-3 py-1.5 rounded-md transition';
+        btn.className = 'chip';
         btn.innerText = c.label;
         btn.onclick = () => setFollowupPrompt(c.prompt);
         container.appendChild(btn);
@@ -936,25 +992,25 @@
       const btnRunText = document.getElementById('btnRunText');
 
       if (mode === 'idea') {
-        btnIdea.className = 'px-5 py-2.5 rounded-md text-xs font-semibold transition bg-blue-600 text-white';
-        btnCode.className = 'px-5 py-2.5 rounded-md text-xs font-semibold transition text-zinc-400 hover:text-white';
+        btnIdea.className = 'tab is-active';
+        btnCode.className = 'tab';
         codeTargetSection.classList.add('hidden');
-        modeDescription.innerText = "Startup idea feasibility, market research & architecture";
+        modeDescription.innerText = "Feasibility, market research and architecture";
         ideaChips.classList.remove('hidden');
         codeChips.classList.add('hidden');
-        inputLabel.innerText = "Describe your startup or project idea:";
+        inputLabel.innerText = "Describe your startup or project idea";
         mainPrompt.placeholder = "What problem are you solving? Who is it for? What is your solution...";
-        btnRunText.innerText = "Run Multi-Agent Pipeline (4 Agents)";
+        btnRunText.innerText = "Run the 4-agent review";
       } else {
-        btnCode.className = 'px-5 py-2.5 rounded-md text-xs font-semibold transition bg-blue-600 text-white';
-        btnIdea.className = 'px-5 py-2.5 rounded-md text-xs font-semibold transition text-zinc-400 hover:text-white';
+        btnCode.className = 'tab is-active';
+        btnIdea.className = 'tab';
         codeTargetSection.classList.remove('hidden');
-        modeDescription.innerText = "AST code parser, fault localization & root-cause diagnosis";
+        modeDescription.innerText = "Finds where the bug is, and why it happens";
         ideaChips.classList.add('hidden');
         codeChips.classList.remove('hidden');
-        inputLabel.innerText = "Enter error traceback or code exploration question:";
+        inputLabel.innerText = "Paste an error message, or ask about the code";
         mainPrompt.placeholder = "Paste an exception traceback or ask about code structure (e.g. ValueError in verify_token)...";
-        btnRunText.innerText = "Diagnose Codebase with AST (4 Agents)";
+        btnRunText.innerText = "Review the code (4 agents)";
       }
 
       // 3. Restore target pillar state
@@ -1040,7 +1096,7 @@
 
       btn.disabled = true;
       btn.innerText = "Scanning...";
-      badge.className = "text-blue-400 text-xs px-2.5 py-1 bg-surface rounded-md border border-blue-900/60 font-mono";
+      badge.className = "text-blue-400 text-xs px-2 py-1 bg-surface rounded border border-blue-900/60";
       badge.innerText = repoPath.startsWith('http') ? "Cloning GitHub repo & indexing AST..." : "Scanning AST...";
       badge.classList.remove('hidden');
 
@@ -1055,14 +1111,14 @@
           const filesCount = data.summary ? data.summary.total_files : 0;
           const chunksCount = data.summary ? data.summary.total_chunks : 0;
           const label = data.is_remote ? `GitHub: ${data.repo_name || 'Cloned'}` : 'Local';
-          badge.className = "text-emerald-400 text-xs px-2.5 py-1 bg-surface rounded-md border border-emerald-900/60 font-mono";
+          badge.className = "text-emerald-400 text-xs px-2 py-1 bg-surface rounded border border-emerald-900/60";
           badge.innerText = `${filesCount} files, ${chunksCount} functions scanned (${label})`;
         } else {
-          badge.className = "text-rose-400 text-xs px-2.5 py-1 bg-surface rounded-md border border-rose-900/60 font-mono";
+          badge.className = "text-rose-400 text-xs px-2 py-1 bg-surface rounded border border-rose-900/60";
           badge.innerText = data.message || "Failed to scan repository.";
         }
       } catch (e) {
-        badge.className = "text-rose-400 text-xs px-2.5 py-1 bg-surface rounded-md border border-rose-900/60 font-mono";
+        badge.className = "text-rose-400 text-xs px-2 py-1 bg-surface rounded border border-rose-900/60";
         badge.innerText = "Connection error while scanning repo.";
       } finally {
         btn.disabled = false;
@@ -1077,17 +1133,17 @@
       if (statusSpan) statusSpan.innerText = statusText;
 
       if (isError) {
-        node.className = "border border-rose-500 bg-rose-950/40 p-3.5 rounded-lg space-y-1 transition-all";
-        if (statusSpan) statusSpan.className = "status-badge text-rose-400 uppercase font-bold text-[11px]";
+        node.className = "subpanel p-3.5 space-y-1 border-l-2 border-l-rose-500";
+        if (statusSpan) statusSpan.className = "status-badge text-rose-400 font-semibold text-[11px]";
       } else if (isActive) {
-        node.className = "border border-blue-500 bg-blue-950/40 p-3.5 rounded-lg space-y-1 transition-all";
-        if (statusSpan) statusSpan.className = "status-badge text-blue-400 uppercase font-bold text-[11px]";
+        node.className = "subpanel p-3.5 space-y-1 border-l-2 border-l-blue-500";
+        if (statusSpan) statusSpan.className = "status-badge text-blue-400 font-semibold text-[11px]";
       } else if (isDone) {
-        node.className = "border border-emerald-900 bg-emerald-950/20 p-3.5 rounded-lg space-y-1 transition-all";
-        if (statusSpan) statusSpan.className = "status-badge text-emerald-400 uppercase font-bold text-[11px]";
+        node.className = "subpanel p-3.5 space-y-1 border-l-2 border-l-emerald-500";
+        if (statusSpan) statusSpan.className = "status-badge text-emerald-400 font-semibold text-[11px]";
       } else {
-        node.className = "border border-borderSubtle bg-canvas/70 p-3.5 rounded-lg space-y-1 transition-all";
-        if (statusSpan) statusSpan.className = "status-badge text-zinc-600 uppercase font-semibold text-[11px]";
+        node.className = "subpanel p-3.5 space-y-1";
+        if (statusSpan) statusSpan.className = "status-badge text-zinc-500 font-semibold text-[11px]";
       }
     }
 
@@ -1097,39 +1153,39 @@
       const findingsList = Array.isArray(d.findings) ? d.findings : [];
 
       const card = document.createElement('div');
-      card.className = 'border border-borderSubtle bg-canvas/80 p-5 sm:p-6 rounded-lg space-y-3 transition-all animate-step-reveal';
+      card.className = 'subpanel p-5 sm:p-6 space-y-3 animate-step-reveal';
 
       card.innerHTML = `
         <div class="flex flex-wrap items-center justify-between gap-2 border-b border-borderSubtle/70 pb-3">
-          <div class="flex items-center space-x-2.5">
-            <span class="text-xs font-mono font-bold text-blue-400 bg-blue-950/70 border border-blue-800/80 px-2.5 py-0.5 rounded-lg">Step 0${idx + 1}</span>
-            <h4 class="text-sm sm:text-base font-bold text-white">${escapeHtml(step.agent_name)}</h4>
+          <div class="flex items-center gap-2.5">
+            <span class="label is-inline is-accent" style="margin:0;">Step ${idx + 1}</span>
+            <h4 class="text-sm sm:text-base font-semibold text-white">${escapeHtml(step.agent_name)}</h4>
           </div>
-          <div class="flex items-center space-x-3 text-xs font-mono">
-            <span class="text-zinc-400 border border-borderSubtle bg-surface px-2.5 py-1 rounded-md">${escapeHtml(d.tool || 'Reasoning Engine')}</span>
-            <span class="text-emerald-400 font-semibold">+${step.elapsed_ms}ms</span>
+          <div class="flex items-center gap-3 text-xs">
+            <span class="tag">${escapeHtml(d.tool || 'Reasoning engine')}</span>
+            <span class="text-zinc-400">${((step.elapsed_ms || 0) / 1000).toFixed(1)} s</span>
           </div>
         </div>
 
         <div class="space-y-1">
-          <span class="text-[11px] font-mono uppercase text-zinc-500 font-semibold">Goal & Thinking:</span>
-          <p class="text-xs sm:text-sm text-zinc-300 leading-relaxed italic bg-surface/60 p-3.5 rounded-md border border-borderSubtle/50">
-            "${escapeHtml(d.thinking || step.action)}"
+          <span class="label">What it was trying to do</span>
+          <p class="text-xs sm:text-sm text-zinc-300 leading-relaxed subpanel p-3.5">
+            ${escapeHtml(d.thinking || step.action)}
           </p>
         </div>
 
         ${findingsList.length > 0 ? `
           <div class="space-y-1.5 pt-1">
-            <span class="text-[11px] font-mono uppercase text-emerald-400 font-semibold">What It Found:</span>
-            <ul class="space-y-1 text-xs sm:text-sm text-zinc-200 pl-4 list-disc marker:text-emerald-500 leading-relaxed">
+            <span class="label is-good">What it found</span>
+            <ul class="space-y-1 text-xs sm:text-sm text-zinc-200 pl-4 list-disc leading-relaxed">
               ${findingsList.map(f => `<li>${escapeHtml(f)}</li>`).join('')}
             </ul>
           </div>
         ` : ''}
 
         ${d.handoff ? `
-          <div class="pt-2 border-t border-borderSubtle/60 flex items-center space-x-2 text-xs">
-            <span class="font-mono text-[11px] uppercase text-zinc-500 font-semibold">Passed Forward:</span>
+          <div class="pt-2 rule flex items-center gap-2 text-xs">
+            <span class="label is-inline" style="margin:0;">Passed to the next step:</span>
             <span class="text-zinc-300 font-medium">${escapeHtml(d.handoff)}</span>
           </div>
         ` : ''}
@@ -1139,14 +1195,14 @@
     }
 
     function getAgentActionDescription(agentName, idx) {
-      if (agentName.includes('Decomposer') || idx === 0) return "Decomposing requirements, personas, and MVP scope...";
-      if (agentName.includes('Market')) return "Searching live competitor references and stack architecture...";
-      if (agentName.includes('Kill') || agentName.includes('Advocate')) return "Stress-testing unproven assumptions and evaluating fatal flaws...";
-      if (agentName.includes('Scorecard') || agentName.includes('Roadmap') || idx === 3) return "Evaluating deterministic 100-point rubric and delivery milestones...";
-      if (agentName.includes('AST') || agentName.includes('Indexer')) return "Parsing syntax trees and mapping call relationships...";
-      if (agentName.includes('Diagnosis')) return "Formulating root-cause hypothesis and fix direction...";
-      if (agentName.includes('Critic')) return "Executing deterministic Python AST syntax and disk checks...";
-      return "Analyzing query context and dispatching domain specialist...";
+      if (agentName.includes('Decomposer') || idx === 0) return "Reading your input and setting the scope";
+      if (agentName.includes('Market')) return "Looking up similar products and the technology to build it";
+      if (agentName.includes('Kill') || agentName.includes('Advocate')) return "Looking for the weaknesses and the ways it could fail";
+      if (agentName.includes('Scorecard') || agentName.includes('Roadmap') || idx === 3) return "Scoring the idea and planning the delivery steps";
+      if (agentName.includes('AST') || agentName.includes('Indexer')) return "Reading the files and building a map of the code";
+      if (agentName.includes('Diagnosis')) return "Working out the likely cause and how to fix it";
+      if (agentName.includes('Critic')) return "Checking every claim against your actual source files";
+      return "Reading the question and choosing the right specialist";
     }
 
     async function executeWorkflow() {
@@ -1171,19 +1227,19 @@
       const originalRunLabel = btnRunTextEl.innerText;
       btnRun.disabled = true;
       btnRun.classList.add('opacity-70', 'cursor-not-allowed');
-      btnRunTextEl.innerText = 'Agents Working...';
+      btnRunTextEl.innerText = 'The 4 agents are working';
 
       const runId = ++pillarStates[thisPillar].runId;
       pillarStates[thisPillar].isRunning = true;
       pillarStates[thisPillar].hasOutput = false;
       pillarStates[thisPillar].storyboardHtml = '';
       pillarStates[thisPillar].chatHtml = ''; // Fresh run resets follow-up chat for this pillar
-      pillarStates[thisPillar].statusText = "Running Agents...";
+      pillarStates[thisPillar].statusText = "Review in progress";
       pillarStates[thisPillar].statusClass = "text-blue-400 font-semibold";
 
       if (activePillar === thisPillar) {
         document.getElementById('followupThread').innerHTML = '';
-        document.getElementById('pipelineStatusText').innerText = "Running Agents...";
+        document.getElementById('pipelineStatusText').innerText = "Review in progress";
         document.getElementById('pipelineStatusText').className = "text-blue-400 font-semibold";
         document.getElementById('agentStepsDetail').innerHTML = '';
         document.getElementById('outputArea').classList.add('hidden');
@@ -1249,20 +1305,14 @@
           // Only touch DOM if user is currently viewing this pillar!
           if (activePillar === thisPillar) {
             setAgentNodeState(currentNodeId, 'Working...', true, false, false);
-            document.getElementById('pipelineStatusText').innerText = `Agent 0${i + 1} (${step.agent_name}) is working...`;
+            document.getElementById('pipelineStatusText').innerText = `Step ${i + 1}: ${step.agent_name} is working`;
 
             const loaderCard = document.createElement('div');
             loaderCard.id = 'activeAgentStepLoader';
-            loaderCard.className = 'border border-borderSubtle bg-surface/60 p-4 rounded-lg flex items-center space-x-3';
+            loaderCard.className = 'subpanel p-4 space-y-1 border-l-2 border-l-blue-500';
             loaderCard.innerHTML = `
-              <div class="w-8 h-8 rounded-md bg-blue-600/30 border border-blue-500 flex items-center justify-center shrink-0">
-                <svg class="w-4 h-4 text-blue-400 animate-spin" fill="none" viewBox="0 0 24 24">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
-                </svg>
-              </div>
               <div class="space-y-0.5">
-                <div class="text-xs font-mono font-bold text-blue-400 uppercase tracking-wide">Agent 0${i + 1} (${step.agent_name}) in progress</div>
+                <div class="label is-accent" style="margin-bottom:0;">Step ${i + 1} of ${currentAgents.length}: ${escapeHtml(step.agent_name)} is working</div>
                 <div class="text-xs text-zinc-300">${getAgentActionDescription(step.agent_name, i)}</div>
               </div>
             `;
@@ -1290,12 +1340,12 @@
 
         pillarStates[thisPillar].isRunning = false;
         pillarStates[thisPillar].hasOutput = true;
-        pillarStates[thisPillar].statusText = "All Agents Complete";
+        pillarStates[thisPillar].statusText = "Review complete";
         pillarStates[thisPillar].statusClass = "text-emerald-400 font-semibold";
 
         if (activePillar === thisPillar) {
           currentSessionState = state;
-          document.getElementById('pipelineStatusText').innerText = "All Agents Complete";
+          document.getElementById('pipelineStatusText').innerText = "Review complete";
           document.getElementById('pipelineStatusText').className = "text-emerald-400 font-semibold";
           document.getElementById('btnExportTop').classList.remove('hidden');
 
@@ -1329,13 +1379,13 @@
         const stoppedTimerStr = `(${elapsedSec}s - Stopped)`;
         pillarStates[thisPillar].timerText = stoppedTimerStr;
         pillarStates[thisPillar].isRunning = false;
-        pillarStates[thisPillar].statusText = "Execution Error";
+        pillarStates[thisPillar].statusText = "Stopped";
         pillarStates[thisPillar].statusClass = "text-rose-400 font-bold";
 
         if (activePillar === thisPillar) {
           document.getElementById('pipelineTimer').innerText = stoppedTimerStr;
-          document.getElementById('pipelineStatusText').innerText = "Execution Stopped: Error";
-          document.getElementById('pipelineStatusText').className = "text-rose-400 font-bold";
+          document.getElementById('pipelineStatusText').innerText = "Stopped: something went wrong";
+          document.getElementById('pipelineStatusText').className = "text-rose-400 font-semibold";
 
           // Remove any active loader
           const existingLoader = document.getElementById('activeAgentStepLoader');
@@ -1345,35 +1395,26 @@
           const currentAgents = thisPillar === 'idea' ? IDEA_AGENTS : CODE_AGENTS;
           currentAgents.forEach((ag) => {
             const nodeEl = document.getElementById(ag.id);
-            if (nodeEl && nodeEl.className.includes('border-blue-500')) {
+            if (nodeEl && nodeEl.className.includes('border-l-blue-500')) {
               setAgentNodeState(ag.id, 'Error', false, false, true);
             }
           });
 
-          // Render clear in-page visual error container
+          // Render a clear in-page error card
           const detailContainer = document.getElementById('agentStepsDetail');
           const errorCard = document.createElement('div');
-          errorCard.className = 'border border-rose-500/50 bg-rose-950/20 p-6 rounded-lg space-y-3 animate-step-reveal';
+          errorCard.className = 'callout callout-risk space-y-3 animate-step-reveal';
           errorCard.innerHTML = `
-            <div class="flex items-center space-x-3">
-              <div class="w-9 h-9 rounded-md bg-rose-600/30 border border-rose-500 flex items-center justify-center shrink-0">
-                <svg class="w-5 h-5 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-                </svg>
-              </div>
-              <div>
-                <h4 class="text-sm sm:text-base font-bold text-rose-300">Pipeline Execution Stopped</h4>
-                <p class="text-xs text-zinc-400">An issue occurred during pipeline execution. The timer has been safely stopped.</p>
-              </div>
+            <div>
+              <h4 class="text-sm sm:text-base font-semibold text-rose-300">The review stopped</h4>
+              <p class="text-xs text-zinc-400">Nothing was lost. You can run it again in a moment.</p>
             </div>
-            <div class="p-3.5 bg-canvas/90 rounded-md border border-rose-900/50 font-mono text-xs text-rose-300 break-words leading-relaxed">
+            <div class="p-3.5 bg-canvas/90 rounded-md text-xs text-rose-300 break-words leading-relaxed">
               ${escapeHtml(err.message || String(err))}
             </div>
             <div class="flex flex-wrap items-center justify-between gap-2 pt-1 text-xs text-zinc-400">
-              <span>Please wait a moment if rate-limited on free tier, then retry.</span>
-              <button onclick="executeWorkflow()" class="px-3.5 py-1.5 rounded-md text-xs font-semibold bg-rose-600/40 hover:bg-rose-600 text-white border border-rose-500/60">
-                Retry Query
-              </button>
+              <span>If the free AI limit was reached, wait about 30 seconds and try again.</span>
+              <button onclick="executeWorkflow()" class="btn btn-primary py-2">Run again</button>
             </div>
           `;
           detailContainer.appendChild(errorCard);
@@ -1396,14 +1437,14 @@
     function renderTraceLog(state) {
       const traces = state.execution_trace || [];
       document.getElementById('traceAccordion').classList.remove('hidden');
-      document.getElementById('traceLogCount').innerText = `View raw timestamp log (${traces.length} steps)`;
+      document.getElementById('traceLogCount').innerText = `Show timing log (${traces.length} steps)`;
 
       const container = document.getElementById('traceLogContainer');
       container.innerHTML = '';
 
       traces.forEach(t => {
         const row = document.createElement('div');
-        row.className = 'border-l-2 border-blue-500/50 pl-3 py-1 flex items-start justify-between text-xs font-mono';
+        row.className = 'border-l border-borderSubtle pl-3 py-1 flex items-start justify-between text-xs';
         row.innerHTML = `
           <div>
             <span class="text-white font-bold">[${escapeHtml(t.agent_name)}]</span>
@@ -1416,23 +1457,26 @@
     }
 
     function renderMetrics(state) {
-      document.getElementById('kpiLatency').innerText = `${state.total_latency_ms}ms`;
-      document.getElementById('kpiRevisions').innerText = `${state.revision_count} Retries Needed`;
-      
       const out = state.final_output || {};
+      const seconds = ((state.total_latency_ms || 0) / 1000).toFixed(1);
+
+      document.getElementById('kpiLatency').innerText = `${seconds} seconds`;
+
       if (out.feasibility_score !== undefined) {
-        document.getElementById('kpiTrack').innerText = `${out.feasibility_score}/100 Rating`;
+        document.getElementById('kpiTrack').innerText = `${out.feasibility_score} / 100`;
+      } else if (state.intent === 'codebase_analysis') {
+        document.getElementById('kpiTrack').innerText = `${(out.candidates || []).length} findings`;
       } else {
-        document.getElementById('kpiTrack').innerText = state.intent === 'idea_validation' ? 'Idea Track' : 'Codebase Track';
+        document.getElementById('kpiTrack').innerText = 'Reviewed';
       }
 
-      const critic = out.critic || {};
-      if (state.intent === 'codebase_analysis') {
-        const score = critic.grounding_score !== undefined ? `${Math.round(critic.grounding_score * 100)}% Grounded` : 'Verified';
-        document.getElementById('kpiGrounding').innerText = score;
-      } else {
-        document.getElementById('kpiGrounding').innerText = '100% Grounded';
-      }
+      const prd = out.prd || {};
+      const diagrams = ['architecture_diagram_mermaid', 'component_diagram_mermaid', 'dataflow_diagram_mermaid']
+        .filter(k => typeof prd[k] === 'string' && prd[k].trim()).length;
+      document.getElementById('kpiGrounding').innerText = diagrams > 0 ? `${diagrams} diagrams` : 'Not applicable';
+
+      const agentCount = (state.execution_trace || []).filter(t => t.details && (t.details.thinking || t.details.findings)).length;
+      document.getElementById('kpiRevisions').innerText = agentCount > 0 ? `${agentCount} agents` : '4 agents';
     }
 
     function switchMermaidTab(tab) {
@@ -1442,9 +1486,9 @@
         const btn = document.getElementById(`tabMermaid_${t}`);
         if (btn) {
           if (t === tab) {
-            btn.className = 'px-3.5 py-2 text-xs font-semibold text-white border-b-2 border-blue-500 -mb-px';
+            btn.className = 'tab is-active';
           } else {
-            btn.className = 'px-3.5 py-2 text-xs font-semibold text-zinc-400 hover:text-white border-b-2 border-transparent -mb-px';
+            btn.className = 'tab';
           }
         }
       });
@@ -1464,17 +1508,13 @@
       const container = document.getElementById(containerId);
       if (!container) return;
       if (!chartDefinition || !chartDefinition.trim()) {
-        container.innerHTML = '<div class="text-xs font-mono text-zinc-500 italic p-6 text-center">No diagram specification available.</div>';
+        container.innerHTML = '<div class="text-xs text-zinc-500 p-6 text-center">No diagram on this tab.</div>';
         return;
       }
 
       container.innerHTML = `
-        <div class="flex items-center justify-center p-8 space-x-2 text-xs font-mono text-blue-400">
-          <svg class="w-4 h-4 animate-spin text-blue-400" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
-          </svg>
-          <span>Rendering diagram model...</span>
+        <div class="flex items-center justify-center p-8 text-xs text-zinc-400">
+          <span>Drawing the diagram...</span>
         </div>
       `;
 
@@ -1484,7 +1524,7 @@
           const uniqueId = 'mermaid_diag_' + Math.random().toString(36).substring(2, 9);
           const { svg } = await mermaid.render(uniqueId, cleanChart);
           container.innerHTML = `
-            <div class="overflow-x-auto p-4 flex justify-center bg-black/40 rounded-lg border border-borderSubtle w-full">
+            <div class="overflow-x-auto p-4 flex justify-center bg-white/[0.02] rounded-lg w-full">
               ${svg}
             </div>
           `;
@@ -1496,7 +1536,7 @@
 
       // Fallback display
       container.innerHTML = `
-        <div class="p-4 bg-black/50 rounded-lg border border-borderSubtle w-full">
+        <div class="p-4 bg-white/[0.02] rounded-lg w-full">
           <div class="text-[11px] font-mono text-zinc-500 mb-2">Mermaid Definition:</div>
           <pre class="text-xs font-mono text-blue-300 overflow-x-auto leading-relaxed whitespace-pre">${escapeHtml(chartDefinition.trim())}</pre>
         </div>
@@ -1519,11 +1559,11 @@
       const verdictEl = document.getElementById('scVerdictBadge');
       verdictEl.innerText = verdictVal;
       if (verdictVal === 'GO') {
-        verdictEl.className = 'px-3 py-1 rounded-md text-xs font-mono font-bold uppercase bg-emerald-950/60 border border-emerald-800 text-emerald-300';
+        verdictEl.className = 'tag good';
       } else if (verdictVal === 'PIVOT') {
-        verdictEl.className = 'px-3 py-1 rounded-md text-xs font-mono font-bold uppercase bg-amber-950/60 border border-amber-800 text-amber-300';
+        verdictEl.className = 'tag warn';
       } else {
-        verdictEl.className = 'px-3 py-1 rounded-md text-xs font-mono font-bold uppercase bg-rose-950/60 border border-rose-800 text-rose-300';
+        verdictEl.className = 'tag risk';
       }
       document.getElementById('scDisclaimerText').innerText = disclaimerVal;
       document.getElementById('scVerdictSummary').innerText = sc.verdict_summary || 'Evaluated against the 7-category project rubric.';
@@ -1564,7 +1604,7 @@
       strengthsContainer.innerHTML = '';
       (sc.key_strengths || []).forEach(s => {
         const tag = document.createElement('span');
-        tag.className = 'text-xs font-mono px-3 py-1 rounded-md bg-emerald-950/40 border border-emerald-800/80 text-emerald-300';
+        tag.className = 'tag good';
         tag.innerText = s;
         strengthsContainer.appendChild(tag);
       });
@@ -1573,7 +1613,7 @@
       scRisksContainer.innerHTML = '';
       (sc.key_risks || []).forEach(r => {
         const tag = document.createElement('span');
-        tag.className = 'text-xs font-mono px-3 py-1 rounded-md bg-amber-950/40 border border-amber-800/80 text-amber-300';
+        tag.className = 'tag warn';
         tag.innerText = r;
         scRisksContainer.appendChild(tag);
       });
@@ -1588,22 +1628,22 @@
       fatalFlawsContainer.innerHTML = '';
       (kill.fatal_flaws || []).forEach(flaw => {
         const card = document.createElement('div');
-        card.className = 'p-4 sm:p-5 rounded-lg bg-canvas/80 border border-red-900/40 space-y-2';
+        card.className = 'subpanel p-4 sm:p-5 space-y-2';
         const sevClass = flaw.severity === 'CRITICAL'
-          ? 'bg-rose-950 text-rose-300 border-rose-800'
+          ? 'tag risk'
           : flaw.severity === 'HIGH'
-          ? 'bg-amber-950 text-amber-300 border-amber-800'
-          : 'bg-blue-950 text-blue-300 border-blue-800';
+          ? 'tag warn'
+          : 'tag info';
         card.innerHTML = `
           <div class="flex flex-wrap items-center justify-between gap-2">
             <h4 class="text-sm font-bold text-white">${escapeHtml(flaw.title)}</h4>
-            <span class="text-[10px] font-mono px-2.5 py-0.5 rounded-lg border font-bold uppercase ${sevClass}">
+            <span class="${sevClass}">
               ${escapeHtml(flaw.severity)}
             </span>
           </div>
           <p class="text-xs text-zinc-300 leading-relaxed">${escapeHtml(flaw.reason)}</p>
-          <div class="pt-1 text-[11px] font-mono text-zinc-400">
-            <span class="text-zinc-500 uppercase font-semibold">Validation Test:</span>
+          <div class="pt-1 text-[11px] text-zinc-400">
+            <span class="text-zinc-500 font-semibold">How to test it:</span>
             <span class="text-zinc-300 ml-1">${escapeHtml(flaw.mitigation_test)}</span>
           </div>
         `;
@@ -1649,7 +1689,7 @@
       userStoriesContainer.innerHTML = '';
       (prd.user_stories || []).forEach(story => {
         const card = document.createElement('div');
-        card.className = 'bg-surface/50 border border-borderSubtle p-5 rounded-lg space-y-3';
+        card.className = 'subpanel p-5 space-y-3';
         const criteriaList = (story.acceptance_criteria || []).map(c => `
           <li class="flex items-start space-x-2 text-xs text-zinc-300">
             <span class="text-blue-400 mt-0.5">✓</span>
@@ -1658,15 +1698,15 @@
         `).join('');
         card.innerHTML = `
           <div class="flex items-center justify-between border-b border-borderSubtle/60 pb-2">
-            <span class="text-xs font-mono font-bold text-blue-400 uppercase tracking-wider">${escapeHtml(story.story_id)}</span>
+            <span class="label is-accent">${escapeHtml(story.story_id)}</span>
             <span class="text-[11px] font-mono text-zinc-400">${escapeHtml(story.persona)}</span>
           </div>
           <div class="text-xs text-zinc-200 space-y-1">
-            <p><strong class="text-zinc-400 font-mono text-[11px]">WANT:</strong> ${escapeHtml(story.want)}</p>
-            <p><strong class="text-zinc-400 font-mono text-[11px]">SO THAT:</strong> ${escapeHtml(story.so_that)}</p>
+            <p><strong class="text-zinc-400 text-[11px] font-semibold">Needs:</strong> ${escapeHtml(story.want)}</p>
+            <p><strong class="text-zinc-400 text-[11px] font-semibold">Goal:</strong> ${escapeHtml(story.so_that)}</p>
           </div>
           <div class="pt-2 border-t border-borderSubtle/60 space-y-1.5">
-            <span class="text-[10px] font-mono uppercase text-emerald-400 font-semibold block">Acceptance Criteria:</span>
+            <span class="label is-good">This story is done when:</span>
             <ul class="space-y-1">${criteriaList}</ul>
           </div>
         `;
@@ -1679,17 +1719,17 @@
         const row = document.createElement('div');
         row.className = 'p-4 sm:p-5 hover:bg-surface/40 transition space-y-1.5';
         const prioClass = fr.priority === 'Must Have'
-          ? 'bg-blue-950 text-blue-300 border-blue-800'
+          ? 'tag info'
           : fr.priority === 'Should Have'
-          ? 'bg-cyan-950 text-cyan-300 border-cyan-800'
-          : 'bg-zinc-800 text-zinc-300 border-zinc-700';
+          ? 'tag'
+          : 'tag';
         row.innerHTML = `
           <div class="flex flex-wrap items-center justify-between gap-2">
             <div class="flex items-center space-x-2">
               <span class="text-xs font-mono font-bold text-blue-400">${escapeHtml(fr.req_id)}</span>
               <span class="text-xs font-bold text-white">${escapeHtml(fr.title)}</span>
             </div>
-            <span class="text-[10px] font-mono px-2.5 py-0.5 rounded-lg border font-semibold ${prioClass}">
+            <span class="${prioClass}">
               ${escapeHtml(fr.priority)}
             </span>
           </div>
@@ -1703,9 +1743,9 @@
       const nfrs = prd.non_functional_requirements || {};
       for (const [key, val] of Object.entries(nfrs)) {
         const card = document.createElement('div');
-        card.className = 'bg-surface/50 border border-borderSubtle p-4 rounded-md space-y-1';
+        card.className = 'subpanel p-4 space-y-1';
         card.innerHTML = `
-          <span class="text-[10px] font-mono uppercase text-zinc-400 font-semibold">${escapeHtml(key)}</span>
+          <span class="label">${escapeHtml(key)}</span>
           <p class="text-xs text-zinc-200 leading-relaxed">${escapeHtml(val)}</p>
         `;
         nfrContainer.appendChild(card);
@@ -1718,15 +1758,15 @@
       personasContainer.innerHTML = '';
       (out.target_personas || []).forEach(p => {
         const div = document.createElement('div');
-        div.className = 'bg-surface/50 border border-borderSubtle p-6 rounded-lg space-y-3';
+        div.className = 'subpanel p-6 space-y-3';
         div.innerHTML = `
-          <div class="text-xs font-mono font-bold text-blue-400 uppercase tracking-wider">${escapeHtml(p.persona)}</div>
+          <div class="label is-accent">${escapeHtml(p.persona)}</div>
           <div class="space-y-1">
-            <span class="text-[11px] font-mono text-zinc-500 uppercase">Core Pain Point</span>
+            <span class="label">Main problem</span>
             <p class="text-sm text-zinc-200 leading-relaxed">${escapeHtml(p.pain_point)}</p>
           </div>
           <div class="pt-2 border-t border-borderSubtle/60 space-y-1">
-            <span class="text-[11px] font-mono text-emerald-400 uppercase font-semibold">Expected Benefit</span>
+            <span class="label is-good">What they gain</span>
             <p class="text-xs text-zinc-300 leading-relaxed">${escapeHtml(p.expected_benefit)}</p>
           </div>
         `;
@@ -1742,12 +1782,12 @@
         div.innerHTML = `
           <div class="flex flex-wrap items-baseline justify-between gap-2">
             <h4 class="font-bold text-white text-sm">${escapeHtml(c.name)}</h4>
-            <span class="text-[11px] font-mono text-zinc-500">Live Search Reference</span>
+            <span class="text-[11px] text-zinc-500">Found from public sources</span>
           </div>
           <p class="text-sm text-zinc-300 leading-relaxed">${escapeHtml(c.summary || '')}</p>
           <div class="pt-1 flex items-baseline space-x-2 text-xs">
-            <span class="font-mono text-blue-400 font-semibold uppercase text-[11px]">Our Advantage:</span>
-            <span class="text-zinc-200">${escapeHtml(c.gaps || 'Tailored specifically to requirements')}</span>
+            <span class="label is-inline is-accent" style="margin:0;">How we are different:</span>
+            <span class="text-zinc-200">${escapeHtml(c.gaps || 'Built around your exact requirements')}</span>
           </div>
         `;
         compContainer.appendChild(div);
@@ -1762,18 +1802,16 @@
         div.className = 'p-5 sm:p-6 space-y-2 hover:bg-surface/40 transition';
         div.innerHTML = `
           <div class="flex flex-wrap items-center justify-between gap-2">
-            <span class="text-xs font-mono text-blue-400 uppercase font-bold tracking-wider">${escapeHtml(category)}</span>
-            <span class="text-xs font-mono font-bold text-white bg-canvas px-3 py-1 rounded-lg border border-borderSubtle">
-              ${escapeHtml(item.choice || '')}
-            </span>
+            <span class="label is-accent">${escapeHtml(category)}</span>
+            <span class="tag info">${escapeHtml(item.choice || '')}</span>
           </div>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1 text-xs sm:text-sm">
             <div>
-              <span class="text-[11px] font-mono text-zinc-500 uppercase font-semibold block">Engineering Rationale:</span>
+              <span class="label">Why this choice:</span>
               <p class="text-zinc-300 leading-relaxed mt-0.5">${escapeHtml(item.rationale || '')}</p>
             </div>
             <div>
-              <span class="text-[11px] font-mono text-amber-300 uppercase font-semibold block">Technical Tradeoff:</span>
+              <span class="label is-warn">What you give up:</span>
               <p class="text-zinc-400 leading-relaxed mt-0.5">${escapeHtml(item.tradeoffs || 'Standard operational overhead')}</p>
             </div>
           </div>
@@ -1786,27 +1824,25 @@
       roadmapContainer.innerHTML = '';
       (out.phases || []).forEach(ph => {
         const div = document.createElement('div');
-        div.className = 'bg-surface/50 border border-borderSubtle p-6 rounded-lg space-y-3';
+        div.className = 'subpanel p-6 space-y-3';
         div.innerHTML = `
           <div class="flex flex-wrap items-center justify-between gap-3 border-b border-borderSubtle/60 pb-3">
             <div>
-              <span class="text-xs font-mono text-blue-400 uppercase font-semibold tracking-wider">Milestone Step 0${ph.phase_number}</span>
+              <span class="label is-accent">Phase ${ph.phase_number}</span>
               <h4 class="font-bold text-base text-white mt-0.5">${escapeHtml(ph.phase_name)}</h4>
             </div>
-            <span class="text-xs font-mono text-zinc-300 border border-borderSubtle px-3 py-1 rounded-md bg-canvas">
-              ${escapeHtml(ph.duration_weeks)}
-            </span>
+            <span class="tag">${escapeHtml(ph.duration_weeks)}</span>
           </div>
 
           <div class="space-y-1.5">
-            <span class="text-[11px] font-mono text-zinc-400 uppercase font-semibold block">Deliverables:</span>
+            <span class="label">What gets built:</span>
             <ul class="list-disc list-inside space-y-1 text-sm text-zinc-200 leading-relaxed">
               ${(ph.deliverables || []).map(d => `<li>${escapeHtml(d)}</li>`).join('')}
             </ul>
           </div>
 
-          <div class="pt-2 border-t border-borderSubtle/60 flex items-baseline space-x-2 text-xs">
-            <span class="font-mono text-emerald-400 uppercase font-semibold text-[11px]">Exit Criteria:</span>
+          <div class="pt-2 rule flex items-baseline gap-2 text-xs">
+            <span class="label is-inline is-good" style="margin:0;">Done when:</span>
             <span class="text-zinc-200">${escapeHtml(ph.exit_criteria)}</span>
           </div>
         `;
@@ -1822,12 +1858,10 @@
         div.innerHTML = `
           <div class="flex flex-wrap items-baseline justify-between gap-2">
             <h4 class="text-sm font-bold text-white">${escapeHtml(r.risk)}</h4>
-            <span class="text-xs font-mono px-2.5 py-0.5 rounded-lg border border-borderSubtle bg-canvas text-zinc-300">
-              ${escapeHtml(r.category)} (${escapeHtml(r.severity)})
-            </span>
+            <span class="tag">${escapeHtml(r.category)}: ${escapeHtml(r.severity)}</span>
           </div>
-          <div class="flex items-baseline space-x-2 text-xs sm:text-sm">
-            <span class="font-mono text-blue-400 uppercase font-semibold text-[11px]">Mitigation:</span>
+          <div class="flex items-baseline gap-2 text-xs sm:text-sm">
+            <span class="label is-inline is-accent" style="margin:0;">How to handle it:</span>
             <span class="text-zinc-300">${escapeHtml(r.mitigation)}</span>
           </div>
         `;
@@ -1846,16 +1880,16 @@
 
     function renderCodeResults(state) {
       const out = state.final_output || {};
-      document.getElementById('codeSummaryText').innerText = out.summary || "Diagnosis complete.";
+      document.getElementById('codeSummaryText').innerText = out.summary || "Review complete.";
 
       const critic = out.critic || {};
       const badge = document.getElementById('codeCriticBadge');
       if (critic.is_valid) {
-        badge.className = 'text-xs font-mono font-semibold px-3 py-1 rounded-md border border-emerald-800 bg-emerald-950/40 text-emerald-300';
-        badge.innerText = '[VERIFIED IN AST]';
+        badge.className = 'tag good';
+        badge.innerText = 'Checked against your source';
       } else {
-        badge.className = 'text-xs font-mono font-semibold px-3 py-1 rounded-md border border-amber-800 bg-amber-950/40 text-amber-300';
-        badge.innerText = '[NEEDS REVISION]';
+        badge.className = 'tag warn';
+        badge.innerText = 'Needs a second look';
       }
 
       const container = document.getElementById('codeCandidatesContainer');
@@ -1863,7 +1897,7 @@
 
       (out.candidates || []).forEach(c => {
         const card = document.createElement('div');
-        card.className = 'border border-borderSubtle bg-surface/50 p-6 sm:p-8 rounded-lg space-y-5';
+        card.className = 'subpanel p-6 sm:p-8 space-y-5';
         
         const citationsList = Array.isArray(c.citations) && c.citations.length > 0
           ? c.citations
@@ -1872,30 +1906,26 @@
         card.innerHTML = `
           <div class="flex flex-wrap items-center justify-between gap-3 border-b border-borderSubtle pb-4">
             <div class="flex items-center space-x-3">
-              <span class="bg-blue-950 border border-blue-800 text-blue-300 px-2.5 py-1 rounded-md text-xs font-mono font-bold">#${c.rank}</span>
+              <span class="tag info">Finding ${c.rank}</span>
               <h4 class="font-mono font-bold text-base text-white">${escapeHtml(c.symbol_name)}</h4>
               <span class="text-zinc-400 text-xs font-mono">${escapeHtml(c.file_path)}:${c.line_start}-${c.line_end}</span>
             </div>
             <div class="flex items-center space-x-2">
-              <span class="font-mono text-xs text-zinc-300 border border-borderSubtle bg-canvas px-3 py-1 rounded-md">
-                Confidence: ${c.confidence ? c.confidence.toUpperCase() : 'MEDIUM'}
-              </span>
-              <span class="font-mono text-xs text-blue-400 border border-blue-900 bg-blue-950/50 px-2.5 py-1 rounded-md">
-                Read-Only Analysis
-              </span>
+              <span class="tag">Confidence: ${(c.confidence || 'medium').toLowerCase()}</span>
+              <span class="tag info">Read only</span>
             </div>
           </div>
 
           <div class="space-y-1">
-            <span class="text-[11px] font-mono text-zinc-400 uppercase font-semibold">Root Cause Hypothesis:</span>
+            <span class="label">Why this is a problem</span>
             <p class="text-sm text-zinc-200 leading-relaxed">${escapeHtml(c.why_problematic || c.root_cause_hypothesis)}</p>
           </div>
 
           <!-- Task 9.2: Side-by-Side Educational Pattern Comparison -->
           <div class="space-y-2 pt-2">
             <div class="flex items-center justify-between">
-              <span class="text-xs font-mono text-zinc-300 uppercase font-semibold">Educational Pattern Comparison:</span>
-              <span class="text-[11px] font-mono text-zinc-500">Human review required</span>
+              <span class="label">Side by side comparison</span>
+              <span class="text-[11px] text-zinc-500">Read it before you change anything</span>
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -1903,12 +1933,12 @@
               <!-- Current / Risky Implementation -->
               <div class="rounded-lg border border-red-900/50 bg-red-950/15 p-4 space-y-2.5">
                 <div class="flex items-center justify-between border-b border-red-900/40 pb-2">
-                  <span class="text-xs font-mono font-bold text-red-400 uppercase tracking-wider">Current / Risky Implementation</span>
-                  <span class="text-[11px] font-mono text-red-300/80">Lines ${c.line_start}-${c.line_end}</span>
+                  <span class="label is-risk">The code as it is now</span>
+                  <span class="text-[11px] text-red-300/80">Lines ${c.line_start}-${c.line_end}</span>
                 </div>
                 <pre class="text-xs font-mono text-red-200 overflow-x-auto leading-relaxed p-3.5 rounded-md bg-black/50 border border-red-900/30 whitespace-pre">${escapeHtml(c.wrong_code || '# Current implementation in retrieved file')}</pre>
                 <div class="pt-1 text-xs text-red-300/90 leading-relaxed">
-                  <strong class="font-mono uppercase text-[10px] text-red-400 block mb-0.5">Why It Is Problematic:</strong>
+                  <strong class="label is-inline is-risk">Why it is a problem:</strong>
                   ${escapeHtml(c.why_problematic || c.root_cause_hypothesis)}
                 </div>
               </div>
@@ -1916,12 +1946,12 @@
               <!-- Correct / Recommended Pattern -->
               <div class="rounded-lg border border-emerald-900/50 bg-emerald-950/15 p-4 space-y-2.5">
                 <div class="flex items-center justify-between border-b border-emerald-900/40 pb-2">
-                  <span class="text-xs font-mono font-bold text-emerald-400 uppercase tracking-wider">Correct / Recommended Pattern</span>
-                  <span class="text-[11px] font-mono text-emerald-300/80">Educational Guidance</span>
+                  <span class="label is-good">The code we suggest</span>
+                  <span class="text-[11px] text-emerald-300/80">Suggested fix</span>
                 </div>
                 <pre class="text-xs font-mono text-emerald-200 overflow-x-auto leading-relaxed p-3.5 rounded-md bg-black/50 border border-emerald-900/30 whitespace-pre">${escapeHtml(c.recommended_pattern || c.correct_code || '# Recommended fix direction')}</pre>
                 <div class="pt-1 text-xs text-emerald-300/90 leading-relaxed">
-                  <strong class="font-mono uppercase text-[10px] text-emerald-400 block mb-0.5">Explanation of the Change:</strong>
+                  <strong class="label is-inline is-good">What the change does:</strong>
                   ${escapeHtml(c.explanation_of_change || c.suggested_fix)}
                 </div>
               </div>
@@ -1931,11 +1961,9 @@
 
           <!-- Grounded Citations List -->
           <div class="pt-3 border-t border-borderSubtle/60 flex flex-wrap items-center gap-2">
-            <span class="text-[11px] font-mono text-zinc-500 uppercase font-semibold">Grounded Citations:</span>
+            <span class="label">Where this came from</span>
             ${citationsList.map(cit => `
-              <span class="text-[11px] font-mono px-2.5 py-1 rounded-lg bg-canvas border border-borderSubtle text-blue-300">
-                ${escapeHtml(cit)}
-              </span>
+              <span class="text-[11px] font-mono px-2 py-1 rounded bg-canvas text-blue-300">${escapeHtml(cit)}</span>
             `).join('')}
           </div>
         `;
@@ -1954,6 +1982,9 @@
     function escapeHtml(str) {
       if (!str) return '';
       return String(str)
+        .replace(/\s+—\s+/g, ', ')
+        .replace(/—/g, '-')
+        .replace(/\s+–\s+/g, '-')
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
@@ -1962,14 +1993,11 @@
     }
 
     function getSpecialistBadgeClass(agentName) {
-      if (!agentName) return 'text-blue-300 bg-blue-950/60 border-blue-800';
-      if (agentName.includes('Market')) return 'text-purple-300 bg-purple-950/60 border-purple-800';
-      if (agentName.includes('Kill') || agentName.includes('Devil')) return 'text-rose-300 bg-rose-950/60 border-rose-800';
-      if (agentName.includes('Scorecard') || agentName.includes('Rubric')) return 'text-amber-300 bg-amber-950/60 border-amber-800';
-      if (agentName.includes('PRD') || agentName.includes('Architect')) return 'text-cyan-300 bg-cyan-950/60 border-cyan-800';
-      if (agentName.includes('Roadmap') || agentName.includes('Delivery')) return 'text-emerald-300 bg-emerald-950/60 border-emerald-800';
-      if (agentName.includes('Code') || agentName.includes('AST') || agentName.includes('Diagnosis')) return 'text-blue-300 bg-blue-950/60 border-blue-800';
-      return 'text-blue-300 bg-blue-950/60 border-blue-800';
+      if (!agentName) return 'info';
+      if (agentName.includes('Kill') || agentName.includes('Devil')) return 'risk';
+      if (agentName.includes('Scorecard') || agentName.includes('Rubric')) return 'warn';
+      if (agentName.includes('Roadmap') || agentName.includes('Delivery')) return 'good';
+      return 'info';
     }
 
     function getAgentAvatarClass(agentName) {
@@ -1996,7 +2024,7 @@
         const wrapper = codeEl.closest('pre');
         if (!wrapper || !definition.trim()) continue;
         const holder = document.createElement('div');
-        holder.className = 'my-3 p-3 bg-black/40 rounded-md border border-borderSubtle overflow-x-auto';
+        holder.className = 'my-3 p-3 bg-white/[0.02] rounded-md overflow-x-auto';
         try {
           const uniqueId = 'mermaid_reply_' + Math.random().toString(36).substring(2, 10);
           const { svg } = await mermaid.render(uniqueId, definition.trim());
@@ -2026,10 +2054,10 @@
       const mentionLabel = mentionMatch ? mentionMatch[1] : null;
 
       const userCard = document.createElement('div');
-      userCard.className = 'bg-blue-950/30 border border-blue-900/50 p-4 rounded-lg space-y-1 ml-auto max-w-2xl animate-step-reveal';
+      userCard.className = 'subpanel p-4 space-y-1 ml-auto max-w-2xl animate-step-reveal';
       userCard.innerHTML = `
         <div class="flex items-center justify-between gap-3">
-          <span class="text-[11px] font-mono uppercase text-blue-400 font-semibold">You${mentionLabel ? ` / to @${escapeHtml(mentionLabel)}` : ''}</span>
+          <span class="label is-inline is-accent" style="margin:0;">You${mentionLabel ? ` / to @${escapeHtml(mentionLabel)}` : ''}</span>
         </div>
         <p class="text-sm text-zinc-100 font-medium">${escapeHtml(query)}</p>
       `;
@@ -2046,15 +2074,11 @@
 
       const thinkingCard = document.createElement('div');
       thinkingCard.id = 'followupThinkingCard';
-      thinkingCard.className = 'bg-surface/50 border border-borderSubtle p-4 rounded-lg space-y-1.5 max-w-2xl';
+      thinkingCard.className = 'subpanel p-4 space-y-1.5 max-w-2xl';
       thinkingCard.innerHTML = `
-        <div class="flex items-center space-x-2 text-xs font-mono text-zinc-400">
-          <svg class="w-3.5 h-3.5 animate-spin text-blue-400" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
-          </svg>
-          <span class="font-medium text-zinc-300">Agent responding...</span>
-          <span id="followupThinkingTimer" class="text-zinc-500 text-[11px] font-mono">(0.2s)</span>
+        <div class="flex items-center gap-2 text-xs text-zinc-400">
+          <span class="font-medium text-zinc-300">The agent is answering</span>
+          <span id="followupThinkingTimer" class="text-zinc-500">(0.2s)</span>
         </div>
       `;
       thread.appendChild(thinkingCard);
@@ -2108,38 +2132,38 @@
         const parsedMarkdown = marked.parse(data.answer || '');
 
         const agentCard = document.createElement('div');
-        agentCard.className = 'border border-borderSubtle bg-surface/70 p-6 sm:p-7 rounded-lg space-y-4 animate-step-reveal';
+        agentCard.className = 'panel p-6 sm:p-7 space-y-4 animate-step-reveal';
         
         agentCard.innerHTML = `
           <div class="flex flex-wrap items-center justify-between gap-2 border-b border-borderSubtle pb-3">
             <div class="flex items-center space-x-2.5">
               <div class="agent-avatar ${avatarClass}">${escapeHtml(getAgentInitials(agentName))}</div>
               <div>
-                <span class="text-xs font-mono font-bold px-2.5 py-0.5 rounded border ${badgeClass}">
+                <span class="tag ${badgeClass}">
                   ${escapeHtml(agentName)}
                 </span>
                 <div class="text-[11px] text-zinc-500 mt-0.5">${escapeHtml(data.action_taken || 'Response')}</div>
               </div>
             </div>
-            <span class="text-[11px] font-mono text-zinc-500">${data.direct_agent ? '@' + escapeHtml(data.direct_agent) : 'Specialist'}</span>
+            <span class="text-[11px] text-zinc-500">${data.direct_agent ? 'asked @' + escapeHtml(data.direct_agent) : 'specialist'}</span>
           </div>
 
           <div class="prose-chat reply-body">${parsedMarkdown}</div>
 
           ${(data.referenced_symbols && data.referenced_symbols.length > 0) ? `
-            <div class="pt-2 border-t border-borderSubtle/60 flex flex-wrap items-center gap-1.5 text-xs">
-              <span class="font-mono text-[10px] uppercase text-zinc-500 font-semibold">Referenced Symbols:</span>
+            <div class="pt-2 rule flex flex-wrap items-center gap-1.5 text-xs">
+              <span class="label is-inline" style="margin:0;">It looked at:</span>
               ${data.referenced_symbols.map(s => `
-                <span class="font-mono text-[11px] text-blue-300 bg-canvas px-2 py-0.5 rounded border border-borderSubtle">${escapeHtml(s)}</span>
+                <span class="font-mono text-[11px] text-blue-300 bg-canvas px-2 py-0.5 rounded">${escapeHtml(s)}</span>
               `).join('')}
             </div>
           ` : ''}
 
           ${(data.referenced_files && data.referenced_files.length > 0) ? `
             <div class="pt-1 flex flex-wrap items-center gap-1.5 text-xs">
-              <span class="font-mono text-[10px] uppercase text-zinc-500 font-semibold">Referenced Files:</span>
+              <span class="label is-inline" style="margin:0;">Files used:</span>
               ${data.referenced_files.map(f => `
-                <span class="font-mono text-[11px] text-zinc-300 bg-canvas px-2 py-0.5 rounded border border-borderSubtle">${escapeHtml(f)}</span>
+                <span class="font-mono text-[11px] text-zinc-300 bg-canvas px-2 py-0.5 rounded">${escapeHtml(f)}</span>
               `).join('')}
             </div>
           ` : ''}
@@ -2159,14 +2183,11 @@
         const errorCard = document.createElement('div');
         errorCard.className = 'border border-rose-900/60 bg-rose-950/20 p-5 rounded-lg space-y-2 max-w-2xl animate-step-reveal';
         errorCard.innerHTML = `
-          <div class="flex items-center space-x-2 text-xs font-mono text-rose-300 font-bold uppercase tracking-wide">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-            </svg>
-            <span>${isRateLimit ? 'Groq Rate Limit Hit' : 'Follow-Up Failed'}</span>
+          <div class="label is-risk" style="margin-bottom:0;">
+            <span>${isRateLimit ? 'The free AI limit was reached' : 'That question could not be answered'}</span>
           </div>
           <p class="text-xs text-zinc-300 leading-relaxed">${escapeHtml(msg)}</p>
-          ${isRateLimit ? '<p class="text-[11px] font-mono text-zinc-400">The engine auto-rotates across models and caches answers. Try again in a few seconds, or address a specialist directly (e.g. <span class="text-blue-300">@scorecard</span>) which answers deterministically without using LLM quota.</p>' : ''}
+          ${isRateLimit ? '<p class="text-[11px] text-zinc-400">The engine waits a few seconds and then tries the next model by itself. Send the question again, or ask a specialist such as <span class="text-blue-300">@scorecard</span>, which answers from the report without using the AI limit.</p>' : ''}
         `;
         thread.appendChild(errorCard);
         pillarStates[activePillar].chatHtml = thread.innerHTML;
@@ -2210,7 +2231,7 @@
         const btn = document.createElement('button');
         btn.dataset.agentKey = a.key;
         btn.title = a.blurb;
-        btn.className = 'group text-[11px] font-mono text-zinc-400 hover:text-white border border-borderSubtle hover:border-blue-600 bg-canvas px-2.5 py-1.5 rounded-md flex items-center space-x-1.5';
+        btn.className = 'chip flex items-center gap-1.5';
         btn.innerHTML = `<span class="text-blue-400 font-bold">@</span><span>${escapeHtml(a.name)}</span>`;
         btn.onclick = () => applyMention(a.key);
         container.appendChild(btn);
@@ -2228,8 +2249,8 @@
       container.querySelectorAll('button[data-agent-key]').forEach(btn => {
         const active = btn.dataset.agentKey === selected;
         btn.className = active
-          ? 'text-white bg-blue-600 border border-blue-500 text-[11px] font-mono px-2.5 py-1.5 rounded-md flex items-center space-x-1.5'
-          : 'group text-[11px] font-mono text-zinc-400 hover:text-white border border-borderSubtle hover:border-blue-600 bg-canvas px-2.5 py-1.5 rounded-md flex items-center space-x-1.5';
+          ? 'chip is-active flex items-center gap-1.5'
+          : 'chip flex items-center gap-1.5';
       });
     }
 
@@ -2370,14 +2391,14 @@
         chip.classList.remove('hidden');
         const rl = data.rate_limits || {};
         if (rl.all_rate_limited) {
-          text.innerText = 'Groq: Cooling';
-          chip.className = 'hidden sm:flex items-center text-rose-300 border border-rose-900 bg-surface px-2.5 py-1 rounded text-xs font-mono';
+          text.innerText = 'AI engine resting (free tier limit reached)';
+          chip.className = 'hidden sm:flex items-center text-xs text-rose-300';
         } else if (Object.keys(rl.cooldowns || {}).length > 0) {
-          text.innerText = 'Groq: Cooling';
-          chip.className = 'hidden sm:flex items-center text-amber-300 border border-amber-900 bg-surface px-2.5 py-1 rounded text-xs font-mono';
+          text.innerText = 'One model is resting, another is answering';
+          chip.className = 'hidden sm:flex items-center text-xs text-amber-300';
         } else {
-          text.innerText = 'Groq Online';
-          chip.className = 'hidden sm:flex items-center text-zinc-300 border border-borderSubtle bg-surface px-2.5 py-1 rounded text-xs font-mono';
+          text.innerText = 'AI engine ready';
+          chip.className = 'hidden sm:flex items-center text-xs text-zinc-400';
         }
       } catch (e) {
         /* health chip is best-effort */
