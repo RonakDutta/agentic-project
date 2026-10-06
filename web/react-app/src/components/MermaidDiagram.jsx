@@ -1,6 +1,10 @@
 import React, { useEffect, useId, useRef, useState } from 'react'
 import mermaid from 'mermaid'
 
+// Unique per render attempt: StrictMode double-invokes effects in dev, and
+// mermaid v10 collides when two concurrent renders share one diagram id.
+let renderSeq = 0
+
 export default function MermaidDiagram({ chart }) {
   const id = useId().replace(/[^a-zA-Z0-9]/g, '')
   const [svg, setSvg] = useState(null) // null = loading, '' = failed
@@ -14,7 +18,8 @@ export default function MermaidDiagram({ chart }) {
       setSvg('empty')
       return () => { alive.current = false }
     }
-    mermaid.render(`mermaid_diag_${id}`, definition)
+    const renderId = `mermaid_diag_${id}_${++renderSeq}`
+    mermaid.render(renderId, definition)
       .then(({ svg: rendered }) => { if (alive.current) setSvg(rendered) })
       .catch((e) => {
         console.warn('Mermaid SVG render failed, displaying structured definition:', e)

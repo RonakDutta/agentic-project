@@ -128,8 +128,10 @@ export default function Followup({ pillar, messages, thinkingStart, sendError, o
     setMenu({ open: true, items: matches, index: 0 })
   }
 
-  function selectMentionItem() {
-    const item = menu.items[menu.index]
+  // Replaces the partially typed @token with the chosen agent.
+  // Takes an explicit index so mouse clicks do not depend on hover state.
+  function selectMentionItem(forcedIndex) {
+    const item = menu.items[forcedIndex ?? menu.index]
     if (!item || !inputRef.current) return
     const el = inputRef.current
     const caret = el.selectionStart
@@ -285,7 +287,7 @@ export default function Followup({ pillar, messages, thinkingStart, sendError, o
                 aria-selected={idx === menu.index}
                 className={`mention-item ${idx === menu.index ? 'is-active' : ''}`}
                 onMouseEnter={() => setMenu((m) => ({ ...m, index: idx }))}
-                onMouseDown={(e) => { e.preventDefault(); setMenu((m) => ({ ...m, index: idx })); setTimeout(selectMentionItem, 0) }}
+                onMouseDown={(e) => { e.preventDefault(); selectMentionItem(idx) }}
               >
                 <span className="font-mono text-[11px] text-blue-300 w-24 shrink-0">@{a.key}</span>
                 <span className="text-xs text-zinc-200 font-semibold">{a.name}</span>

@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
+import { marked } from 'marked'
 import Header from './components/Header.jsx'
 import Footer from './components/Footer.jsx'
 import InputPanel from './components/InputPanel.jsx'
@@ -61,6 +62,8 @@ export default function App() {
 
   const runStartRef = useRef({ idea: null, code: null })
   const runIdRef = useRef({ idea: 0, code: 0 })
+  const pillarRef = useRef(pillar)
+  pillarRef.current = pillar
 
   const ps = pillars[pillar]
   const agents = pillar === 'idea' ? IDEA_AGENTS : CODE_AGENTS
@@ -189,7 +192,7 @@ export default function App() {
         setPillars((prev) => {
           const nodes = [...prev[thisPillar].nodes]
           nodes[nodeIdx] = 'done'
-          return { ...prev, [thisPillar]: { ...prev[thisPillar], nodes, loader: null, steps: [...prev[thisPillar].steps, { step, idx: i }] } }
+          return { ...prev, [thisPillar]: { ...prev[thisPillar], nodes, loader: null, steps: [...prev[thisPillar].steps, step] } }
         })
         await delay(600)
       }
@@ -204,7 +207,9 @@ export default function App() {
           statusText: 'Review complete', statusClass: 'text-emerald-400 font-semibold',
         },
       }))
-      document.getElementById('outputArea')?.scrollIntoView({ behavior: 'smooth' })
+      if (pillarRef.current === thisPillar) {
+        document.getElementById('outputArea')?.scrollIntoView({ behavior: 'smooth' })
+      }
     } catch (err) {
       clearTimeout(timeoutId)
       if (!alive()) return
@@ -265,7 +270,7 @@ export default function App() {
             agentName: data.agent_name || 'Technical Co-Pilot',
             actionTaken: data.action_taken || 'Response',
             directAgent: data.direct_agent || '',
-            html: data.answer || '',
+            html: marked.parse(data.answer || ''),
             symbols: data.referenced_symbols || [],
             files: data.referenced_files || [],
           }],
