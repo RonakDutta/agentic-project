@@ -746,23 +746,6 @@
 
           <!-- Milestone Roadmap -->
           <div id="roadmapContainer" class="space-y-4"></div>
-
-          <!-- Technical Risks Table -->
-          <div class="space-y-2 pt-2">
-            <span class="label">Identified Vulnerabilities & Mitigations</span>
-            <div class="subpanel overflow-hidden">
-              <div id="risksContainer" class="divide-y divide-borderSubtle"></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- 8. Strategic Implementation Takeaways -->
-        <div class="panel p-8 space-y-3">
-          <div class="flex items-center justify-between border-b border-borderSubtle pb-3">
-            <h3 class="section-title">What to do next</h3>
-            <span class="text-xs text-zinc-500">Practical steps before you build</span>
-          </div>
-          <ul id="evalTipsContainer" class="list-disc list-inside text-sm text-zinc-200 space-y-2 leading-relaxed pt-1"></ul>
         </div>
 
       </div>
@@ -797,7 +780,7 @@
         <div class="flex flex-wrap items-center justify-between gap-4 border-b border-borderSubtle pb-4">
           <div>
             <h3 class="text-base sm:text-lg font-bold text-white">Ask a follow-up question</h3>
-            <p class="text-xs text-zinc-400 mt-1 leading-relaxed">Ask anything about the result, or talk to one specialist directly by starting your message with <span class="text-blue-300 font-semibold">@kill</span>, <span class="text-blue-300 font-semibold">@market</span> or <span class="text-blue-300 font-semibold">@architect</span>.</p>
+            <p class="text-xs text-zinc-400 mt-1 leading-relaxed">Ask anything about the result, or talk to one of the 4 specialists directly by starting your message with <span class="text-blue-300 font-semibold">@idea</span>, <span class="text-blue-300 font-semibold">@market</span>, <span class="text-blue-300 font-semibold">@roadmap</span> or <span class="text-blue-300 font-semibold">@critic</span>.</p>
           </div>
         </div>
 
@@ -948,8 +931,8 @@
       container.innerHTML = '';
       const chips = mode === 'idea' ? [
         { label: 'Competitors & rivals', prompt: 'Who are the closest market competitors to this idea?' },
-        { label: 'Risks & flaws', prompt: '@kill why will this project fail and what are the main fatal flaws?' },
-        { label: 'Tech stack rationale', prompt: '@architect explain the database and backend choices.' },
+        { label: 'Risks & flaws', prompt: '@roadmap what are the main risks and how do we mitigate them?' },
+        { label: 'Tech stack rationale', prompt: '@market explain the database and backend choices.' },
         { label: 'Must-have steps', prompt: 'What are the key preconditions needed to succeed?' }
       ] : [
         { label: 'Where is auth verified?', prompt: 'Where is customer authentication verified in the codebase?' },
@@ -1866,34 +1849,6 @@
         `;
         roadmapContainer.appendChild(div);
       });
-
-      // Risks Table
-      const risksContainer = document.getElementById('risksContainer');
-      risksContainer.innerHTML = '';
-      (out.risks || []).forEach(r => {
-        const div = document.createElement('div');
-        div.className = 'p-5 sm:p-6 space-y-2 hover:bg-surface/40 transition';
-        div.innerHTML = `
-          <div class="flex flex-wrap items-baseline justify-between gap-2">
-            <h4 class="text-sm font-bold text-white">${escapeHtml(r.risk)}</h4>
-            <span class="tag">${escapeHtml(r.category)}: ${escapeHtml(r.severity)}</span>
-          </div>
-          <div class="flex items-baseline gap-2 text-xs sm:text-sm">
-            <span class="label is-inline is-accent" style="margin:0;">How to handle it:</span>
-            <span class="text-zinc-300">${escapeHtml(r.mitigation)}</span>
-          </div>
-        `;
-        risksContainer.appendChild(div);
-      });
-
-      // Strategic Implementation Takeaways
-      const tipsContainer = document.getElementById('evalTipsContainer');
-      tipsContainer.innerHTML = '';
-      (out.evaluation_tips || []).forEach(tip => {
-        const li = document.createElement('li');
-        li.innerText = tip;
-        tipsContainer.appendChild(li);
-      });
     }
 
     function renderCodeResults(state) {
@@ -2067,7 +2022,7 @@
       // Prevent double-send while a request is in flight
       if (btn.disabled) return;
 
-      // The mention itself lives in the text ("@kill why..."); the backend parses it.
+      // The mention itself lives in the text ("@market who are our rivals?"); the backend parses it.
       const mentionMatch = query.match(/^@([a-zA-Z_-]+)\b/);
       const mentionLabel = mentionMatch ? mentionMatch[1] : null;
 
@@ -2220,20 +2175,17 @@
     // NOVELTY #2: Direct Agent Interrogation chips
     // ------------------------------------------------------------------
     const IDEA_DIRECT_AGENTS = [
-      { key: 'kill', name: "Roadmap & Risk Agent (Critic)", blurb: "Risks & fatal flaws" },
-      { key: 'market', name: 'Market & Tech Analyst', blurb: 'Competitors & gaps' },
-      { key: 'architect', name: 'Code Navigation & Architect', blurb: 'Tech stack & choices' },
-      { key: 'scorecard', name: 'Critic & Feasibility Agent', blurb: 'Score & rubric' },
-      { key: 'prd', name: 'Product Manager', blurb: 'User stories & requirements' },
-      { key: 'roadmap', name: 'Roadmap Planner', blurb: 'Phases & milestones' },
-      { key: 'arbiter', name: 'Decision Arbiter', blurb: 'Tradeoffs & verdict' },
-      { key: 'decomposer', name: 'Idea & Research Agent', blurb: 'Problem & MVP scope' }
+      { key: 'idea', name: 'Idea & Research Agent', blurb: 'Problem & MVP scope' },
+      { key: 'market', name: 'Market & Tech Analyst', blurb: 'Competitors & stack' },
+      { key: 'roadmap', name: 'Roadmap & Risk Agent', blurb: 'Phases, risks & mitigations' },
+      { key: 'critic', name: 'Critic & Feasibility Agent', blurb: 'Score & verdict' }
     ];
 
     const CODE_DIRECT_AGENTS = [
-      { key: 'code', name: 'Diagnosis Agent', blurb: 'Bug diagnosis & patterns' },
-      { key: 'risk', name: 'Security & Callers Auditor', blurb: 'Blast radius & callers' },
-      { key: 'architect', name: 'Code Navigation Agent', blurb: 'AST structure & import graph' }
+      { key: 'planner', name: 'Orchestrator Agent', blurb: 'Plan & code index' },
+      { key: 'navigate', name: 'Code Navigation Agent', blurb: 'Symbols & structure' },
+      { key: 'diagnose', name: 'Diagnosis Agent', blurb: 'Bug diagnosis & fix direction' },
+      { key: 'critic', name: 'Critic Agent', blurb: 'Grounding verdict' }
     ];
 
     function getActiveAgentList() {

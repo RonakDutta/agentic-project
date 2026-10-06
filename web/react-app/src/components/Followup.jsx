@@ -195,10 +195,13 @@ export default function Followup({ pillar, messages, thinkingStart, sendError, o
         <div>
           <h3 className="text-base sm:text-lg font-bold text-white">Ask a follow-up question</h3>
           <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
-            Ask anything about the result, or talk to one specialist directly by starting your message with{' '}
-            <span className="text-blue-300 font-semibold">@kill</span>,{' '}
-            <span className="text-blue-300 font-semibold">@market</span> or{' '}
-            <span className="text-blue-300 font-semibold">@architect</span>.
+            Ask anything about the result, or talk to one of the 4 specialists directly by starting your message with{' '}
+            {agentList.map((a, i) => (
+              <span key={a.key}>
+                <span className="text-blue-300 font-semibold">@{a.key}</span>
+                {i < agentList.length - 1 ? (i === agentList.length - 2 ? ' or ' : ', ') : '.'}
+              </span>
+            ))}
           </p>
         </div>
       </div>
@@ -243,7 +246,7 @@ export default function Followup({ pillar, messages, thinkingStart, sendError, o
                 <p className="text-xs text-zinc-300 leading-relaxed">{m.text}</p>
                 {m.rateLimited && (
                   <p className="text-[11px] text-zinc-400">
-                    The engine waits a few seconds and then tries the next model by itself. Send the question again, or ask a specialist such as <span className="text-blue-300">@scorecard</span>, which answers from the report without using the AI limit.
+                    The engine waits a few seconds and then tries the next model by itself. Send the question again, or ask a specialist such as <span className="text-blue-300">@critic</span>, which answers from the report without using the AI limit.
                   </p>
                 )}
               </div>

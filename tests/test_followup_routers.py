@@ -211,56 +211,129 @@ def test_code_followup_deterministic_routers():
     assert "Recommended Pattern" in res["answer"]
 
 
-def test_direct_agent_interrogation():
-    """Verifies that @agent mentions route directly to the named specialist without error."""
-    mock_context = {
+def _idea_direct_ctx():
+    return {
         "type": "idea_validation",
         "project_title": "IoT Energy Auditor",
         "problem_statement": "Residential energy waste from unmonitored power spikes.",
-        "core_value_prop": "Real-time circuit-level power spike detection using ESP32 CT sensors.",
-        "kill_report": {
-            "bear_case_summary": "Unreliable LoRaWAN coverage in dense residential buildings.",
-            "fatal_flaws": [
-                {
-                    "title": "Breaker Box Regulations",
-                    "category": "Regulatory",
-                    "severity": "Critical",
-                    "argument": "Requires licensed electricians to install inside mains panel.",
-                    "counter_evidence": "Homeowners cannot self-install safely."
-                }
-            ],
-            "incumbent_threats": ["Utilities already deploy smart meters."]
-        },
+        "core_value_prop": "Real-time circuit-level spike detection with ESP32 sensors.",
+        "mvp_features": ["Live spike alerts", "Weekly waste report"],
         "competitors": [{"name": "Sense", "summary": "ML energy monitor", "advantages": "Brand", "gaps": "Expensive"}],
-        "tech_stack": {"backend": {"choice": "FastAPI", "rationale": "High throughput", "tradeoffs": "None"}}
+        "key_differentiators": ["Open-source firmware"],
+        "tech_stack": {"backend": {"choice": "FastAPI", "rationale": "High throughput", "tradeoffs": "None"}},
+        "phases": [
+            {
+                "phase_number": 1,
+                "phase_name": "Prototype",
+                "duration_weeks": "4 weeks",
+                "deliverables": ["PCB", "Firmware loop"],
+                "exit_criteria": "Accuracy within 2%",
+            }
+        ],
+        "risks": [{"risk": "Parts shortage", "mitigation": "Dual-source suppliers"}],
+        "scorecard": {
+            "total_score": 82,
+            "verdict": "CONDITIONAL_PURSUIT",
+            "categories": [{"category_name": "Market Demand", "score": 17, "max_score": 20, "rationale": "High interest"}],
+            "key_strengths": ["Low BOM cost"],
+            "key_risks": ["Regulatory hurdles"],
+        },
     }
 
-    # Interrogate @kill
-    res_kill = orchestrator.answer_followup(
-        query="@kill why is installation risky?",
-        context=mock_context,
-        session_id="test_direct_sess",
-    )
-    assert res_kill["status"] == "ok"
-    assert res_kill["direct_agent"] == "kill"
-    assert len(res_kill["answer"]) > 10
 
-    # Interrogate @market
-    res_mkt = orchestrator.answer_followup(
+def _code_direct_ctx():
+    return {
+        "type": "codebase_analysis",
+        "candidates": [
+            {
+                "rank": 1,
+                "symbol_name": "verify_token",
+                "file_path": "auth.py",
+                "line_start": 8,
+                "line_end": 24,
+                "why_problematic": "Does not catch ExpiredSignatureError before verifying payload.",
+            }
+        ],
+        "indexed_summary": {
+            "total_files": 3,
+            "total_chunks": 12,
+            "total_symbols": 20,
+            "files": ["auth.py", "main.py", "orders.py"],
+        },
+        "critic": {"is_valid": True, "grounding_score": 0.83, "total_verified": 1, "flags": []},
+    }
+
+
+def test_direct_agent_interrogation():
+    """Only the 4 pipeline agents per track answer as specialists.
+
+    The LLM is forced down so every answer comes from the deterministic
+    evidence path (zero tokens, fully reproducible).
+    """
+    from unittest import mock
+    from core.llm import llm_client
+
+    with mock.patch.object(llm_client, "generate", side_effect=RuntimeError("simulated outage")):
+        idea = _idea_direct_ctx()
+        for key, needle in [
+            ("idea", "Residential energy waste"),
+            ("market", "Sense"),
+            ("roadmap", "Prototype"),
+            ("critic", "82/100"),
+        ]:
+            res = orchestrator.answer_followup(
+                query=f"@{key} what did you find?",
+                context=idea,
+                session_id="test_direct_idea",
+            )
+            assert res["status"] == "ok", key
+            assert res["direct_agent"] == key, key
+            assert needle in res["answer"], key
+
+        code = _code_direct_ctx()
+        for key, needle in [
+            ("planner", "Indexed 3 files"),
+            ("navigate", "verify_token"),
+            ("diagnose", "ExpiredSignatureError"),
+            ("critic", "83%"),
+        ]:
+            res = orchestrator.answer_followup(
+                query=f"@{key} what did you find?",
+                context=code,
+                session_id="test_direct_code",
+            )
+            assert res["status"] == "ok", key
+            assert res["direct_agent"] == key, key
+            assert needle in res["answer"], key
+
+
+def test_out_of_scope_mentions_get_future_scope_notice():
+    """@keys outside the 4-agent build never answer as specialists (no LLM spent)."""
+    idea = _idea_direct_ctx()
+    res = orchestrator.answer_followup(
+        query="@kill why will this fail?",
+        context=idea,
+        session_id="test_scope_idea",
+    )
+    assert res["status"] == "ok"
+    assert "future scope" in res["answer"].lower()
+    assert "@idea" in res["answer"] and "@critic" in res["answer"]
+
+    # Cross-pillar mentions are also out of scope.
+    code = _code_direct_ctx()
+    res = orchestrator.answer_followup(
         query="@market who are our rivals?",
-        context=mock_context,
-        session_id="test_direct_sess",
+        context=code,
+        session_id="test_scope_code",
     )
-    assert res_mkt["status"] == "ok"
-    assert res_mkt["direct_agent"] == "market"
-    assert len(res_mkt["answer"]) > 10
+    assert res["status"] == "ok"
+    assert "future scope" in res["answer"].lower()
+    assert "@diagnose" in res["answer"]
 
-    # Interrogate @architect
-    res_arch = orchestrator.answer_followup(
-        query="@architect why FastAPI?",
-        context=mock_context,
-        session_id="test_direct_sess",
+    # @tokens buried in pasted text (emails, decorators) are not mentions.
+    res = orchestrator.answer_followup(
+        query="the decorator @app.route handles login in main",
+        context=code,
+        session_id="test_scope_buried",
     )
-    assert res_arch["status"] == "ok"
-    assert res_arch["direct_agent"] == "architect"
-    assert len(res_arch["answer"]) > 10
+    assert "future scope" not in res["answer"].lower()

@@ -401,36 +401,6 @@ export default function IdeaView({ out }) {
             </div>
           ))}
         </div>
-
-        <div className="space-y-2 pt-2">
-          <span className="label">Identified Vulnerabilities & Mitigations</span>
-          <div className="subpanel overflow-hidden">
-            <div className="divide-y divide-borderSubtle">
-              {(out.risks || []).map((r, i) => (
-                <div key={i} className="p-5 sm:p-6 space-y-2 hover:bg-surface/40 transition">
-                  <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <h4 className="text-sm font-bold text-white">{r.risk}</h4>
-                    <span className="tag">{r.category}: {r.severity}</span>
-                  </div>
-                  <div className="flex items-baseline gap-2 text-xs sm:text-sm">
-                    <span className="label is-inline is-accent" style={{ margin: 0 }}>How to handle it:</span>
-                    <span className="text-zinc-300">{r.mitigation}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="panel p-8 space-y-3">
-        <div className="flex items-center justify-between border-b border-borderSubtle pb-3">
-          <h3 className="section-title">What to do next</h3>
-          <span className="text-xs text-zinc-500">Practical steps before you build</span>
-        </div>
-        <ul className="list-disc list-inside text-sm text-zinc-200 space-y-2 leading-relaxed pt-1">
-          {(out.evaluation_tips || []).map((tip, i) => <li key={i}>{tip}</li>)}
-        </ul>
       </div>
     </div>
   )

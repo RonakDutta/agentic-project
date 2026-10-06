@@ -15,20 +15,17 @@ export const CODE_AGENTS = [
 ]
 
 export const IDEA_DIRECT_AGENTS = [
-  { key: 'kill', name: 'Roadmap & Risk Agent (Critic)', blurb: 'Risks & fatal flaws' },
-  { key: 'market', name: 'Market & Tech Analyst', blurb: 'Competitors & gaps' },
-  { key: 'architect', name: 'Code Navigation & Architect', blurb: 'Tech stack & choices' },
-  { key: 'scorecard', name: 'Critic & Feasibility Agent', blurb: 'Score & rubric' },
-  { key: 'prd', name: 'Product Manager', blurb: 'User stories & requirements' },
-  { key: 'roadmap', name: 'Roadmap Planner', blurb: 'Phases & milestones' },
-  { key: 'arbiter', name: 'Decision Arbiter', blurb: 'Tradeoffs & verdict' },
-  { key: 'decomposer', name: 'Idea & Research Agent', blurb: 'Problem & MVP scope' },
+  { key: 'idea', name: 'Idea & Research Agent', blurb: 'Problem & MVP scope' },
+  { key: 'market', name: 'Market & Tech Analyst', blurb: 'Competitors & stack' },
+  { key: 'roadmap', name: 'Roadmap & Risk Agent', blurb: 'Phases, risks & mitigations' },
+  { key: 'critic', name: 'Critic & Feasibility Agent', blurb: 'Score & verdict' },
 ]
 
 export const CODE_DIRECT_AGENTS = [
-  { key: 'code', name: 'Diagnosis Agent', blurb: 'Bug diagnosis & patterns' },
-  { key: 'risk', name: 'Security & Callers Auditor', blurb: 'Blast radius & callers' },
-  { key: 'architect', name: 'Code Navigation Agent', blurb: 'AST structure & import graph' },
+  { key: 'planner', name: 'Orchestrator Agent', blurb: 'Plan & code index' },
+  { key: 'navigate', name: 'Code Navigation Agent', blurb: 'Symbols & structure' },
+  { key: 'diagnose', name: 'Diagnosis Agent', blurb: 'Bug diagnosis & fix direction' },
+  { key: 'critic', name: 'Critic Agent', blurb: 'Grounding verdict' },
 ]
 
 export const SAMPLE_PROMPTS = {
@@ -44,8 +41,8 @@ export const SAMPLE_PROMPTS = {
 export const FOLLOWUP_QUICK_CHIPS = {
   idea: [
     { label: 'Competitors & rivals', prompt: 'Who are the closest market competitors to this idea?' },
-    { label: 'Risks & flaws', prompt: '@kill why will this project fail and what are the main fatal flaws?' },
-    { label: 'Tech stack rationale', prompt: '@architect explain the database and backend choices.' },
+    { label: 'Risks & flaws', prompt: '@roadmap what are the main risks and how do we mitigate them?' },
+    { label: 'Tech stack rationale', prompt: '@market explain the database and backend choices.' },
     { label: 'Must-have steps', prompt: 'What are the key preconditions needed to succeed?' },
   ],
   code: [
