@@ -19,7 +19,7 @@ export default function Header({ health, canExport, onExport }) {
             <span className="font-medium">{health.text}</span>
           </span>
           {canExport && (
-            <button onClick={onExport} className="hidden btn btn-quiet">Download report (.md)</button>
+            <button onClick={onExport} className="btn btn-quiet">Download report (.md)</button>
           )}
         </div>
       </div>

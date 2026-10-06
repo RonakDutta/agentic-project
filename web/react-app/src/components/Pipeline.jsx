@@ -23,27 +23,37 @@ function badgeText(state) {
 }
 
 function StoryCard({ step, idx }) {
-  const d = step.details || {}
-  const findings = Array.isArray(d.findings) ? d.findings : []
+  const d = step?.details || {}
+  const agentName = step?.agent_name || step?.agent_role || `Agent ${idx + 1}`
+  const thinking = d.thinking || step?.input_summary || step?.action || ''
+  const findings = (Array.isArray(d.findings) && d.findings.length > 0)
+    ? d.findings
+    : (step?.output_summary ? [step.output_summary] : [])
+  const tool = d.tool || step?.agent_role || 'Reasoning engine'
+  const handoff = d.handoff || ''
+  const elapsed = ((step?.elapsed_ms || step?.duration_ms || 0) / 1000).toFixed(1)
+
   return (
     <div className="subpanel p-5 sm:p-6 space-y-3 animate-step-reveal">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-borderSubtle/70 pb-3">
         <div className="flex items-center gap-2.5">
           <span className="label is-inline is-accent" style={{ margin: 0 }}>Step {idx + 1}</span>
-          <h4 className="text-sm sm:text-base font-semibold text-white">{step.agent_name}</h4>
+          <h4 className="text-sm sm:text-base font-semibold text-white">{agentName}</h4>
         </div>
         <div className="flex items-center gap-3 text-xs">
-          <span className="tag">{d.tool || 'Reasoning engine'}</span>
-          <span className="text-zinc-400">{((step.elapsed_ms || 0) / 1000).toFixed(1)} s</span>
+          <span className="tag">{tool}</span>
+          <span className="text-zinc-400">{elapsed} s</span>
         </div>
       </div>
 
-      <div className="space-y-1">
-        <span className="label">What it was trying to do</span>
-        <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed subpanel p-3.5">
-          {d.thinking || step.action}
-        </p>
-      </div>
+      {thinking && (
+        <div className="space-y-1">
+          <span className="label">What it was trying to do</span>
+          <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed subpanel p-3.5">
+            {thinking}
+          </p>
+        </div>
+      )}
 
       {findings.length > 0 && (
         <div className="space-y-1.5 pt-1">
@@ -54,10 +64,10 @@ function StoryCard({ step, idx }) {
         </div>
       )}
 
-      {d.handoff && (
+      {handoff && (
         <div className="pt-2 rule flex items-center gap-2 text-xs">
           <span className="label is-inline" style={{ margin: 0 }}>Passed to the next step:</span>
-          <span className="text-zinc-300 font-medium">{d.handoff}</span>
+          <span className="text-zinc-300 font-medium">{handoff}</span>
         </div>
       )}
     </div>
@@ -96,12 +106,16 @@ export default function Pipeline({
       </div>
 
       <div className="space-y-4 pt-2">
-        {steps.map((step, i) => <StoryCard key={`${step.step_id}-${i}`} step={step} idx={i} />)}
+        {(steps || []).map((item, i) => {
+          const s = item?.step || item
+          const stepIdx = item?.idx !== undefined ? item.idx : i
+          return <StoryCard key={`${s?.step_id || i}-${stepIdx}`} step={s} idx={stepIdx} />
+        })}
         {loader && (
           <div className="subpanel p-4 space-y-1 border-l-2 border-l-blue-500">
             <div className="space-y-0.5">
               <div className="label is-accent" style={{ marginBottom: 0 }}>
-                Step {loader.idx + 1} of {agents.length}: {loader.step.agent_name} is working
+                Step {loader.idx + 1} of {agents.length}: {loader.step?.agent_name || loader.step?.name || 'Agent'} is working
               </div>
               <div className="text-xs text-zinc-300">{loader.actionText}</div>
             </div>

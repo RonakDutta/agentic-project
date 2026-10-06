@@ -179,12 +179,18 @@ export default function App() {
     setRunBusy(true)
     const runId = ++runIdRef.current[thisPillar]
     runStartRef.current[thisPillar] = Date.now()
+    const currentAgents = thisPillar === 'idea' ? IDEA_AGENTS : CODE_AGENTS
     setPillars((prev) => ({
       ...prev,
       [thisPillar]: {
         ...prev[thisPillar], steps: [], messages: [], runError: null, hasOutput: false,
         isRunning: true, nodes: ['working', 'waiting', 'waiting', 'waiting'],
         statusText: 'Review in progress', statusClass: 'text-blue-400 font-semibold',
+        loader: {
+          step: { agent_name: currentAgents[0].name },
+          idx: 0,
+          actionText: getAgentActionDescription(currentAgents[0].name, 0),
+        },
       },
     }))
 
@@ -209,8 +215,13 @@ export default function App() {
       if (!alive()) return
 
       const traces = state.execution_trace || []
-      const agentSteps = traces.filter((t) => t.details && (t.details.thinking || t.details.findings))
-      const currentAgents = thisPillar === 'idea' ? IDEA_AGENTS : CODE_AGENTS
+      let agentSteps = traces.filter((t) => t.details && (t.details.thinking || t.details.findings))
+      if (agentSteps.length === 0) {
+        agentSteps = traces.filter((t) => t.agent_name && t.agent_name !== 'Orchestrator')
+      }
+      if (agentSteps.length === 0) {
+        agentSteps = traces
+      }
 
       for (let i = 0; i < agentSteps.length; i++) {
         if (!alive()) return

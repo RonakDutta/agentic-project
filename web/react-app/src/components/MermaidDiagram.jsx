@@ -11,22 +11,48 @@ export default function MermaidDiagram({ chart }) {
   const alive = useRef(true)
 
   useEffect(() => {
-    alive.current = true
+    let isCancelled = false
     setSvg(null)
-    const definition = (chart || '').trim()
+
+    let definition = (chart || '').trim()
     if (!definition) {
       setSvg('empty')
-      return () => { alive.current = false }
+      return
     }
-    const renderId = `mermaid_diag_${id}_${++renderSeq}`
-    mermaid.render(renderId, definition)
-      .then(({ svg: rendered }) => { if (alive.current) setSvg(rendered) })
-      .catch((e) => {
+
+    // Strip markdown code fences if present (e.g. ```mermaid ... ```)
+    definition = definition
+      .replace(/^```(?:mermaid)?\s*/i, '')
+      .replace(/```\s*$/i, '')
+      .trim()
+
+    const renderId = `mermaid_diag_${Math.random().toString(36).substring(2, 9)}_${Date.now()}`
+
+    const renderChart = async () => {
+      try {
+        const { svg: rendered } = await mermaid.render(renderId, definition)
+        if (!isCancelled) {
+          setSvg(rendered)
+        }
+      } catch (e) {
         console.warn('Mermaid SVG render failed, displaying structured definition:', e)
-        if (alive.current) setSvg('')
-      })
-    return () => { alive.current = false }
-  }, [chart, id])
+        // Clean up any stray error elements inserted into document.body by Mermaid v10
+        document.getElementById(renderId)?.remove()
+        document.getElementById('d' + renderId)?.remove()
+        if (!isCancelled) {
+          setSvg('')
+        }
+      }
+    }
+
+    renderChart()
+
+    return () => {
+      isCancelled = true
+      document.getElementById(renderId)?.remove()
+      document.getElementById('d' + renderId)?.remove()
+    }
+  }, [chart])
 
   if (!chart || !chart.trim()) {
     return <div className="text-xs text-zinc-500 p-6 text-center">No diagram on this tab.</div>
@@ -47,6 +73,6 @@ export default function MermaidDiagram({ chart }) {
     )
   }
   return (
-    <div className="overflow-x-auto p-4 flex justify-center bg-white/[0.02] rounded-lg w-full" dangerouslySetInnerHTML={{ __html: svg }} />
+    <div className="mermaid overflow-x-auto p-4 flex justify-center bg-white/[0.02] rounded-lg w-full" dangerouslySetInnerHTML={{ __html: svg }} />
   )
 }

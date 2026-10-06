@@ -340,12 +340,23 @@ class ConversationalFollowupEngine:
         proj_title = ctx.get("project_title") or session.active_entities.get("project_title", "Current Project")
         prob_stmt = ctx.get("problem_statement", "")
 
-        if agent_key == "idea":
+        if agent_key in ("idea", "decomposer"):
             if ctx:
                 evidence_snippets.append(f"Problem: {prob_stmt}")
                 evidence_snippets.append(f"Value Proposition: {ctx.get('core_value_prop', '')}")
                 for f in ctx.get("mvp_features", [])[:4]:
                     evidence_snippets.append(f"- MVP Feature: {f}")
+                for p in ctx.get("target_personas", [])[:3]:
+                    if isinstance(p, dict):
+                        evidence_snippets.append(f"- Persona: {p.get('persona', '')} (Pain: {p.get('pain_point', '')})")
+        elif agent_key == "prd":
+            prd_data = ctx.get("prd", {})
+            for s in prd_data.get("user_stories", [])[:4]:
+                s_id = s.get("story_id", s.get("id", "Story"))
+                evidence_snippets.append(f"- {s_id}: As a {s.get('persona', 'User')}, want {s.get('want', '')}")
+            for fr in prd_data.get("functional_requirements", [])[:4]:
+                if isinstance(fr, dict):
+                    evidence_snippets.append(f"- {fr.get('req_id', 'FR')}: {fr.get('title', '')} ({fr.get('priority', '')})")
         elif agent_key == "market":
             for c in ctx.get("competitors", []):
                 if isinstance(c, dict):
@@ -362,7 +373,16 @@ class ConversationalFollowupEngine:
             for r in ctx.get("risks", [])[:3]:
                 if isinstance(r, dict):
                     evidence_snippets.append(f"- Risk: {r.get('risk')} (Mitigation: {r.get('mitigation')})")
-        elif agent_key == "critic":
+        elif agent_key == "kill":
+            kill = ctx.get("kill_report", {})
+            if kill.get("bear_case_summary"):
+                evidence_snippets.append(f"Bear Case: {kill.get('bear_case_summary')}")
+            for flaw in kill.get("fatal_flaws", [])[:3]:
+                if isinstance(flaw, dict):
+                    evidence_snippets.append(f"- Fatal Flaw: {flaw.get('title')} ({flaw.get('severity')}) - {flaw.get('reason') or flaw.get('argument')}")
+            for inc in kill.get("incumbent_threats", [])[:2]:
+                evidence_snippets.append(f"- Incumbent Threat: {inc}")
+        elif agent_key in ("critic", "scorecard"):
             if ctx.get("candidates"):
                 report = ctx.get("critic", {}) or {}
                 score = report.get("grounding_score")
@@ -382,6 +402,14 @@ class ConversationalFollowupEngine:
                         evidence_snippets.append(f"Strengths: {', '.join(sc.get('key_strengths'))}")
                     if sc.get("key_risks"):
                         evidence_snippets.append(f"Risks: {', '.join(sc.get('key_risks'))}")
+        elif agent_key == "arbiter":
+            rec = ctx.get("reconciliation", {})
+            if rec:
+                evidence_snippets.append(f"Verdict: {rec.get('verdict', '')}")
+                if rec.get("synthesis_rationale"):
+                    evidence_snippets.append(f"Rationale: {rec.get('synthesis_rationale')}")
+                for m in rec.get("must_have_mitigations", [])[:3]:
+                    evidence_snippets.append(f"- Mitigation: {m}")
         elif agent_key == "planner":
             summary = ctx.get("indexed_summary", {}) or {}
             if summary:
@@ -392,7 +420,12 @@ class ConversationalFollowupEngine:
                 )
                 for f in (summary.get("files", []) or [])[:6]:
                     evidence_snippets.append(f"- File: {f}")
-        elif agent_key == "navigate":
+        elif agent_key in ("navigate", "architect"):
+            tstack = ctx.get("tech_stack", {})
+            if tstack:
+                for cat, item in tstack.items():
+                    if isinstance(item, dict):
+                        evidence_snippets.append(f"- {cat.title()}: {item.get('choice', '')} (Rationale: {item.get('rationale', '')})")
             summary = ctx.get("indexed_summary", {}) or {}
             if summary:
                 evidence_snippets.append(
@@ -407,7 +440,7 @@ class ConversationalFollowupEngine:
                     if c.get("file_path"):
                         referenced_files.append(c.get("file_path"))
                     evidence_snippets.append(f"- `{sym}` lives in {c.get('file_path')} (lines {c.get('line_start')}-{c.get('line_end')})")
-        elif agent_key == "diagnose":
+        elif agent_key in ("diagnose", "code", "risk"):
             for c in ctx.get("candidates", [])[:3]:
                 if isinstance(c, dict):
                     sym = c.get("symbol_name", "")
@@ -423,6 +456,7 @@ class ConversationalFollowupEngine:
             f"You are the {agent_name} ({agent_role}). The user addressed you directly using @{agent_key}.\n"
             f"Directly answer their question from your specialist perspective.\n\n"
             f"Guidelines:\n"
+            f"- If the user is greeting you (e.g. 'hi', 'hello', 'hey'), greet them back warmly in your specialist voice and mention 1-2 ways you can help.\n"
             f"- Answer the user's specific question directly, concisely, and practically.\n"
             f"- Use simple, clear, everyday English that anyone can easily understand.\n"
             f"- Ground your points firmly in the project findings provided below.\n"
@@ -448,7 +482,10 @@ class ConversationalFollowupEngine:
             ).strip()
         except Exception as err:
             logger.info(f"[FollowupEngine] Direct agent LLM call fell back ({err}). Grounding from evidence.")
-            if evidence_snippets:
+            q_clean = question.strip().lower()
+            if q_clean in ["hi", "hello", "hey", "greetings", "good morning", "good evening", "howdy", "sup"]:
+                answer = f"Hello! I am the **{agent_name}** ({agent_role}). How can I assist you regarding this project?"
+            elif evidence_snippets:
                 answer = f"**{agent_name} Findings for '{question}'**:\n\n" + "\n\n".join(evidence_snippets[:4])
             else:
                 answer = (
