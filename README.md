@@ -136,7 +136,7 @@ Instead of one blended chatbot persona, users address a specific specialist dire
 
 ### 3. Rate-Limit-Resilient Model Rotation & Completion Cache
 Groq free-tier 429s are absorbed rather than surfaced:
-* An ordered **model chain** (`MODEL_CHAIN`: gpt-oss-120b -> gpt-oss-20b -> llama-3.3-70b -> llama-3.1-8b-instant) pools the per-model RPM/TPM budgets.
+* An ordered **model chain** (`MODEL_CHAIN`: `openai/gpt-oss-120b` -> `openai/gpt-oss-20b` -> `qwen/qwen3.8-27b`) pools the per-model RPM/TPM budgets.
 * 429 payloads are parsed for the exact **retry-after** hint, placing models on precise cooldowns instead of a fixed 60s penalty.
 * Exponential backoff with jitter, jittered inter-call pacing (`PACE_SECONDS`), and a short-TTL **completion cache** (`LLM_CACHE_TTL_SECONDS`) make repeated follow-ups cost zero quota.
 * Intent classification is deterministic-first: the LLM classifier is only invoked for genuinely ambiguous queries (the dashboard's pillar buttons force intent anyway).
@@ -165,10 +165,10 @@ cp .env.example .env
 Ensure your free Groq API key is configured in `.env`:
 ```ini
 GROQ_API_KEY=your_groq_api_key_here
-PRIMARY_MODEL=openai/gpt-oss-120b
-FAST_MODEL=openai/gpt-oss-20b
-MODEL_CHAIN=openai/gpt-oss-120b,openai/gpt-oss-20b,llama-3.3-70b-versatile,llama-3.1-8b-instant
-CONTEXT_TOKEN_BUDGET=4000
+PRIMARY_MODEL=openai/gpt-oss-20b
+FAST_MODEL=qwen/qwen3.8-27b
+MODEL_CHAIN=openai/gpt-oss-20b,qwen/qwen3.8-27b,openai/gpt-oss-120b
+CONTEXT_TOKEN_BUDGET=2500
 LLM_CACHE_TTL_SECONDS=600
 PACE_SECONDS=0.15
 ```
