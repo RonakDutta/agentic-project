@@ -178,8 +178,9 @@ async def get_session_info(session_id: str):
 
 
 if __name__ == "__main__":
-    # HOST/PORT env vars allow containerized or managed-preview runs; local dev defaults stay unchanged.
-    host = os.getenv("HOST", "0.0.0.0")
+    # Default to 127.0.0.1 so browsers on Windows/macOS can click/open the URL directly.
+    host = os.getenv("HOST", "127.0.0.1")
     port = int(os.getenv("PORT", "8000"))
-    reload_enabled = os.getenv("RELOAD", "0") not in ("0", "false", "False")
+    reload_enabled = os.getenv("RELOAD", "1") not in ("0", "false", "False")
+    print(f"\n[Agentic Co-Pilot] Running at: http://localhost:{port} (http://127.0.0.1:{port})\n")
     uvicorn.run("app:app", host=host, port=port, reload=reload_enabled)
