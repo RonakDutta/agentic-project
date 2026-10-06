@@ -79,35 +79,35 @@ Your sole purpose is to ruthlessly critique a proposed startup or project idea a
 Do NOT offer praise or encouragement. Challenge every unproven assumption, competitive threat, and operational trap.
 
 CRITICAL INSTRUCTIONS:
-1. Identify 2 specific Fatal Flaws (existential threats to product viability).
-2. Detail how established incumbents or open-source solutions can easily copy or crush this product.
-3. Identify Customer Acquisition Cost (CAC) traps and user distribution bottlenecks.
-4. Flag potential technical over-engineering or hardware/scaling sinkholes.
+1. Identify 2-3 specific, high-impact Fatal Flaws (existential threats to product viability) with realistic severity ('Critical', 'High', 'Medium').
+2. Detail how established incumbents or open-source solutions can easily copy or crush this product (incumbent_threats).
+3. Identify Customer Acquisition Cost (CAC) traps and user distribution bottlenecks (distribution_traps).
+4. Flag potential technical over-engineering or hardware/scaling sinkholes (overengineering_risks).
 5. Do NOT call tools, browser commands, or functions. Output pure JSON only.
 6. Keep descriptions concise and punchy to minimize token usage.
 7. Output strict JSON with this exact schema:
 {
-  "bear_case_summary": "2-3 sentences explaining the overarching existential threat to this project.",
+  "bear_case_summary": "2-3 sentences explaining the overarching existential threat to this project in clear language.",
   "fatal_flaws": [
     {
       "title": "Short title of the fatal flaw",
-      "category": "Fatal Flaw or Market & Distribution or Competitive Moat or Technical Bottleneck or Regulatory & Trust",
+      "category": "Competitive Moat or Market & Distribution or Technical Bottleneck or Regulatory & Trust",
       "severity": "Critical or High or Medium",
       "argument": "Detailed 2-3 sentence argument on why this kills the product.",
       "counter_evidence": "What real-world dynamic makes this difficult to overcome."
     }
   ],
   "incumbent_threats": [
-    "Threat 1: e.g. Major cloud providers (AWS/GCP) already offer native managed equivalents.",
-    "Threat 2: e.g. Existing open-source GitHub alternatives have superior community velocity."
+    "Threat 1: e.g. Major cloud providers or established software vendors already have native distribution.",
+    "Threat 2: e.g. Existing open-source alternatives have superior developer velocity."
   ],
   "distribution_traps": [
-    "Trap 1: e.g. High customer acquisition cost with low recurring willingness to pay.",
-    "Trap 2: e.g. Lengthy enterprise sales cycles exceed runway."
+    "Trap 1: e.g. High customer acquisition cost (CAC) with low recurring willingness to pay.",
+    "Trap 2: e.g. Lengthy organizational procurement cycles outlast development runway."
   ],
   "overengineering_risks": [
-    "Risk 1: e.g. Building custom inference models when existing APIs suffice.",
-    "Risk 2: e.g. Premature microservices architecture introduces unneeded operational debt."
+    "Risk 1: e.g. Custom multi-model pipeline introduces prohibitive inference latency and cost.",
+    "Risk 2: e.g. Premature distributed architecture adds unneeded operational debt."
   ]
 }
 """
@@ -185,24 +185,31 @@ class KillAgent:
             flaws.append(
                 KillArgument(
                     title=rf.get("title", "Unaddressed Vulnerability"),
-                    category=rf.get("category", "Fatal Flaw"),
+                    category=rf.get("category", "Competitive Moat"),
                     severity=rf.get("severity", "High"),
-                    argument=rf.get("argument", "Potential failure mode in execution."),
-                    counter_evidence=rf.get("counter_evidence", "Incumbents possess structural advantages."),
+                    argument=rf.get("argument", "Potential failure mode in execution or defensibility."),
+                    counter_evidence=rf.get("counter_evidence", "Incumbents possess structural distribution advantages."),
                 )
             )
 
         if not flaws:
-            # Fallback flaw if LLM returns empty list
-            flaws.append(
+            # Fallback flaws if LLM returns empty list or offline
+            flaws = [
                 KillArgument(
-                    title="Incumbent Distribution Advantage",
+                    title="Incumbent Distribution Moat",
                     category="Competitive Moat",
+                    severity="Critical",
+                    argument="Dominant enterprise platforms have native integrations with customer databases and can copy core features at zero marginal cost.",
+                    counter_evidence="New market entrants face high customer acquisition friction and sales resistance.",
+                ),
+                KillArgument(
+                    title="Unit Economics & CAC Disparity",
+                    category="Market & Distribution",
                     severity="High",
-                    argument="Dominant players possess entrenched distribution channels and zero marginal cost additions.",
-                    counter_evidence="New market entrants face high customer acquisition friction.",
-                )
-            )
+                    argument="Customer acquisition cost exceeds lifetime customer value during initial onboarding phases.",
+                    counter_evidence="Target personas exhibit price sensitivity and low recurring willingness to pay.",
+                ),
+            ]
 
         trace.append(f"KillAgent identified {len(flaws)} potential fatal flaws and {len(res.get('incumbent_threats', []))} incumbent threats.")
 
@@ -210,16 +217,18 @@ class KillAgent:
             project_title=decomposed.project_title,
             fatal_flaws=flaws,
             incumbent_threats=res.get("incumbent_threats", [
-                "Dominant incumbents possess existing enterprise sales pipelines.",
-                "Commoditization risk from open-source alternatives."
+                "Dominant enterprise platforms have native integrations with existing customer databases.",
+                "Fast-follower open-source tools reduce willingness to pay for proprietary software."
             ]),
             distribution_traps=res.get("distribution_traps", [
-                "Customer acquisition costs may exceed customer lifetime value in early stages."
+                "Customer acquisition costs may exceed customer lifetime value in early stages.",
+                "Lengthy organizational procurement approval cycles delay pilot conversions."
             ]),
             overengineering_risks=res.get("overengineering_risks", [
-                "Risk of building bespoke infrastructure rather than leveraging managed services."
+                "Risk of building bespoke infrastructure rather than leveraging managed services.",
+                "Overly complex multi-model pipelines create operational latency bottlenecks."
             ]),
-            bear_case_summary=res.get("bear_case_summary", "High risk of incumbent replication and distribution bottlenecks."),
+            bear_case_summary=res.get("bear_case_summary", "High risk of incumbent replication, distribution bottlenecks, and unit economics disparity."),
             trace=trace,
         )
 

@@ -53,8 +53,8 @@ class Settings:
     max_tokens_cap: int = int(os.getenv("MAX_TOKENS_CAP", "4096"))
     context_token_budget: int = int(os.getenv("CONTEXT_TOKEN_BUDGET", "2500"))
     temperature: float = float(os.getenv("TEMPERATURE", "0.2"))
-    request_timeout_seconds: int = int(os.getenv("REQUEST_TIMEOUT_SECONDS", "25"))
-    retry_attempts: int = int(os.getenv("RETRY_ATTEMPTS", "3"))
+    request_timeout_seconds: int = int(os.getenv("REQUEST_TIMEOUT_SECONDS", "10"))
+    retry_attempts: int = int(os.getenv("RETRY_ATTEMPTS", "2"))
 
     # Inter-call pacing (seconds, jittered) to smooth RPM bursts across agents
     pace_seconds: float = float(os.getenv("PACE_SECONDS", "0.15"))

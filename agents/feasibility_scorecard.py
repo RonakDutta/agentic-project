@@ -134,26 +134,28 @@ class FeasibilityScorecardEngine:
         p_score = 0
         p_criteria = []
         p_gaps = []
-        if decomposed.problem_statement and len(decomposed.problem_statement) > 40:
-            p_score += 8
+        if decomposed.problem_statement and len(decomposed.problem_statement) > 50:
+            p_score += 7
             p_criteria.append("Articulated specific problem statement")
         else:
-            p_gaps.append("Problem statement is vague or overly broad")
+            p_score += 4
+            p_gaps.append("Problem statement lacks quantified metrics or domain specificity")
 
         if len(decomposed.target_personas) >= 2:
-            p_score += 7
+            p_score += 6
             p_criteria.append(f"Identified {len(decomposed.target_personas)} distinct user personas")
         elif len(decomposed.target_personas) == 1:
-            p_score += 4
-            p_criteria.append("Identified 1 user persona")
+            p_score += 3
+            p_gaps.append("Only 1 target persona defined; lacks multi-stakeholder validation")
         else:
             p_gaps.append("No explicit user persona identified")
 
-        if decomposed.core_value_prop and len(decomposed.core_value_prop) > 15:
-            p_score += 5
+        if decomposed.core_value_prop and len(decomposed.core_value_prop) > 20:
+            p_score += 4
             p_criteria.append("Clear core value proposition")
         else:
-            p_gaps.append("Value proposition requires sharper differentiation")
+            p_score += 2
+            p_gaps.append("Value proposition requires sharper competitive differentiation")
 
         categories.append(
             CategoryScore(
@@ -172,26 +174,34 @@ class FeasibilityScorecardEngine:
         m_gaps = []
         comp_count = len(market.competitors) if market else 0
         if comp_count >= 2:
-            m_score += 9
+            m_score += 7
             m_criteria.append(f"Validated market demand through {comp_count} existing industry solutions")
         elif comp_count == 1:
-            m_score += 5
+            m_score += 4
             m_criteria.append("Identified 1 existing competitor")
         else:
             m_gaps.append("Limited search evidence of existing market solutions")
 
         if market and market.citations and len(market.citations) >= 2:
-            m_score += 6
+            m_score += 5
             m_criteria.append(f"Backed by {len(market.citations)} verified search citations")
         else:
-            m_gaps.append("Few external references found for validation")
+            m_score += 2
+            m_gaps.append("Few external references or market intelligence citations")
 
         if decomposed.mvp_features and len(decomposed.mvp_features) >= 3:
-            m_score += 5
+            m_score += 4
             m_criteria.append(f"Scope bounded to {len(decomposed.mvp_features)} core MVP features")
         else:
-            m_score += 3
-            p_criteria.append("Basic feature scope outlined")
+            m_score += 2
+            m_gaps.append("Unbounded or sparse initial feature scope")
+
+        # Check Incumbent threats from Kill Agent
+        if kill_report and getattr(kill_report, "incumbent_threats", None):
+            threats = kill_report.incumbent_threats
+            if threats:
+                m_score = max(3, m_score - 2)
+                m_gaps.append(f"Market Threat: {threats[0]}")
 
         categories.append(
             CategoryScore(
@@ -210,28 +220,35 @@ class FeasibilityScorecardEngine:
         c_gaps = []
         diffs = market.key_differentiators if market else []
         if diffs and len(diffs) >= 2:
-            c_score += 8
+            c_score += 6
             c_criteria.append(f"Articulated {len(diffs)} distinct competitive differentiators")
         elif diffs:
-            c_score += 5
+            c_score += 4
             c_criteria.append("Articulated 1 differentiator")
         else:
             c_gaps.append("Lacks clear defensive moat against incumbents")
 
-        # Check against Kill Agent findings if present
-        has_critical_fatal_flaw = False
-        if kill_report and hasattr(kill_report, "fatal_flaws"):
-            critical_flaws = [f for f in kill_report.fatal_flaws if getattr(f, "severity", "") == "Critical"]
-            if critical_flaws:
-                has_critical_fatal_flaw = True
-                c_score = max(2, c_score - 4)
-                c_gaps.append("Adversarial Kill Agent detected critical incumbent moat risk")
-            else:
-                c_score += 5
-                c_criteria.append("Survived adversarial kill critique without existential fatal flaws")
+        # Evaluate Kill Agent Fatal Flaws
+        if kill_report and hasattr(kill_report, "fatal_flaws") and kill_report.fatal_flaws:
+            flaw_deductions = 0
+            for f in kill_report.fatal_flaws:
+                sev = getattr(f, "severity", "High")
+                title = getattr(f, "title", "Fatal Flaw")
+                arg = getattr(f, "argument", "")
+                short_arg = arg[:75] + "..." if len(arg) > 75 else arg
+                if sev == "Critical":
+                    flaw_deductions += 3
+                    c_gaps.append(f"Critical Flaw: {title} ({short_arg})")
+                elif sev == "High":
+                    flaw_deductions += 2
+                    c_gaps.append(f"Moat Vulnerability: {title} ({short_arg})")
+                else:
+                    flaw_deductions += 1
+                    c_gaps.append(f"Competitive Risk: {title}")
+            c_score = max(2, c_score + 4 - flaw_deductions)
         else:
-            c_score += 4
-            c_criteria.append("Standard competitive baseline")
+            c_score += 5
+            c_criteria.append("Standard competitive baseline without existential fatal flaws")
 
         categories.append(
             CategoryScore(
@@ -250,20 +267,30 @@ class FeasibilityScorecardEngine:
         t_gaps = []
         stack = market.tech_stack if market else {}
         if "backend" in stack and "frontend" in stack and "database" in stack:
-            t_score += 10
+            t_score += 7
             t_criteria.append("Comprehensive 3-tier architecture defined (Frontend, Backend, Database)")
         elif "backend" in stack or "database" in stack:
-            t_score += 6
+            t_score += 4
             t_criteria.append("Partial core stack defined")
         else:
             t_gaps.append("Incomplete technical stack definition")
 
         if len(decomposed.key_assumptions) >= 2:
-            t_score += 5
+            t_score += 4
             t_criteria.append(f"Explicitly documented {len(decomposed.key_assumptions)} core engineering assumptions")
         else:
             t_score += 2
             t_gaps.append("Unstated technical assumptions introduce execution uncertainty")
+
+        # Check Overengineering risks from Kill Agent
+        if kill_report and getattr(kill_report, "overengineering_risks", None):
+            oe_risks = kill_report.overengineering_risks
+            if oe_risks:
+                t_score = max(3, t_score - 1)
+                t_gaps.append(f"Technical Debt Risk: {oe_risks[0]}")
+        else:
+            t_score += 2
+            t_criteria.append("Standard architectural complexity profile")
 
         categories.append(
             CategoryScore(
@@ -281,17 +308,24 @@ class FeasibilityScorecardEngine:
         e_criteria = []
         e_gaps = []
         if len(decomposed.mvp_features) in range(2, 6):
-            e_score += 6
+            e_score += 5
             e_criteria.append("Pragmatic MVP scope enabling rapid pilot deployment")
         else:
             e_score += 3
             e_gaps.append("MVP scope is either too lean or overly bloated")
 
-        if not has_critical_fatal_flaw:
-            e_score += 3
-            e_criteria.append("No blocking distribution traps identified")
+        # Check Distribution Traps from Kill Agent
+        if kill_report and getattr(kill_report, "distribution_traps", None):
+            dist_traps = kill_report.distribution_traps
+            if dist_traps:
+                e_score += 2
+                e_gaps.append(f"Distribution Trap: {dist_traps[0]}")
+            else:
+                e_score += 4
+                e_criteria.append("No blocking customer acquisition traps identified")
         else:
-            e_gaps.append("High customer acquisition friction noted in review")
+            e_score += 3
+            e_criteria.append("Standard go-to-market trajectory")
 
         categories.append(
             CategoryScore(
@@ -308,17 +342,17 @@ class FeasibilityScorecardEngine:
         r_score = 0
         r_criteria = []
         r_gaps = []
-        # Free / low-cost open source technologies favored
         stack_text = str(stack).lower()
         if any(tool in stack_text for tool in ["fastapi", "react", "postgres", "sqlite", "python", "tailwind"]):
-            r_score += 7
+            r_score += 5
             r_criteria.append("Built on mature, zero-license open-source foundations")
         else:
-            r_score += 4
+            r_score += 3
             r_criteria.append("Standard commercial software dependencies")
 
         r_score += 2
         r_criteria.append("Lean initial engineering resource footprint")
+        r_gaps.append("Inference API usage and infrastructure scaling require strict token budgets")
 
         categories.append(
             CategoryScore(
@@ -338,14 +372,21 @@ class FeasibilityScorecardEngine:
         if reconciler_result and hasattr(reconciler_result, "must_have_mitigations"):
             mit_count = len(reconciler_result.must_have_mitigations)
             if mit_count >= 2:
-                rk_score += 8
+                rk_score += 5
                 rk_criteria.append(f"Identified {mit_count} concrete risk mitigations via Reconciler")
             else:
-                rk_score += 5
+                rk_score += 3
                 rk_criteria.append("Identified foundational mitigations")
         else:
-            rk_score += 6
+            rk_score += 4
             rk_criteria.append("Documented standard architectural guardrails")
+
+        if reconciler_result and getattr(reconciler_result, "arguments_against", None) and reconciler_result.arguments_against:
+            rk_score += 2
+            rk_gaps.append(f"Critical Tradeoff: {reconciler_result.arguments_against[0]}")
+        else:
+            rk_score += 3
+            rk_criteria.append("Balanced risk-mitigation coverage")
 
         categories.append(
             CategoryScore(
@@ -384,6 +425,17 @@ class FeasibilityScorecardEngine:
                 if len(risks) < 4:
                     risks.append(f"{c.category_name}: {g}")
 
+        # Ensure key_risks is never empty even if categories had sparse gaps
+        if len(risks) < 2 and kill_report:
+            if hasattr(kill_report, "fatal_flaws"):
+                for f in kill_report.fatal_flaws:
+                    if len(risks) < 4:
+                        risks.append(f"Fatal Flaw: {getattr(f, 'title', 'Vulnerability')}")
+            if hasattr(kill_report, "incumbent_threats"):
+                for t in kill_report.incumbent_threats:
+                    if len(risks) < 4:
+                        risks.append(f"Market Threat: {t}")
+
         if verdict == "GO":
             actions.append("Freeze MVP specifications and initiate Sprint 1 foundational development.")
             actions.append("Establish automated regression testing for core customer journeys.")
@@ -407,3 +459,4 @@ class FeasibilityScorecardEngine:
 
 
 scorecard_engine = FeasibilityScorecardEngine()
+

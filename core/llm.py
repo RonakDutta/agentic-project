@@ -521,10 +521,9 @@ class LLMClient:
         while attempts < max_attempts:
             reservation = self._reserve(model, prompt_tokens, base_max_tokens, attempted_models)
             if reservation is None:
-                # Everything is cooling down or over budget. Wait for a window to
-                # refill instead of spending a request we know will be rejected.
+                # Everything is cooling down or over budget. Only wait if window replenishes very soon (<= 2s)
                 wait_s = self._seconds_until_replenish(model, prompt_tokens + settings.min_tokens_floor)
-                if wait_s is not None and wait_cycles < 6 and waited + wait_s <= settings.max_wait_seconds:
+                if wait_s is not None and wait_s <= 2.0 and wait_cycles < 2 and waited + wait_s <= settings.max_wait_seconds:
                     wait_cycles += 1
                     logger.info(
                         f"[LLMClient] Every model is out of budget. Waiting {wait_s:.1f}s for a window to refill."

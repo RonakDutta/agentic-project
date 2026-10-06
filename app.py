@@ -161,6 +161,20 @@ async def health_check():
     )
 
 
+@app.get("/v1/models")
+@app.get("/models")
+async def list_models():
+    """Returns active model list in standard OpenAI-compatible format to avoid 404 polling errors."""
+    models_list = []
+    seen = set()
+    for m in [settings.primary_model] + (settings.model_chain or []):
+        if m and m not in seen:
+            seen.add(m)
+            models_list.append({"id": m, "object": "model", "owned_by": "groq", "permission": []})
+    return JSONResponse(content={"object": "list", "data": models_list})
+
+
+
 @app.get("/api/agents")
 async def list_specialist_agents():
     """Returns the direct-interrogation agent catalog used by the UI chat chips."""
