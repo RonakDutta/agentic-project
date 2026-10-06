@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Project Review Assistant | Idea Validation & Codebase Analysis</title>
+  <title>Agentic AI Co-Pilot | A Multi-Agent RAG System for Idea Validation & Codebase Analysis</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
@@ -383,8 +383,8 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M13 10V3L4 14h7v7l9-11h-7z"/>
         </svg>
         <div class="min-w-0">
-          <div class="text-white text-[15px] font-semibold leading-tight">Project Review Assistant</div>
-          <div class="text-[11px] text-zinc-500 leading-tight hidden sm:block">Reviews your idea or your code, one step at a time</div>
+          <div class="text-white text-[15px] font-semibold leading-tight">Agentic AI Co-Pilot</div>
+          <div class="text-[11px] text-zinc-500 leading-tight hidden sm:block">A Multi-Agent RAG System for Idea Validation & Codebase Analysis</div>
         </div>
       </div>
 
@@ -408,11 +408,11 @@
       <!-- Mode tabs -->
       <div class="flex flex-wrap items-end justify-between gap-4">
         <div class="tabs">
-          <button id="btnModeIdea" onclick="selectPillar('idea')" class="tab is-active">Review an idea</button>
-          <button id="btnModeCode" onclick="selectPillar('code')" class="tab">Review code</button>
+          <button id="btnModeIdea" onclick="selectPillar('idea')" class="tab is-active">Idea Assistance</button>
+          <button id="btnModeCode" onclick="selectPillar('code')" class="tab">Codebase Analysis</button>
         </div>
         <div class="text-xs text-zinc-500 pb-2">
-          <span id="modeDescription">Feasibility, market research and architecture</span>
+          <span id="modeDescription">Problem extraction, market research, roadmap and risk evaluation</span>
         </div>
       </div>
 
@@ -458,14 +458,15 @@
           </div>
 
           <div id="codeChips" class="hidden flex flex-wrap items-center gap-2">
+            <button onclick="setPrompt('orchestrator_flow')" class="chip">Orchestrator Intent Bug</button>
             <button onclick="setPrompt('token_err')" class="chip">Token Expired Bug</button>
             <button onclick="setPrompt('auth_flow')" class="chip">Order Auth Flow</button>
             <button onclick="setPrompt('blast')" class="chip">Blast Radius Check</button>
           </div>
         </div>
 
-        <button id="btnRun" onclick="executeWorkflow()" aria-label="Run the four-agent review" class="btn btn-primary ml-auto">
-          <span id="btnRunText">Run the 4-agent review</span>
+        <button id="btnRun" onclick="executeWorkflow()" aria-label="Run multi-agent review pipeline" class="btn btn-primary ml-auto">
+          <span id="btnRunText">Run Multi-Agent Review</span>
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
           </svg>
@@ -480,8 +481,8 @@
 
       <div class="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h2 class="section-title">How the review works</h2>
-          <p class="section-sub">Four agents read your input one after another. Each step is shown as soon as it finishes.</p>
+          <h2 class="section-title">Multi-Agent Orchestration Pipeline</h2>
+          <p class="section-sub">Coordinated agents execute goal decomposition, retrieval, and synthesis with live trace.</p>
         </div>
         <div class="text-xs text-zinc-400 pt-1">
           Status: <span id="pipelineStatusText" class="text-zinc-200 font-semibold">Ready</span>
@@ -538,7 +539,7 @@
         <div class="panel p-8 sm:p-10 space-y-6">
           <div class="flex flex-wrap items-start justify-between gap-4 border-b border-borderSubtle pb-6">
             <div class="space-y-1">
-              <span class="label is-accent">Project overview</span>
+              <span class="label is-accent">Structured Project Brief</span>
               <h2 id="ideaProjectTitle" class="text-2xl sm:text-3xl font-semibold text-white tracking-tight"></h2>
             </div>
           </div>
@@ -775,8 +776,8 @@
               <p class="text-xs text-zinc-400 mt-0.5">Where the bug probably is, and why.</p>
             </div>
             <div class="flex items-center space-x-2">
-              <span class="tag info">Read only: we suggest a fix, we never edit your files</span>
-              <span id="codeCriticBadge" class="tag good">Checked against your source</span>
+              <span class="tag info">Read-only: suggests fix direction without modifying code</span>
+              <span id="codeCriticBadge" class="tag good">Critic Agent: Grounded in AST code evidence</span>
             </div>
           </div>
           <p id="codeSummaryText" class="text-sm sm:text-base text-zinc-200 leading-relaxed"></p>
@@ -784,7 +785,7 @@
 
         <div class="space-y-5">
           <div class="border-b border-borderSubtle pb-3 flex items-baseline justify-between">
-            <h3 class="text-base sm:text-lg font-bold text-white">Suspected Bugs & Suggested Fixes</h3>
+            <h3 class="text-base sm:text-lg font-bold text-white">Ranked Issue Localisation & Suggested Fixes</h3>
             <span class="text-xs text-zinc-500">Matched against the files you scanned</span>
           </div>
           <div id="codeCandidatesContainer" class="space-y-6"></div>
@@ -846,8 +847,8 @@
 
   <footer class="border-t border-borderSubtle/70">
     <div class="max-w-6xl mx-auto px-6 py-6 flex flex-wrap items-center justify-between gap-3 text-[11px] text-zinc-600">
-      <span>Project Review Assistant</span>
-      <span>Idea checks and code checks, with a written report you can download</span>
+      <span>Agentic AI Co-Pilot</span>
+      <span>A Multi-Agent RAG System for Idea Validation & Codebase Analysis</span>
     </div>
   </footer>
 
@@ -885,17 +886,17 @@
     };
 
     const IDEA_AGENTS = [
-      { id: 'node_0', name: 'Product Lead', role: 'Scope & Personas', desc: 'Clarifies problem and MVP scope' },
-      { id: 'node_1', name: 'Market Analyst', role: 'Competitors & Tech', desc: 'Rivals, differentiators and tech stack' },
-      { id: 'node_2', name: "Devil's Advocate", role: 'Risks & Fatal Flaws', desc: 'Identifies critical risks and failure modes' },
-      { id: 'node_3', name: 'Score & Roadmap', role: 'Verdict & Milestones', desc: 'Feasibility score and delivery plan' }
+      { id: 'node_0', name: 'Idea & Research Agent', role: 'Problem & Target Users', desc: 'Extracts problem, target users and assumptions' },
+      { id: 'node_1', name: 'Market & Tech Analyst', role: 'Competitors & Tech Stack', desc: 'Researches existing solutions & technologies' },
+      { id: 'node_2', name: 'Roadmap & Risk Agent', role: 'Milestones & Mitigations', desc: 'Produces phased plan and assesses main risks' },
+      { id: 'node_3', name: 'Critic & Feasibility Agent', role: 'Grounding & Scorecard', desc: 'Checks evidence grounding and feasibility verdict' }
     ];
 
     const CODE_AGENTS = [
-      { id: 'node_0', name: 'Task Planner & AST Indexer', role: 'Code Structure Parser', desc: 'Parses AST files and symbol table' },
-      { id: 'node_1', name: 'Code Navigation Agent', role: 'Hybrid RAG Retriever', desc: 'BM25 and vector semantic search' },
-      { id: 'node_2', name: 'Diagnosis Agent', role: 'Root-Cause Specialist', desc: 'Hypothesis and fix direction' },
-      { id: 'node_3', name: 'Deterministic Critic', role: 'Fact & Line Verifier', desc: 'Physical disk and syntax check' }
+      { id: 'node_0', name: 'Orchestrator Agent', role: 'Task Planner & AST Indexer', desc: 'Parses Python AST files and symbol table' },
+      { id: 'node_1', name: 'Code Navigation Agent', role: 'Hybrid RAG Retriever', desc: 'Symbol lookup, import graph & hybrid retrieval' },
+      { id: 'node_2', name: 'Diagnosis Agent', role: 'Root-Cause Specialist', desc: 'Ranked cause hypotheses with suggested fix direction' },
+      { id: 'node_3', name: 'Critic Agent', role: 'Grounding & Verification', desc: 'Verifies evidence grounding against physical code' }
     ];
 
     // Initialize Mermaid.js
@@ -995,22 +996,22 @@
         btnIdea.className = 'tab is-active';
         btnCode.className = 'tab';
         codeTargetSection.classList.add('hidden');
-        modeDescription.innerText = "Feasibility, market research and architecture";
+        modeDescription.innerText = "Problem extraction, market research, roadmap and risk evaluation";
         ideaChips.classList.remove('hidden');
         codeChips.classList.add('hidden');
         inputLabel.innerText = "Describe your startup or project idea";
         mainPrompt.placeholder = "What problem are you solving? Who is it for? What is your solution...";
-        btnRunText.innerText = "Run the 4-agent review";
+        btnRunText.innerText = "Run Idea Assistance Pipeline";
       } else {
         btnCode.className = 'tab is-active';
         btnIdea.className = 'tab';
         codeTargetSection.classList.remove('hidden');
-        modeDescription.innerText = "Finds where the bug is, and why it happens";
+        modeDescription.innerText = "AST structure navigation, dependency mapping, and issue diagnosis";
         ideaChips.classList.add('hidden');
         codeChips.classList.remove('hidden');
         inputLabel.innerText = "Paste an error message, or ask about the code";
         mainPrompt.placeholder = "Paste an exception traceback or ask about code structure (e.g. ValueError in verify_token)...";
-        btnRunText.innerText = "Review the code (4 agents)";
+        btnRunText.innerText = "Run Codebase Analysis Pipeline";
       }
 
       // 3. Restore target pillar state
@@ -1066,6 +1067,8 @@
         input.value = "An automated AI peer review platform for engineering students to evaluate their lab code submissions against code quality, linting, and AST standards.";
       } else if (type === 'water') {
         input.value = "A smart ultrasonic water meter for residential buildings using LoRaWAN to detect pipe leakages in real time and estimate daily household consumption.";
+      } else if (type === 'orchestrator_flow') {
+        input.value = "Where is intent classified in orchestrator and how are multi-agent execution steps planned?";
       } else if (type === 'token_err') {
         input.value = "ValueError: Token expired when verify_token validates customer credentials during checkout in order processor.";
       } else if (type === 'auth_flow') {
@@ -1113,6 +1116,21 @@
           const label = data.is_remote ? `GitHub: ${data.repo_name || 'Cloned'}` : 'Local';
           badge.className = "text-emerald-400 text-xs px-2 py-1 bg-surface rounded border border-emerald-900/60";
           badge.innerText = `${filesCount} files, ${chunksCount} functions scanned (${label})`;
+
+          // Reset stale output from previous repository runs
+          pillarStates.code.hasOutput = false;
+          pillarStates.code.sessionState = null;
+          pillarStates.code.storyboardHtml = '';
+          pillarStates.code.chatHtml = '';
+          pillarStates.code.statusText = `Scanned ${filesCount} files - ready to review`;
+          pillarStates.code.statusClass = 'text-emerald-400 font-semibold';
+          document.getElementById('outputArea').classList.add('hidden');
+          document.getElementById('btnExportTop').classList.add('hidden');
+          document.getElementById('agentStepsDetail').innerHTML = '';
+          document.getElementById('followupThread').innerHTML = '';
+          document.getElementById('pipelineStatusText').innerText = `Scanned ${filesCount} files (${label}) - ready to review`;
+          document.getElementById('pipelineStatusText').className = 'text-emerald-400 font-semibold';
+          renderProgressStrip('code');
         } else {
           badge.className = "text-rose-400 text-xs px-2 py-1 bg-surface rounded border border-rose-900/60";
           badge.innerText = data.message || "Failed to scan repository.";
@@ -1982,9 +2000,9 @@
     function escapeHtml(str) {
       if (!str) return '';
       return String(str)
-        .replace(/\s+—\s+/g, ', ')
-        .replace(/—/g, '-')
-        .replace(/\s+–\s+/g, '-')
+        .replace(/\s*\u2014\s*/g, ', ')
+        .replace(/\s+\u2013\s+/g, ', ')
+        .replace(/\u2013/g, '-')
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
@@ -2202,20 +2220,20 @@
     // NOVELTY #2: Direct Agent Interrogation chips
     // ------------------------------------------------------------------
     const IDEA_DIRECT_AGENTS = [
-      { key: 'kill', name: "Devil's Advocate", blurb: "Risks & fatal flaws" },
-      { key: 'market', name: 'Market Analyst', blurb: 'Competitors & gaps' },
-      { key: 'architect', name: 'Systems Architect', blurb: 'Tech stack & choices' },
-      { key: 'scorecard', name: 'Feasibility Scorer', blurb: 'Score & rubric' },
+      { key: 'kill', name: "Roadmap & Risk Agent (Critic)", blurb: "Risks & fatal flaws" },
+      { key: 'market', name: 'Market & Tech Analyst', blurb: 'Competitors & gaps' },
+      { key: 'architect', name: 'Code Navigation & Architect', blurb: 'Tech stack & choices' },
+      { key: 'scorecard', name: 'Critic & Feasibility Agent', blurb: 'Score & rubric' },
       { key: 'prd', name: 'Product Manager', blurb: 'User stories & requirements' },
       { key: 'roadmap', name: 'Roadmap Planner', blurb: 'Phases & milestones' },
       { key: 'arbiter', name: 'Decision Arbiter', blurb: 'Tradeoffs & verdict' },
-      { key: 'decomposer', name: 'Product Lead', blurb: 'Problem & MVP scope' }
+      { key: 'decomposer', name: 'Idea & Research Agent', blurb: 'Problem & MVP scope' }
     ];
 
     const CODE_DIRECT_AGENTS = [
-      { key: 'code', name: 'Code Reviewer', blurb: 'Bug diagnosis & patterns' },
-      { key: 'risk', name: 'Security Auditor', blurb: 'Blast radius & callers' },
-      { key: 'architect', name: 'Systems Architect', blurb: 'Architecture & flow' }
+      { key: 'code', name: 'Diagnosis Agent', blurb: 'Bug diagnosis & patterns' },
+      { key: 'risk', name: 'Security & Callers Auditor', blurb: 'Blast radius & callers' },
+      { key: 'architect', name: 'Code Navigation Agent', blurb: 'AST structure & import graph' }
     ];
 
     function getActiveAgentList() {
@@ -2440,12 +2458,12 @@
       if (out.full_report_markdown) {
         md = out.full_report_markdown;
       } else {
-        md = `# Engineering Validation Report\n`;
+        md = `# Agentic AI Co-Pilot: Project Analysis Report\n`;
         md += `Date: ${new Date().toLocaleDateString()}\n`;
         md += `Session ID: ${currentSessionState.session_id || 'unassigned'}\n\n`;
 
         if (currentSessionState.intent === 'idea_validation') {
-          md += `## Project Title: ${out.project_title || 'Validated Engineering Concept'}\n\n`;
+          md += `## Project Title: ${out.project_title || 'Validated Concept'}\n\n`;
           md += `### Problem Statement\n${out.problem_statement || ''}\n\n`;
           if (out.scorecard) {
             md += `### Feasibility Scorecard: ${out.scorecard.total_score}/100 (${out.scorecard.verdict})\n`;
@@ -2467,7 +2485,7 @@
       const blob = new Blob([md], {type: 'text/markdown'});
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = `engineering_report_${currentSessionState.session_id || 'export'}.md`;
+      a.download = `agentic_copilot_report_${currentSessionState.session_id || 'export'}.md`;
       a.click();
     }
   </script>

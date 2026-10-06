@@ -36,7 +36,7 @@ def test_template_phase9_elements():
     # 2. Feasibility Scorecard components (Task 9.5)
     assert "Feasibility Decision Scorecard" in content
     assert "scDisclaimerText" in content
-    assert "7-Category Project Decision Rubric" in content
+    assert "Score Breakdown:" in content
     assert "scScoreNum" in content
     assert "scVerdictBadge" in content
 
@@ -49,7 +49,7 @@ def test_template_phase9_elements():
     assert "recPreconditionsContainer" in content
 
     # 4. MetaGPT PRD & Mermaid diagram tabs (Task 9.4)
-    assert "Product Requirements Document (PRD) & Architecture" in content
+    assert "Product requirements and architecture" in content
     assert "userStoriesContainer" in content
     assert "functionalReqsContainer" in content
     assert "tabMermaid_architecture" in content

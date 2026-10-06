@@ -17,13 +17,22 @@ def test_configuration():
     print("[1/4] Checking settings configuration...")
     settings.validate()
     assert settings.groq_api_key.startswith("gsk_"), "Invalid Groq API key format!"
-    assert settings.primary_model == "openai/gpt-oss-120b"
-    assert settings.fast_model == "openai/gpt-oss-20b"
+    # Model names come from .env, so check the chain instead of hard-coding one.
+    assert settings.primary_model in settings.model_chain
+    assert settings.fast_model in settings.model_chain
+    assert len(settings.model_chain) >= 2, "Need at least two models to absorb rate limits"
     print("      Settings validated successfully.")
 
 
 import pytest
 from groq import RateLimitError
+
+
+def _skip_if_rate_limited(err: Exception) -> None:
+    """The free tier is shared: skip instead of failing when Groq says 'not now'."""
+    if isinstance(err, RateLimitError) or "rate-limit" in str(err).lower():
+        pytest.skip(f"Groq rate limit reached: {err}")
+    raise err
 
 
 def test_text_generation():
@@ -35,8 +44,8 @@ def test_text_generation():
         )
         print(f"      Response received: {response.strip()}")
         assert "READY" in response.upper(), f"Expected READY, got {response}"
-    except RateLimitError as e:
-        pytest.skip(f"Groq daily rate limit reached: {e}")
+    except (RateLimitError, RuntimeError) as e:
+        _skip_if_rate_limited(e)
 
 
 def test_json_generation():
@@ -53,8 +62,8 @@ def test_json_generation():
         print(f"      Parsed JSON: {result}")
         assert result.get("status") == "OK"
         assert result.get("agent") == "Orchestrator"
-    except RateLimitError as e:
-        pytest.skip(f"Groq daily rate limit reached: {e}")
+    except (RateLimitError, RuntimeError) as e:
+        _skip_if_rate_limited(e)
 
 
 def test_metrics():

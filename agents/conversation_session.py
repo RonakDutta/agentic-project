@@ -251,29 +251,29 @@ class ConversationalFollowupEngine:
 
     # Direct agent aliases -> canonical agent keys
     DIRECT_AGENT_ALIASES: Dict[str, str] = {
-        "decomposer": "decomposer", "idea": "decomposer", "brief": "decomposer",
+        "decomposer": "decomposer", "idea": "decomposer", "brief": "decomposer", "research": "decomposer",
         "market": "market", "competitor": "market",
         "kill": "kill", "devil": "kill", "critic": "kill",
         "arbiter": "arbiter", "reconciler": "arbiter",
         "scorecard": "scorecard", "score": "scorecard", "rubric": "scorecard",
         "prd": "prd", "product": "prd", "stories": "prd",
         "roadmap": "roadmap", "milestone": "roadmap", "delivery": "roadmap",
-        "architect": "architect", "stack": "architect",
+        "architect": "architect", "stack": "architect", "navigation": "architect",
         "risk": "risk", "audit": "risk", "security": "risk",
-        "code": "code", "ast": "code", "debug": "code",
+        "code": "code", "ast": "code", "debug": "code", "diagnosis": "code",
     }
 
     DIRECT_AGENT_PROFILES: Dict[str, Dict[str, str]] = {
-        "decomposer": {"name": "Product Lead", "role": "Idea & Feature Scope"},
-        "market": {"name": "Market Analyst", "role": "Competitors & Positioning"},
-        "kill": {"name": "Devil's Advocate", "role": "Risks & Fatal Flaws"},
+        "decomposer": {"name": "Idea & Research Agent", "role": "Problem & Feature Scope"},
+        "market": {"name": "Market & Tech Analyst", "role": "Competitors & Solutions"},
+        "kill": {"name": "Roadmap & Risk Agent (Critic)", "role": "Risks & Fatal Flaws"},
         "arbiter": {"name": "Decision Arbiter", "role": "Verdict & Tradeoffs"},
-        "scorecard": {"name": "Feasibility Scorer", "role": "Score & Rubric Breakdown"},
+        "scorecard": {"name": "Critic & Feasibility Agent", "role": "Grounding & Feasibility Scorecard"},
         "prd": {"name": "Product Manager", "role": "Requirements & User Stories"},
         "roadmap": {"name": "Roadmap Planner", "role": "Phases & Delivery Milestones"},
-        "architect": {"name": "Systems Architect", "role": "Tech Stack & Infrastructure"},
+        "architect": {"name": "Code Navigation & Systems Architect", "role": "AST Structure & Infrastructure"},
         "risk": {"name": "Security & Risk Auditor", "role": "Blast Radius & Code Safety"},
-        "code": {"name": "Code Reviewer", "role": "Bug Diagnosis & Fixes"},
+        "code": {"name": "Diagnosis Agent", "role": "Bug Diagnosis & Fix Direction"},
     }
 
     @classmethod

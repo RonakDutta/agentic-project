@@ -178,6 +178,43 @@ async def get_session_info(session_id: str):
     return JSONResponse(content={"status": "ok", "session": session.to_dict()})
 
 
+# --- Synopsis alignment layer (branch `muse`, Eval-1) ---
+@app.get("/api/graph")
+async def get_graph_spec():
+    from agents.graph import graph_spec
+    return JSONResponse(content={"status": "ok", "graph": graph_spec()})
+
+
+@app.post("/api/graph/run")
+async def run_graph(req: QueryRequest):
+    from agents.graph import run
+    try:
+        return JSONResponse(content=run(query=req.query, repo_path=req.repo_path, force_intent=req.force_intent))
+    except Exception as err:
+        return JSONResponse(status_code=500, content={"error": str(err), "status": "failed"})
+
+
+@app.get("/api/synopsis/agents")
+async def get_synopsis_agents():
+    from agents.synopsis_agents import get_canonical_catalog
+    return JSONResponse(content={"status": "ok", "agents": get_canonical_catalog()})
+
+
+@app.get("/api/kb/lookup")
+async def kb_lookup(q: str, top_k: int = 3):
+    from indexer.knowledge_base import knowledge_base
+    return JSONResponse(content={"status": "ok", "hits": [h.to_dict() for h in knowledge_base.lookup(q, top_k=top_k)]})
+
+
+@app.get("/api/session-store/{session_id}")
+async def get_stored_session(session_id: str):
+    from agents import session_store
+    data = session_store.load_session(session_id)
+    if not data:
+        return JSONResponse(status_code=404, content={"status": "not_found"})
+    return JSONResponse(content={"status": "ok", "session": data})
+
+
 if __name__ == "__main__":
     # Default to 127.0.0.1 so browsers on Windows/macOS can click/open the URL directly.
     host = os.getenv("HOST", "127.0.0.1")

@@ -59,6 +59,22 @@ class Settings:
     # Inter-call pacing (seconds, jittered) to smooth RPM bursts across agents
     pace_seconds: float = float(os.getenv("PACE_SECONDS", "0.15"))
 
+    # Free-tier budget guardrails (Groq gives each model a fixed requests/minute,
+    # requests/day and tokens/minute budget, all reported in response headers)
+    # Never spend a model's whole token window on one answer; keep this much back.
+    budget_safety_margin: int = int(os.getenv("BUDGET_SAFETY_MARGIN", "512"))
+    # Smallest answer we will ask for when we have to shrink to fit the budget.
+    min_tokens_floor: int = int(os.getenv("MIN_TOKENS_FLOOR", "400"))
+    # Prompts larger than this stay on the strongest model; smaller prompts are
+    # spread across every model so one model never carries the whole run.
+    small_prompt_tokens: int = int(os.getenv("SMALL_PROMPT_TOKENS", "600"))
+    # How long one request may wait for a rate-limit window to refill before the
+    # agents fall back to their built-in grounded answers.
+    max_wait_seconds: float = float(os.getenv("MAX_WAIT_SECONDS", "25"))
+
+    # Plain-language output: ask the model for everyday wording and strip filler.
+    plain_language: bool = os.getenv("PLAIN_LANGUAGE", "1") not in ("0", "false", "False")
+
     # Short-TTL completion cache: identical agent prompts within the TTL cost zero quota
     llm_cache_enabled: bool = os.getenv("LLM_CACHE_ENABLED", "1") not in ("0", "false", "False")
     llm_cache_ttl_seconds: int = int(os.getenv("LLM_CACHE_TTL_SECONDS", "600"))

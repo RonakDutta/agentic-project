@@ -108,6 +108,9 @@ class ASTCodeIndexer:
             "site-packages",
             ".chroma",
         }
+        # If indexing a parent repository, ignore embedded sample_repo test fixture
+        if os.path.basename(self.repo_path) != "sample_repo":
+            self.ignore_dirs.add("sample_repo")
 
     def index(self) -> CodebaseIndex:
         """
