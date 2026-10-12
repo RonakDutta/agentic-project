@@ -5,11 +5,14 @@ applies strict safety filters to exclude non-code, secrets, and binary files,
 and indexes the codebase with our AST indexer in strict read-only mode.
 """
 
+import atexit
 import os
 import re
 import shutil
 import subprocess
 import tempfile
+import threading
+from collections import OrderedDict
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 from indexer.ast_parser import ASTCodeIndexer, CodebaseIndex
@@ -50,10 +53,47 @@ class GitHubIngestionService:
         r"^https:\/\/github\.com\/([a-zA-Z0-9_\.-]+)\/([a-zA-Z0-9_\.-]+?)(?:\.git)?\/?$"
     )
 
-    def __init__(self, workspace_root: Optional[str] = None, max_files: int = 400):
+    MAX_CACHED_CLONES = 6
+
+    def __init__(self, workspace_root: Optional[str] = None, max_files: Optional[int] = None,
+                 max_clone_mb: Optional[int] = None):
+        from core.config import settings
         self.workspace_root = workspace_root or tempfile.gettempdir()
-        self.max_files = max_files
-        self._cache: Dict[str, IngestionResult] = {}
+        self.max_files = max_files or settings.max_repo_files
+        self.max_clone_mb = max_clone_mb or settings.max_clone_mb
+        # url@branch -> result; oldest clones are deleted from disk when evicted.
+        self._cache: "OrderedDict[str, IngestionResult]" = OrderedDict()
+        self._lock = threading.Lock()
+        atexit.register(self.cleanup)
+
+    def cleanup(self) -> None:
+        """Deletes every clone this process made (also runs at interpreter exit)."""
+        with self._lock:
+            for result in self._cache.values():
+                if result.local_path:
+                    shutil.rmtree(result.local_path, ignore_errors=True)
+            self._cache.clear()
+
+    def _remember(self, key: str, result: IngestionResult) -> None:
+        with self._lock:
+            self._cache[key] = result
+            self._cache.move_to_end(key)
+            while len(self._cache) > self.MAX_CACHED_CLONES:
+                _, old = self._cache.popitem(last=False)
+                if old.local_path:
+                    shutil.rmtree(old.local_path, ignore_errors=True)
+
+    @staticmethod
+    def _dir_size_mb(path: str) -> float:
+        total = 0
+        for root, dirs, files in os.walk(path):
+            dirs[:] = [d for d in dirs if d != ".git"]
+            for f in files:
+                try:
+                    total += os.path.getsize(os.path.join(root, f))
+                except OSError:
+                    pass
+        return total / (1024 * 1024)
 
     def is_valid_github_url(self, url: str) -> bool:
         """Validates that the input is a well-formed GitHub HTTPS repository URL."""
@@ -84,27 +124,31 @@ class GitHubIngestionService:
                 error_message="Invalid GitHub URL format. Must be https://github.com/owner/repository",
             )
 
-        cache_key = f"{clean_url}@{branch or 'default'}"
-        if cache_key in self._cache:
-            cached = self._cache[cache_key]
-            if os.path.exists(cached.local_path):
-                return cached
+        cache_key = f"{clean_url.rstrip('/').removesuffix('.git').lower()}@{branch or 'default'}"
+        with self._lock:
+            cached = self._cache.get(cache_key)
+        if cached and os.path.exists(cached.local_path):
+            return cached
 
         repo_ident = self.extract_repo_name(clean_url).replace("/", "_")
         dest_dir = tempfile.mkdtemp(prefix=f"agentic_gh_{repo_ident}_", dir=self.workspace_root)
 
         try:
             # 1. Run git shallow clone (depth 1)
-            cmd = ["git", "clone", "--depth", "1"]
+            cmd = ["git", "clone", "--depth", "1", "--single-branch", "--no-tags"]
             if branch:
                 cmd.extend(["--branch", branch])
             cmd.extend([clean_url, dest_dir])
 
+            # GIT_TERMINAL_PROMPT=0: a private or misspelled repo fails at once
+            # instead of hanging the request on an invisible username prompt.
+            env = dict(os.environ, GIT_TERMINAL_PROMPT="0", GIT_ASKPASS="echo")
             res = subprocess.run(
                 cmd,
                 capture_output=True,
                 text=True,
                 timeout=50,
+                env=env,
             )
 
             if res.returncode != 0:
@@ -119,9 +163,25 @@ class GitHubIngestionService:
                     error_message=f"Git clone failed: {res.stderr.strip() or res.stdout.strip()}",
                 )
 
-            # 2. Run AST Indexer over cloned repository
-            indexer = ASTCodeIndexer(repo_path=dest_dir, max_files=self.max_files)
-            codebase_index = indexer.index()
+            size_mb = self._dir_size_mb(dest_dir)
+            if size_mb > self.max_clone_mb:
+                shutil.rmtree(dest_dir, ignore_errors=True)
+                return IngestionResult(
+                    status="error",
+                    repo_name=repo_ident,
+                    repo_url=clean_url,
+                    local_path="",
+                    total_files=0,
+                    total_symbols=0,
+                    error_message=(
+                        f"Repository is {size_mb:.0f} MB, above the {self.max_clone_mb} MB limit "
+                        "(MAX_CLONE_MB). Try a smaller repository."
+                    ),
+                )
+
+            # 2. Run AST Indexer over cloned repository (shared with the index cache)
+            from indexer import index_cache
+            codebase_index = index_cache.get_index(dest_dir, max_files=self.max_files)
 
             result = IngestionResult(
                 status="ok",
@@ -133,7 +193,7 @@ class GitHubIngestionService:
                 branch=branch or "default",
                 codebase_index=codebase_index,
             )
-            self._cache[cache_key] = result
+            self._remember(cache_key, result)
             return result
 
         except subprocess.TimeoutExpired:

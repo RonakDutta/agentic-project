@@ -11,7 +11,65 @@ Task 9.3:
 
 from dataclasses import dataclass, field, asdict
 from typing import Any, Dict, List, Optional
-from core.llm import llm_client
+from core.llm import llm_client, AGENT_MAX_TOKENS
+
+SEVERITIES = ("Critical", "High", "Medium")
+CATEGORIES = ("Fatal Flaw", "Market & Distribution", "Competitive Moat", "Technical Bottleneck", "Regulatory & Trust")
+RECONCILER_VERDICTS = ("Proceed with Defined Mitigations", "Strategic Pivot Recommended", "High Rejection Risk")
+
+
+def normalize_severity(value: Any) -> str:
+    """Maps 'critical', 'HIGH', 'severe', 'low' etc. onto Critical/High/Medium."""
+    text = str(value or "").strip().lower()
+    if text.startswith("crit") or text in ("severe", "fatal", "existential"):
+        return "Critical"
+    if text.startswith("high") or text == "major":
+        return "High"
+    return "Medium"
+
+
+def normalize_category(value: Any) -> str:
+    text = str(value or "").strip().lower()
+    for cat in CATEGORIES:
+        if text == cat.lower():
+            return cat
+    if "market" in text or "distribution" in text or "cac" in text:
+        return "Market & Distribution"
+    if "moat" in text or "compet" in text or "incumbent" in text:
+        return "Competitive Moat"
+    if "tech" in text or "scal" in text or "engineer" in text:
+        return "Technical Bottleneck"
+    if "regul" in text or "trust" in text or "legal" in text or "privacy" in text:
+        return "Regulatory & Trust"
+    return "Fatal Flaw"
+
+
+def normalize_verdict(value: Any) -> str:
+    """Maps the reconciler's free-text verdict onto one of the three allowed labels."""
+    text = str(value or "").strip().lower()
+    for verdict in RECONCILER_VERDICTS:
+        if text == verdict.lower():
+            return verdict
+    if "reject" in text or "no-go" in text or "no go" in text or "abandon" in text:
+        return "High Rejection Risk"
+    if "pivot" in text or "refine" in text:
+        return "Strategic Pivot Recommended"
+    return "Proceed with Defined Mitigations"
+
+
+def _str_list(value: Any, default: List[str]) -> List[str]:
+    """LLM lists can come back as null, a string or a list of dicts."""
+    if isinstance(value, str) and value.strip():
+        return [value.strip()]
+    if not isinstance(value, list):
+        return list(default)
+    items = []
+    for item in value:
+        if isinstance(item, dict):
+            item = item.get("text") or item.get("title") or item.get("description") or " ".join(str(v) for v in item.values())
+        if item:
+            items.append(str(item))
+    return items or list(default)
 from agents.idea_agent import DecomposedIdea
 from agents.market_agent import MarketAnalysis
 
@@ -37,6 +95,8 @@ class KillReport:
     overengineering_risks: List[str]
     bear_case_summary: str
     trace: List[str] = field(default_factory=list)
+    generation_source: str = "llm"
+    fallback_reason: str = ""
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -47,6 +107,8 @@ class KillReport:
             "overengineering_risks": self.overengineering_risks,
             "bear_case_summary": self.bear_case_summary,
             "trace": self.trace,
+            "generation_source": self.generation_source,
+            "fallback_reason": self.fallback_reason,
         }
 
 
@@ -60,6 +122,8 @@ class ReconciliationResult:
     must_have_mitigations: List[str]
     synthesis_rationale: str
     trace: List[str] = field(default_factory=list)
+    generation_source: str = "llm"
+    fallback_reason: str = ""
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -71,6 +135,8 @@ class ReconciliationResult:
             "must_have_mitigations": self.must_have_mitigations,
             "synthesis_rationale": self.synthesis_rationale,
             "trace": self.trace,
+            "generation_source": self.generation_source,
+            "fallback_reason": self.fallback_reason,
         }
 
 
@@ -167,6 +233,7 @@ class KillAgent:
         )
 
         trace.append("Querying Groq LLM with Kill Agent Devil's Advocate persona...")
+        generation_source, fallback_reason = "llm", ""
         try:
             res = self.llm.generate_json(
                 messages=[
@@ -174,25 +241,31 @@ class KillAgent:
                     {"role": "user", "content": user_content},
                 ],
                 temperature=0.3,
+                max_tokens=AGENT_MAX_TOKENS["kill"],
             )
         except Exception as err:
             trace.append(f"Kill Agent LLM note ({err}). Using structured adversarial stress-test fallback.")
+            generation_source, fallback_reason = "fallback", f"LLM unavailable: {err}"
             res = {}
 
-        raw_flaws = res.get("fatal_flaws", [])
+        raw_flaws = res.get("fatal_flaws") or []
         flaws: List[KillArgument] = []
-        for rf in raw_flaws:
+        for rf in raw_flaws if isinstance(raw_flaws, list) else []:
+            if not isinstance(rf, dict):
+                continue
             flaws.append(
                 KillArgument(
-                    title=rf.get("title", "Unaddressed Vulnerability"),
-                    category=rf.get("category", "Competitive Moat"),
-                    severity=rf.get("severity", "High"),
-                    argument=rf.get("argument", "Potential failure mode in execution or defensibility."),
-                    counter_evidence=rf.get("counter_evidence", "Incumbents possess structural distribution advantages."),
+                    title=str(rf.get("title") or "Unaddressed Vulnerability"),
+                    category=normalize_category(rf.get("category")),
+                    severity=normalize_severity(rf.get("severity")),
+                    argument=str(rf.get("argument") or "Potential failure mode in execution or defensibility."),
+                    counter_evidence=str(rf.get("counter_evidence") or "Incumbents possess structural distribution advantages."),
                 )
             )
 
         if not flaws:
+            if generation_source == "llm":
+                generation_source, fallback_reason = "fallback", "Model returned no fatal flaws."
             # Fallback flaws if LLM returns empty list or offline
             flaws = [
                 KillArgument(
@@ -211,25 +284,28 @@ class KillAgent:
                 ),
             ]
 
-        trace.append(f"KillAgent identified {len(flaws)} potential fatal flaws and {len(res.get('incumbent_threats', []))} incumbent threats.")
+        incumbent_threats = _str_list(res.get("incumbent_threats"), [
+            "Dominant enterprise platforms have native integrations with existing customer databases.",
+            "Fast-follower open-source tools reduce willingness to pay for proprietary software.",
+        ])
+        trace.append(f"KillAgent identified {len(flaws)} potential fatal flaws and {len(incumbent_threats)} incumbent threats.")
 
         return KillReport(
             project_title=decomposed.project_title,
             fatal_flaws=flaws,
-            incumbent_threats=res.get("incumbent_threats", [
-                "Dominant enterprise platforms have native integrations with existing customer databases.",
-                "Fast-follower open-source tools reduce willingness to pay for proprietary software."
-            ]),
-            distribution_traps=res.get("distribution_traps", [
+            incumbent_threats=incumbent_threats,
+            distribution_traps=_str_list(res.get("distribution_traps"), [
                 "Customer acquisition costs may exceed customer lifetime value in early stages.",
-                "Lengthy organizational procurement approval cycles delay pilot conversions."
+                "Lengthy organizational procurement approval cycles delay pilot conversions.",
             ]),
-            overengineering_risks=res.get("overengineering_risks", [
+            overengineering_risks=_str_list(res.get("overengineering_risks"), [
                 "Risk of building bespoke infrastructure rather than leveraging managed services.",
-                "Overly complex multi-model pipelines create operational latency bottlenecks."
+                "Overly complex multi-model pipelines create operational latency bottlenecks.",
             ]),
-            bear_case_summary=res.get("bear_case_summary", "High risk of incumbent replication, distribution bottlenecks, and unit economics disparity."),
+            bear_case_summary=str(res.get("bear_case_summary") or "High risk of incumbent replication, distribution bottlenecks, and unit economics disparity."),
             trace=trace,
+            generation_source=generation_source,
+            fallback_reason=fallback_reason,
         )
 
 
@@ -264,6 +340,7 @@ class ReconcilerAgent:
         )
 
         trace.append("Querying Groq LLM for balanced reconciliation synthesis...")
+        generation_source, fallback_reason = "llm", ""
         try:
             res = self.llm.generate_json(
                 messages=[
@@ -271,35 +348,48 @@ class ReconcilerAgent:
                     {"role": "user", "content": user_content},
                 ],
                 temperature=0.2,
+                max_tokens=AGENT_MAX_TOKENS["reconcile"],
             )
         except Exception as err:
             trace.append(f"Reconciler LLM note ({err}). Using structured dialectical synthesis fallback.")
+            generation_source, fallback_reason = "fallback", f"LLM unavailable: {err}"
             res = {}
 
-        verdict = res.get("verdict", "Proceed with Defined Mitigations")
+        if res.get("verdict"):
+            verdict = normalize_verdict(res.get("verdict"))
+        else:
+            # No model verdict: derive it from the kill report instead of defaulting to "Proceed".
+            critical = sum(1 for f in kill_report.fatal_flaws if f.severity == "Critical")
+            verdict = (
+                "High Rejection Risk" if critical >= 2
+                else "Strategic Pivot Recommended" if critical == 1
+                else "Proceed with Defined Mitigations"
+            )
         trace.append(f"Reconciliation verdict synthesized: '{verdict}'")
 
         return ReconciliationResult(
             project_title=decomposed.project_title,
             verdict=verdict,
-            arguments_for=res.get("arguments_for", [
+            arguments_for=_str_list(res.get("arguments_for"), [
                 f"Valid user pain point: {decomposed.core_value_prop}",
-                f"Defensible niche: {', '.join(market.key_differentiators[:2]) or 'Targeted solution'}"
+                f"Defensible niche: {', '.join(market.key_differentiators[:2]) or 'Targeted solution'}",
             ]),
-            arguments_against=res.get("arguments_against", [
+            arguments_against=_str_list(res.get("arguments_against"), [
                 kill_report.fatal_flaws[0].title if kill_report.fatal_flaws else "Incumbent distribution risk",
-                kill_report.bear_case_summary
+                kill_report.bear_case_summary,
             ]),
-            key_tradeoffs=res.get("key_tradeoffs", [
+            key_tradeoffs=_str_list(res.get("key_tradeoffs"), [
                 "Speed to market vs custom engineering depth",
-                "Broad feature coverage vs focused niche differentiation"
+                "Broad feature coverage vs focused niche differentiation",
             ]),
-            must_have_mitigations=res.get("must_have_mitigations", [
+            must_have_mitigations=_str_list(res.get("must_have_mitigations"), [
                 "Focus exclusively on MVP core flow to conserve runway.",
-                "Secure 3 pilot user commitments prior to large-scale infrastructure build."
+                "Secure 3 pilot user commitments prior to large-scale infrastructure build.",
             ]),
-            synthesis_rationale=res.get("synthesis_rationale", "The idea addresses a real problem but must navigate distribution headwinds with lean execution."),
+            synthesis_rationale=str(res.get("synthesis_rationale") or "The idea addresses a real problem but must navigate distribution headwinds with lean execution."),
             trace=trace,
+            generation_source=generation_source,
+            fallback_reason=fallback_reason,
         )
 
 

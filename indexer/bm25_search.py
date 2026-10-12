@@ -16,22 +16,25 @@ def tokenize_code(text: str) -> List[str]:
     Splits on punctuation and whitespace, expands camelCase and snake_case,
     and preserves both compound tokens and individual sub-words.
     """
-    # Find all identifier-like tokens
-    raw_tokens = re.findall(r"[A-Za-z0-9_]+", text.lower())
+    # Find all identifier-like tokens. Case is kept until after the camelCase
+    # split; lowercasing first made "jwtAuthService" impossible to split.
+    raw_tokens = re.findall(r"[A-Za-z0-9_]+", text)
     result_tokens: List[str] = []
 
     for token in raw_tokens:
-        result_tokens.append(token)
+        result_tokens.append(token.lower())
 
         # Split snake_case
-        if "_" in token:
-            sub_tokens = [s for s in token.split("_") if s]
-            result_tokens.extend(sub_tokens)
+        parts = [s for s in token.split("_") if s] if "_" in token else [token]
+        if len(parts) > 1:
+            result_tokens.extend(p.lower() for p in parts)
 
-        # Split camelCase / numbers: e.g. "jwtAuthService" -> "jwt", "auth", "service"
-        camel_parts = re.findall(r"[a-z]+|[A-Z][a-z]*|\d+", token)
-        if len(camel_parts) > 1:
-            result_tokens.extend([p.lower() for p in camel_parts])
+        # Split camelCase / PascalCase / acronyms / numbers in each part:
+        # "jwtAuthService" -> jwt, auth, service; "HTTPServer" -> http, server
+        for part in parts:
+            camel_parts = re.findall(r"[A-Z]+(?=[A-Z][a-z])|[A-Z]?[a-z]+|[A-Z]+|\d+", part)
+            if len(camel_parts) > 1:
+                result_tokens.extend(c.lower() for c in camel_parts)
 
     return [t for t in result_tokens if len(t) > 1]
 

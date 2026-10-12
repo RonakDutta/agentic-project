@@ -40,6 +40,9 @@ class CodebaseIndex:
     file_list: List[str] = field(default_factory=list)
     callers_map: Dict[str, List[Dict[str, Any]]] = field(default_factory=dict)
     call_graph: Dict[str, List[Dict[str, Any]]] = field(default_factory=dict)
+    # True when the repo had more Python files than max_files and some were skipped.
+    truncated: bool = False
+    max_files: int = 0
 
     def lookup_symbol(self, name: str) -> List[Dict[str, Any]]:
         """Finds definition locations for a given symbol name."""
@@ -85,6 +88,8 @@ class CodebaseIndex:
             "total_files": len(self.file_list),
             "total_chunks": len(self.chunks),
             "total_symbols": len(self.symbol_table),
+            "truncated": self.truncated,
+            "max_files": self.max_files,
             "files": self.file_list,
         }
 
@@ -118,8 +123,9 @@ class ASTCodeIndexer:
         and constructs semantic chunks, symbol tables, import graphs,
         and alias-aware caller/callee graphs.
         """
-        codebase_index = CodebaseIndex(repo_path=self.repo_path)
+        codebase_index = CodebaseIndex(repo_path=self.repo_path, max_files=self.max_files)
         py_files = self._collect_python_files()
+        codebase_index.truncated = len(py_files) >= self.max_files
         codebase_index.file_list = [
             os.path.relpath(f, self.repo_path).replace("\\", "/") for f in py_files
         ]
@@ -213,9 +219,27 @@ class ASTCodeIndexer:
                     import_aliases[alias_name] = full_target
                     imports.append(full_target)
 
-        # Module Header / Overview Chunk
-        if lines:
-            header_line_count = min(25, len(lines))
+        # Module Header / Overview Chunk: docstring, imports and module constants,
+        # ending before the first top-level function or class (including its
+        # decorators). A fixed 25-line window used to cut through functions.
+        first_def_line = None
+        for node in ast.iter_child_nodes(tree):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                starts = [node.lineno] + [d.lineno for d in getattr(node, "decorator_list", [])]
+                first_def_line = min(starts)
+                break
+        header_limit = (first_def_line - 1) if first_def_line else len(lines)
+        header_line_count = min(40, header_limit, len(lines))
+        # Never end the header inside a multi-line statement (e.g. a long dict constant).
+        if header_line_count < header_limit:
+            for node in ast.iter_child_nodes(tree):
+                end = getattr(node, "end_lineno", None)
+                if end and node.lineno <= header_line_count < end:
+                    header_line_count = node.lineno - 1
+                    break
+        while header_line_count > 0 and not lines[header_line_count - 1].strip():
+            header_line_count -= 1
+        if lines and header_line_count > 0:
             header_code = "".join(lines[:header_line_count])
             chunks.append(
                 CodeChunk(
@@ -250,6 +274,21 @@ class ASTCodeIndexer:
         start = node.lineno
         end = getattr(node, "end_lineno", start + 5)
         class_code = "".join(lines[start - 1 : end])
+        if len(class_code) > 2000:
+            # Big classes keep a readable overview, cut at the end of a whole
+            # statement (cutting at 2000 characters split lines and strings).
+            # Every method is indexed as its own chunk below.
+            cut_line = node.body[0].end_lineno if node.body else start
+            for child in node.body:
+                child_end = getattr(child, "end_lineno", child.lineno)
+                if len("".join(lines[start - 1 : child_end])) > 2000:
+                    break
+                cut_line = child_end
+            remaining = end - cut_line
+            class_code = "".join(lines[start - 1 : cut_line])
+            if remaining > 0:
+                indent = " " * ((node.body[0].col_offset) if node.body else 4)
+                class_code += f"{indent}# ... {remaining} more lines; methods are indexed as separate chunks\n"
         doc = ast.get_docstring(node) or ""
 
         # Construct class signature
@@ -266,7 +305,7 @@ class ASTCodeIndexer:
                 signature=class_sig,
                 start_line=start,
                 end_line=end,
-                code=class_code[:2000],  # Concise class definition overview
+                code=class_code,  # Whole class, or an overview cut at a statement boundary
                 docstring=doc,
                 calls=[],
                 parent_class=None,

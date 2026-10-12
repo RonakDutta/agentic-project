@@ -4,11 +4,35 @@ Conducts competitor and market intelligence using the WebSearchTool,
 identifies existing solutions with citations, and recommends a tailored technical architecture.
 """
 
+import re
 from dataclasses import dataclass, asdict
 from typing import Any, Dict, List, Optional
-from core.llm import llm_client
+from core.llm import llm_client, AGENT_MAX_TOKENS
 from tools.search_tool import web_search_tool, SearchResultItem
 from agents.idea_agent import DecomposedIdea
+
+_STOPWORDS = {
+    "a", "an", "the", "and", "or", "for", "with", "that", "this", "to", "of", "in", "on",
+    "using", "based", "system", "platform", "app", "application", "tool", "smart", "low-cost",
+}
+
+
+def build_search_queries(idea: DecomposedIdea) -> List[str]:
+    """A few short, different queries: the product, its alternatives, and the problem."""
+    title = (idea.project_title or "").strip()
+    words = [w for w in re.findall(r"[A-Za-z0-9-]+", idea.raw_idea or title) if w.lower() not in _STOPWORDS]
+    keywords = " ".join(words[:8])
+    queries = [
+        title,
+        f"{title} alternatives competitors",
+        keywords,
+    ]
+    out: List[str] = []
+    for q in queries:
+        q = q.strip()
+        if q and q.lower() not in {x.lower() for x in out}:
+            out.append(q)
+    return out
 
 
 @dataclass
@@ -19,6 +43,12 @@ class MarketAnalysis:
     citations: List[Dict[str, str]]
     trace: List[str]
     implementation_pitfall: Optional[Dict[str, str]] = None
+    # "llm" when the model wrote this section, "fallback" when built-in defaults were used.
+    generation_source: str = "llm"
+    fallback_reason: str = ""
+    # Which search backend produced the citations, and how many were live results.
+    search_backend: str = "none"
+    live_citation_count: int = 0
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -40,7 +70,8 @@ CRITICAL INSTRUCTIONS:
       "summary": "1-2 sentence description of what they do",
       "advantages": "What they do well",
       "gaps": "What they lack or where our project wins",
-      "reference_url": "URL from the provided search results"
+      "reference_url": "URL from the provided search results, or empty if not in the evidence",
+      "evidence": "search if this competitor appears in the provided evidence, otherwise model_knowledge"
     }
   ],
   "tech_stack": {
@@ -91,14 +122,19 @@ class MarketTechStackAgent:
         trace = list(idea.trace)
         trace.append(f"Market Agent querying web search for existing solutions in '{idea.project_title}'...")
 
-        # 1. Gather live search evidence
-        search_query = f"{idea.project_title} {idea.core_value_prop[:40]}"
-        search_results: List[SearchResultItem] = self.search_tool.search(search_query, max_results=4)
+        # 1. Gather live search evidence (several short queries, merged by URL)
+        queries = build_search_queries(idea)
+        search_results: List[SearchResultItem] = self.search_tool.search_many(queries, max_results=5)
+        search_backend = getattr(self.search_tool, "last_backend", "unknown")
+        live_results = [r for r in search_results if r.is_live]
 
-        trace.append(f"Retrieved {len(search_results)} market intelligence references.")
+        trace.append(
+            f"Search backend: {search_backend}. {len(live_results)} live results, "
+            f"{len(search_results) - len(live_results)} offline references."
+        )
 
         citations = [
-            {"title": r.title, "url": r.url, "snippet": r.snippet}
+            {"title": r.title, "url": r.url, "snippet": r.snippet, "source": r.source, "is_live": r.is_live}
             for r in search_results
         ]
 
@@ -106,9 +142,9 @@ class MarketTechStackAgent:
         # are the biggest TPM cost, so each snippet is clipped short. Full
         # text stays in `citations` for the report.
         evidence_text = "\n".join(
-            f"Source [{i+1}] {r.title} ({r.url}):\n{r.snippet[:350]}"
+            f"Source [{i+1}] {r.title} ({r.url}){'' if r.is_live else ' [offline reference, not a live search result]'}:\n{r.snippet[:350]}"
             for i, r in enumerate(search_results)
-        )[:2500]
+        )[:2500] or "No live search evidence was reachable. Name well-known competitors you are confident exist, set evidence to model_knowledge and leave reference_url empty."
 
         # 2. Synthesize with LLM
         trace.append("Synthesizing competitive matrix and architectural tradeoffs...")
@@ -120,6 +156,7 @@ class MarketTechStackAgent:
             f"Analyze existing competitors, recommend technology stack, and identify one high-risk code implementation pitfall (wrong code vs correct code) in required JSON format."
         )
 
+        generation_source, fallback_reason = "llm", ""
         try:
             json_output = self.llm.generate_json(
                 messages=[
@@ -127,21 +164,24 @@ class MarketTechStackAgent:
                     {"role": "user", "content": user_prompt},
                 ],
                 temperature=0.2,
-                # This schema is large (competitors + stack + code pitfall):
-                # reserve room so Groq does not truncate the JSON mid-object.
-                max_tokens=3000,
+                # Largest schema (competitors + stack + code pitfall); a truncated
+                # answer is retried once with +1,024 tokens by the client.
+                max_tokens=AGENT_MAX_TOKENS["market"],
             )
         except Exception as err:
-            trace.append(f"LLM market analysis note ({err}). Using live search citations fallback.")
-            comp_names = [r.title[:40] for r in search_results[:3]] if search_results else ["Industry Standard SaaS"]
+            trace.append(f"LLM market analysis note ({err}). Using search results as the competitor list.")
+            generation_source, fallback_reason = "fallback", f"LLM unavailable: {err}"
             json_output = {
                 "competitors": [
                     {
-                        "name": comp_names[0],
-                        "summary": "Established market presence and existing user base.",
-                        "advantages": "Established market presence and existing user base.",
-                        "gaps": "Higher licensing costs and less domain-specific integration.",
+                        "name": r.title[:60],
+                        "summary": r.snippet[:200],
+                        "advantages": "Not analysed (LLM unavailable).",
+                        "gaps": "Not analysed (LLM unavailable).",
+                        "reference_url": r.url,
+                        "evidence": "search" if r.is_live else "offline_reference",
                     }
+                    for r in search_results[:3]
                 ],
                 "tech_stack": {
                     "frontend": {"choice": "React + Tailwind CSS", "rationale": "Component reusability and rapid prototyping."},
@@ -164,7 +204,9 @@ class MarketTechStackAgent:
             "correct_code": "# Recommended Fix: Async non-blocking with connection pool\nimport httpx\nimport asyncio\n\nasync def fetch_data(endpoints: list[str]) -> list[dict]:\n    limits = httpx.Limits(max_keepalive_connections=5, max_connections=10)\n    async with httpx.AsyncClient(limits=limits, timeout=5.0) as client:\n        tasks = [client.get(url) for url in endpoints]\n        responses = await asyncio.gather(*tasks, return_exceptions=True)\n        return [r.json() for r in responses if isinstance(r, httpx.Response) and r.status_code == 200]",
         }
 
-        pitfall = json_output.get("implementation_pitfall") or default_pitfall
+        pitfall = json_output.get("implementation_pitfall")
+        if not isinstance(pitfall, dict) or not pitfall.get("wrong_code"):
+            pitfall = dict(default_pitfall, generic=True)
 
         tech_stack = json_output.get("tech_stack") or {}
         if not isinstance(tech_stack, dict):
@@ -178,18 +220,35 @@ class MarketTechStackAgent:
             if k not in tech_stack or not tech_stack[k]:
                 tech_stack[k] = v
 
-        competitors = json_output.get("competitors") or []
+        competitors = [c for c in (json_output.get("competitors") or []) if isinstance(c, dict) and c.get("name")]
+        live_urls = {c["url"].rstrip("/").lower() for c in citations if c.get("is_live") and c.get("url")}
+        for comp in competitors:
+            url = (comp.get("reference_url") or "").rstrip("/").lower()
+            # Trust the citation check, not the model's own label.
+            if url and url in live_urls:
+                comp["evidence"] = "search"
+            elif comp.get("evidence") == "search":
+                comp["evidence"] = "model_knowledge"
+            comp.setdefault("evidence", "model_knowledge")
         if not competitors:
-            competitors = [
-                {"name": "Industry Benchmark Platform", "summary": "Standard commercial offering in this domain.", "advantages": "Broad brand awareness.", "gaps": "High subscription fee and limited custom automation."}
-            ]
+            trace.append("No competitors could be identified from evidence or the model.")
+
+        differentiators = json_output.get("key_differentiators")
+        if not isinstance(differentiators, list) or not differentiators:
+            differentiators = ["Automated end-to-end intelligence.", "Transparent extensible architecture."]
+            if generation_source == "llm":
+                generation_source, fallback_reason = "fallback", "Model returned no differentiators."
 
         return MarketAnalysis(
             competitors=competitors,
             tech_stack=tech_stack,
-            key_differentiators=json_output.get("key_differentiators", ["Automated end-to-end intelligence.", "Transparent extensible architecture."]),
+            key_differentiators=[str(d) for d in differentiators],
             citations=citations,
             trace=trace,
             implementation_pitfall=pitfall,
+            generation_source=generation_source,
+            fallback_reason=fallback_reason,
+            search_backend=search_backend,
+            live_citation_count=len(live_results),
         )
 

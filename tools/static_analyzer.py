@@ -48,6 +48,10 @@ class StaticCodeAnalyzer:
                 complexity += 1
             elif isinstance(subnode, ast.Assert):
                 complexity += 1
+            elif isinstance(subnode, ast.IfExp):
+                complexity += 1
+            elif isinstance(subnode, ast.comprehension):
+                complexity += 1 + len(subnode.ifs)
             elif isinstance(subnode, ast.BoolOp):
                 complexity += len(subnode.values) - 1
         return complexity

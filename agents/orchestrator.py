@@ -8,10 +8,12 @@ import logging
 import os
 import re
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Dict, List, Optional
-from core.llm import llm_client
+from core.llm import llm_client, AGENT_MAX_TOKENS
 from indexer.ast_parser import ASTCodeIndexer, CodebaseIndex
 from indexer.hybrid_retriever import HybridRetriever
+from indexer import index_cache
 from agents.code_nav_agent import CodeNavigationAgent
 from agents.diagnosis_agent import DiagnosisAgent
 from agents.critic_agent import DeterministicCriticAgent
@@ -48,6 +50,17 @@ Classify the intent and output strict JSON matching this exact schema:
 
 logger = logging.getLogger(__name__)
 
+CODE_PLAN = ("Parse AST & Index", "Navigate Code Chunks", "Diagnose Root Cause", "Deterministic Critic Verification")
+IDEA_PLAN = (
+    "Decompose Idea",
+    "Conduct Market & Competitor Research",
+    "Adversarial Kill Critique",
+    "Weigh Evidence & Reconcile",
+    "Score Feasibility Rubric",
+    "Generate PRD & Architecture Models",
+    "Generate 3-Phase Roadmap & Risk Matrix",
+)
+
 # Deterministic keyword signals for zero-cost intent classification.
 _CODE_INTENT_SIGNALS = re.compile(
     r"traceback|exception|valueerror|typeerror|keyerror|attributeerror|indexerror|zerodivisionerror|"
@@ -78,6 +91,20 @@ def _classify_intent_deterministically(query: str, repo_path: Optional[str]) -> 
     return None
 
 
+def _phase_weeks(duration: Any) -> int:
+    """
+    Length of one roadmap phase in weeks.
+    "Weeks 5 - 8" is a calendar range (4 weeks); "3-4 weeks" is an estimate (take 4).
+    """
+    text = str(duration or "").strip().lower()
+    nums = [int(n) for n in re.findall(r"\d+", text)]
+    if not nums:
+        return 0
+    if text.startswith("week") and len(nums) >= 2:
+        return max(nums) - min(nums) + 1
+    return max(nums)
+
+
 class OrchestratorAgent:
     def __init__(self):
         self.llm = llm_client
@@ -98,89 +125,83 @@ class OrchestratorAgent:
     ) -> AgentWorkflowState:
         """
         Executes the multi-agent workflow from start to finish.
+        The same four steps are the nodes of the LangGraph graph (agents/graph.py).
         """
-        session_id = str(uuid.uuid4())[:8]
+        state = self.new_state(query, repo_path)
+        self.classify(state, force_intent)
+        self.execute_track(state)
+        self.finalize(state)
+        return state
+
+    def new_state(self, query: str, repo_path: Optional[str] = None) -> AgentWorkflowState:
         state = AgentWorkflowState(
-            session_id=session_id,
+            session_id=str(uuid.uuid4())[:8],
             user_query=query,
             repo_path=repo_path,
         )
-
         state.add_trace("Orchestrator", f"Session initialized. Received query: '{query[:80]}...'")
+        return state
 
+    def classify(self, state: AgentWorkflowState, force_intent: Optional[str] = None) -> None:
+        """Graph node 1: intent classification and plan."""
         # 1. Intent Classification & Task Decomposition
         if force_intent in ("codebase_analysis", "idea_validation"):
             intent = force_intent
             confidence = 1.0
             plan_steps = (
-                ["Parse AST & Index", "Navigate Code Chunks", "Diagnose Root Cause", "Deterministic Critic Verification"]
+                list(CODE_PLAN)
                 if intent == "codebase_analysis"
-                else [
-                    "Decompose Idea",
-                    "Conduct Market & Competitor Research",
-                    "Adversarial Kill Critique",
-                    "Weigh Evidence & Reconcile",
-                    "Score Feasibility Rubric",
-                    "Generate PRD & Architecture Models",
-                    "Generate 3-Phase Roadmap & Risk Matrix",
-                ]
+                else list(IDEA_PLAN)
             )
             state.add_trace("Orchestrator", f"Intent explicitly specified as '{intent}'.")
         else:
             state.add_trace("Orchestrator", "Classifying user intent and planning execution steps...")
-            deterministic_intent = _classify_intent_deterministically(query, repo_path)
+            deterministic_intent = _classify_intent_deterministically(state.user_query, state.repo_path)
 
             if deterministic_intent:
                 # Zero-cost path: skip the LLM entirely for confident classifications.
                 intent = deterministic_intent
                 confidence = 0.92
                 plan_steps = (
-                    ["Parse AST & Index", "Navigate Code Chunks", "Diagnose Root Cause", "Deterministic Critic Verification"]
+                    list(CODE_PLAN)
                     if intent == "codebase_analysis"
-                    else [
-                        "Decompose Idea",
-                        "Conduct Market & Competitor Research",
-                        "Adversarial Kill Critique",
-                        "Weigh Evidence & Reconcile",
-                        "Score Feasibility Rubric",
-                        "Generate PRD & Architecture Models",
-                        "Generate 3-Phase Roadmap & Risk Matrix",
-                    ]
+                    else list(IDEA_PLAN)
                 )
             else:
                 try:
-                    intent_context = f"Query: {query}\n"
-                    if repo_path:
-                        intent_context += f"Context: Repository path provided ({repo_path})\n"
+                    intent_context = f"Query: {state.user_query}\n"
+                    if state.repo_path:
+                        intent_context += f"Context: Repository path provided ({state.repo_path})\n"
                     intent_json = self.llm.generate_json(
                         messages=[
                             {"role": "system", "content": ORCHESTRATOR_INTENT_PROMPT},
                             {"role": "user", "content": intent_context},
                         ],
                         temperature=0.1,
+                        max_tokens=AGENT_MAX_TOKENS["intent"],
                     )
-                    intent = intent_json.get("intent", "idea_validation")
-                    confidence = float(intent_json.get("confidence", 0.9))
-                    plan_steps = intent_json.get("plan_steps", [])
+                    intent = intent_json.get("intent")
+                    if intent not in ("codebase_analysis", "idea_validation"):
+                        intent = "codebase_analysis" if state.repo_path else "idea_validation"
+                    try:
+                        confidence = max(0.0, min(1.0, float(intent_json.get("confidence", 0.9))))
+                    except (TypeError, ValueError):
+                        confidence = 0.9
+                    plan_steps = intent_json.get("plan_steps")
+                    if not isinstance(plan_steps, list) or not plan_steps:
+                        plan_steps = list(CODE_PLAN if intent == "codebase_analysis" else IDEA_PLAN)
+                    plan_steps = [str(step) for step in plan_steps]
                 except Exception as err:
                     state.add_trace("Orchestrator", f"LLM intent note ({err}). Using deterministic intent classifier.")
-                    fallback_intent = _classify_intent_deterministically(query, repo_path)
-                    if fallback_intent == "codebase_analysis" or repo_path:
+                    fallback_intent = _classify_intent_deterministically(state.user_query, state.repo_path)
+                    if fallback_intent == "codebase_analysis" or state.repo_path:
                         intent = "codebase_analysis"
                         confidence = 0.95
-                        plan_steps = ["Parse AST & Index", "Navigate Code Chunks", "Diagnose Root Cause", "Deterministic Critic Verification"]
+                        plan_steps = list(CODE_PLAN)
                     else:
                         intent = "idea_validation"
                         confidence = 0.95
-                        plan_steps = [
-                            "Decompose Idea",
-                            "Conduct Market & Competitor Research",
-                            "Adversarial Kill Critique",
-                            "Weigh Evidence & Reconcile",
-                            "Score Feasibility Rubric",
-                            "Generate PRD & Architecture Models",
-                            "Generate 3-Phase Roadmap & Risk Matrix",
-                        ]
+                        plan_steps = list(IDEA_PLAN)
 
         state.intent = intent
         state.intent_confidence = confidence
@@ -191,12 +212,19 @@ class OrchestratorAgent:
             details={"plan": plan_steps},
         )
 
+
+    def execute_track(self, state: AgentWorkflowState) -> None:
+        """Graph node 2: runs the code or idea pipeline chosen by classify()."""
+        intent = state.intent
         # 2. Route Execution to Specialized Pipeline
         if intent == "codebase_analysis":
-            self._execute_codebase_pipeline(state, query, repo_path)
+            self._execute_codebase_pipeline(state, state.user_query, state.repo_path)
         else:
-            self._execute_idea_pipeline(state, query)
+            self._execute_idea_pipeline(state, state.user_query)
 
+
+    def finalize(self, state: AgentWorkflowState) -> None:
+        """Graph node 3: closes the trace and registers the session for follow-ups."""
         state.finalize()
         state.add_trace(
             "Orchestrator",
@@ -206,7 +234,8 @@ class OrchestratorAgent:
 
         # Register in session manager for persistent conversational follow-ups
         try:
-            session = session_manager.get_or_create_session(state.session_id, repo_path)
+            # state.repo_path is the local clone for GitHub URLs, so follow-ups can open it.
+            session = session_manager.get_or_create_session(state.session_id, state.repo_path)
             if state.final_output:
                 session.active_entities["final_output"] = state.final_output
                 session.active_entities["project_title"] = state.final_output.get("project_title", "")
@@ -215,7 +244,7 @@ class OrchestratorAgent:
                     symbols = [c.get("symbol_name") for c in candidates if c.get("symbol_name")]
                     files = [c.get("file_path") for c in candidates if c.get("file_path")]
                     session.add_turn(
-                        user_query=query,
+                        user_query=state.user_query,
                         agent_name="Diagnosis Agent",
                         agent_role="Root-Cause Diagnosis Specialist",
                         answer=state.final_output.get("summary", ""),
@@ -224,7 +253,7 @@ class OrchestratorAgent:
                     )
                 elif state.final_output.get("type") == "idea_validation":
                     session.add_turn(
-                        user_query=query,
+                        user_query=state.user_query,
                         agent_name="Idea Decomposer",
                         agent_role="Product & Idea Decomposition Agent",
                         answer=state.final_output.get("problem_statement", "") or "Idea validation processed.",
@@ -232,7 +261,6 @@ class OrchestratorAgent:
         except Exception as sess_err:
             logger.warning(f"[Orchestrator] Session registration note: {sess_err}")
 
-        return state
 
     def _execute_codebase_pipeline(
         self, state: AgentWorkflowState, query: str, repo_path: Optional[str]
@@ -284,9 +312,9 @@ class OrchestratorAgent:
             }
             return
 
-        # Step 1: AST Parsing & Indexing
-        indexer = ASTCodeIndexer(repo_path=target_path)
-        codebase_index = indexer.index()
+        # Step 1: AST Parsing & Indexing (cached per repo until a .py file changes)
+        codebase_index = index_cache.get_index(target_path)
+        state.repo_path = target_path
 
         state.add_trace(
             "Code Structure Indexer",
@@ -305,75 +333,104 @@ class OrchestratorAgent:
         )
 
         # Step 2: Hybrid Retrieval & Code Navigation
-        retriever = HybridRetriever(codebase_index=codebase_index, prefer_neural=True)
+        retriever = index_cache.get_retriever(codebase_index, prefer_neural=True)
         nav_agent = CodeNavigationAgent(codebase_index=codebase_index, retriever=retriever)
         nav_result = nav_agent.navigate(query, top_k=4)
+        vector_backend = getattr(retriever.vector_index, "backend", "unknown")
 
         state.add_trace(
             "Code Navigation Agent",
             f"Searched symbols and ranked code units for query: '{query[:60]}...'",
             status="completed",
             details={
-                "thinking": "Using hybrid search (BM25 keywords + neural vectors) to find exact code symbols matching the bug report.",
-                "tool": "Hybrid Code Search (BM25 + Semantic Embeddings)",
+                "thinking": "Using hybrid search (BM25 keywords + vectors) to find exact code symbols matching the bug report.",
+                "tool": f"Hybrid Code Search (BM25 + {'MiniLM embeddings' if vector_backend == 'sentence-transformers' else 'TF-IDF vectors'})",
                 "findings": [
                     f"Narrowed repository down to {len(nav_result.candidate_chunks)} candidate code blocks",
+                    f"Explicit symbols in query: {', '.join(nav_result.identified_symbols) or 'none'}",
                     f"Identified primary suspect: {nav_result.candidate_chunks[0].id if nav_result.candidate_chunks else 'None'}",
                 ],
                 "handoff": "Passed candidate code blocks to Diagnosis Agent.",
             },
         )
 
+        # Static analysis + git history for each candidate go into the diagnosis prompt.
+        static_notes = self._static_notes(codebase_index, nav_result.candidate_chunks)
+
         # Step 3: Fault Diagnosis
-        diag_result = self.diag_agent.diagnose(nav_result)
+        diag_result = self._run_step(
+            state, "Root Cause Diagnosis Agent",
+            lambda: self.diag_agent.diagnose(nav_result, feedback={"static_notes": static_notes}),
+        )
 
         state.add_trace(
             "Root Cause Diagnosis Agent",
             "Analyzed code logic and formulated candidate bug fixes",
-            status="completed",
+            status="completed" if diag_result.generation_source == "llm" else "warning",
             details={
                 "thinking": "Inspecting AST slice for logic errors, missing error handlers, or invalid state mutations.",
-                "tool": "Reasoning Diagnosis Engine",
+                "tool": "Groq LLM with line-numbered code + static analysis" if diag_result.generation_source == "llm" else "Retrieval + static analysis only (LLM unavailable)",
                 "findings": [
                     f"Identified root cause hypothesis: {diag_result.summary[:100]}...",
-                    f"Generated {len(diag_result.ranked_candidates)} prioritized patch candidates with line bounds",
+                    f"Generated {len(diag_result.ranked_candidates)} prioritized candidates with line bounds",
                 ],
                 "handoff": "Passed patch proposals to Deterministic Critic for grounding verification.",
+                "source": diag_result.generation_source,
             },
         )
 
         # Step 4: Deterministic Critic Verification Loop
         critic_agent = DeterministicCriticAgent(codebase_index=codebase_index)
-        critic_report = critic_agent.verify(diag_result)
+        critic_report = critic_agent.verify(diag_result, retrieved_chunks=nav_result.candidate_chunks)
+        first_score = critic_report.grounding_score
 
-        # Revision Loop
-        if not critic_report.is_valid and state.revision_count < state.max_revisions:
+        # Revision Loop: the critic's flags go back into the prompt, so the retry
+        # is a genuinely different request (not a cache hit on the first answer).
+        broken_fix = critic_report.fixes_checked > critic_report.fixes_compiling
+        needs_revision = (not critic_report.is_valid or broken_fix) and diag_result.generation_source == "llm"
+        if needs_revision and state.revision_count < state.max_revisions:
             state.revision_count += 1
             state.add_trace(
                 "Deterministic Critic",
-                f"Grounding check detected issues ({critic_report.flags}). Triggering self-correction revision cycle...",
+                f"Grounding check found {len(critic_report.flags)} issue(s). Sending them back for one revision...",
                 status="revised",
                 details={
-                    "thinking": "Checking whether referenced files and line numbers physically exist on disk.",
-                    "tool": "Python ast.parse Linter & Disk Verifier",
-                    "findings": ["Draft diagnosis referenced unverified lines. Requesting revision."],
-                    "handoff": "Sent feedback back to Diagnosis Agent for correction.",
+                    "thinking": "Checking whether referenced files, symbols, lines and quoted code match the repository.",
+                    "tool": "Python ast.parse + disk verifier",
+                    "findings": critic_report.flags[:4],
+                    "handoff": "Sent flags and repair hints back to Diagnosis Agent.",
                 },
             )
-            diag_result = self.diag_agent.diagnose(nav_result)
-            critic_report = critic_agent.verify(diag_result)
+            revised = self.diag_agent.diagnose(
+                nav_result,
+                feedback={
+                    "static_notes": static_notes,
+                    "flags": critic_report.flags,
+                    "repair_hints": critic_report.repair_hints,
+                },
+            )
+            revised_report = critic_agent.verify(revised, retrieved_chunks=nav_result.candidate_chunks)
+            # Keep whichever answer is better grounded.
+            if revised_report.grounding_score >= critic_report.grounding_score:
+                diag_result, critic_report = revised, revised_report
 
+        fix_line = (
+            f"{critic_report.fixes_compiling}/{critic_report.fixes_checked} recommended fixes compile as Python"
+            if critic_report.fixes_checked else "No code fixes to compile-check"
+        )
         state.add_trace(
             "Deterministic Critic",
             f"Grounding check complete. Final Score: {int(critic_report.grounding_score * 100)}%",
-            status="completed",
+            status="completed" if critic_report.is_valid else "warning",
             details={
-                "thinking": "Final verification of code lines, file paths, and syntax tree validity.",
-                "tool": "Python ast.parse Linter & Disk Verifier",
+                "thinking": "Final verification of file paths, symbols, line ranges, quoted code and fix syntax.",
+                "tool": "Python ast.parse + disk verifier",
                 "findings": [
-                    f"Grounding score: {int(critic_report.grounding_score * 100)}%",
-                    f"Verified {len(critic_report.verified_candidates)} candidate code blocks on disk",
-                    "All code patches pass Python syntax check",
+                    f"Grounding score: {int(critic_report.grounding_score * 100)}%"
+                    + (f" (was {int(first_score * 100)}% before revision)" if state.revision_count else ""),
+                    f"Verified {len(critic_report.verified_candidates)}/{critic_report.total_checked} candidate locations on disk",
+                    f"{critic_report.code_quote_matches}/{critic_report.total_checked} quoted code blocks match the file",
+                    fix_line,
                 ],
                 "handoff": "Final results ready for display.",
             },
@@ -385,11 +442,76 @@ class OrchestratorAgent:
             "candidates": [c.to_dict() for c in diag_result.ranked_candidates],
             "critic": critic_report.to_dict(),
             "indexed_summary": codebase_index.get_summary(),
+            "local_repo_path": target_path,
+            "retrieval_backend": vector_backend,
+            "static_analysis": static_notes,
+            "provenance": {"diagnosis": diag_result.generation_source, "critic": "deterministic"},
+            "used_fallback": diag_result.generation_source == "fallback",
         }
+
+    @staticmethod
+    def _static_notes(codebase_index: CodebaseIndex, chunks: List[Any]) -> Dict[str, str]:
+        """Complexity metrics and last-commit info per candidate chunk (no LLM)."""
+        import textwrap
+        from tools.static_analyzer import static_analyzer
+        from tools import git_tools
+        from tools.lint_metrics import radon_complexity
+
+        notes: Dict[str, str] = {}
+        is_repo = git_tools.is_repo(codebase_index.repo_path)
+        for chunk in chunks:
+            try:
+                metrics = static_analyzer.analyze_code_snippet(textwrap.dedent(chunk.code or ""), chunk.name)
+                parts = [
+                    f"complexity {metrics.cyclomatic_complexity}, {metrics.lines_of_code} lines, grade {metrics.maintainability_grade}"
+                ] + metrics.findings[:2]
+                radon = radon_complexity(textwrap.dedent(chunk.code or ""), chunk.name)
+                if radon.get("status") == "ok" and radon.get("blocks"):
+                    top = max(radon["blocks"], key=lambda b: b["complexity"])
+                    parts.append(f"radon rank {top['rank']} ({top['name']}: {top['complexity']})")
+                if is_repo:
+                    blame = git_tools.blame_file(codebase_index.repo_path, chunk.file_path, chunk.start_line)
+                    if blame.get("status") == "ok":
+                        parts.append(f"last changed in {blame.get('commit')} on {str(blame.get('date'))[:10]}")
+                notes[chunk.id] = "; ".join(parts)
+            except Exception as err:  # static notes are optional evidence
+                logger.debug(f"[Orchestrator] static notes skipped for {chunk.id}: {err}")
+        return notes
+
+    def _run_step(self, state: AgentWorkflowState, step_name: str, fn):
+        """
+        Runs one agent step. Agents already fall back on LLM errors; this guard
+        covers everything else (a bad field in a model reply, a bug), so one
+        step can never fail the whole run. On a crash the step is re-run with
+        the LLM switched off, which makes it use its own built-in fallback.
+        """
+        try:
+            return fn()
+        except Exception as err:
+            logger.exception(f"[Orchestrator] {step_name} crashed; re-running on its built-in fallback.")
+            state.add_trace(
+                step_name,
+                f"Step error ({type(err).__name__}: {err}). Re-running with built-in fallback.",
+                status="warning",
+            )
+            with self.llm.force_offline():
+                return fn()
+
+    @staticmethod
+    def _source_status(obj: Any) -> str:
+        return "warning" if getattr(obj, "generation_source", "llm") == "fallback" else "completed"
+
+    @staticmethod
+    def _source_note(obj: Any) -> Dict[str, str]:
+        source = getattr(obj, "generation_source", "llm")
+        note = {"source": source}
+        if source == "fallback":
+            note["fallback_reason"] = getattr(obj, "fallback_reason", "") or "LLM output unavailable"
+        return note
 
     def _execute_idea_pipeline(self, state: AgentWorkflowState, query: str) -> None:
         """
-        Executes the expanded 7-agent Idea Validation pipeline:
+        Executes the 7-agent Idea Validation pipeline:
         1. Idea Decomposition Agent
         2. Market & Competitor Intelligence Agent
         3. Adversarial Kill Agent (Devil's Advocate)
@@ -397,20 +519,24 @@ class OrchestratorAgent:
         5. Deterministic Feasibility Scorecard Engine (7-Category Rubric)
         6. PRD & Architecture Engine (MetaGPT-Style User Stories & Mermaid Models)
         7. Roadmap & Risk Assessor (3-Phase Timeline & Matrix)
+
+        The roadmap only needs steps 1-2, so it runs on a worker thread while
+        steps 3-6 run; the LLM client spreads the two streams over different
+        models' rate-limit windows.
         """
         # Step 1: Decomposition
-        decomposed = self.idea_agent.decompose(query)
+        decomposed = self._run_step(state, "Idea Decomposer", lambda: self.idea_agent.decompose(query))
         state.add_trace(
             agent_name="Idea Decomposer",
             action=f"Defined project brief for '{decomposed.project_title}'",
-            status="completed",
+            status=self._source_status(decomposed),
             agent_role="Product & Idea Decomposition Agent",
             input_summary=f"Raw user idea prompt: '{query[:80]}...'",
             output_summary=f"Extracted {len(decomposed.target_personas)} personas, {len(decomposed.mvp_features)} MVP features",
             evidence_count=len(decomposed.target_personas),
             details={
                 "thinking": "Analyzed problem domain, segmented core personas, and established lean MVP scope.",
-                "tool": "Project Requirement Analyzer",
+                "tool": "Groq LLM (structured JSON)" if decomposed.generation_source == "llm" else "Built-in fallback brief",
                 "findings": [
                     f"Project Title: {decomposed.project_title}",
                     f"Core Problem: {decomposed.problem_statement[:120]}...",
@@ -418,111 +544,150 @@ class OrchestratorAgent:
                     f"Defined {len(decomposed.mvp_features)} must-have MVP features",
                 ],
                 "handoff": "Passed product definition to Market & Competitor Researcher.",
+                **self._source_note(decomposed),
             },
         )
 
         # Step 2: Market & Tech Stack
-        market = self.market_agent.analyze(decomposed)
+        market = self._run_step(state, "Market & Competitor Researcher", lambda: self.market_agent.analyze(decomposed))
+        live_urls = [c.get("url", "") for c in market.citations if c.get("is_live") and c.get("url")]
         state.add_trace(
             agent_name="Market & Competitor Researcher",
             action=f"Synthesized {len(market.competitors)} market references and production tech stack",
-            status="completed",
+            status=self._source_status(market),
             agent_role="Market Intelligence Specialist",
             input_summary=f"Project brief: '{decomposed.project_title}'",
-            output_summary=f"Identified {len(market.competitors)} competitors, recommended 3-tier stack",
-            evidence_count=len(market.citations),
-            citations=[c.get("url", "") for c in market.citations[:3] if c.get("url")],
+            output_summary=(
+                f"Identified {len(market.competitors)} competitors from {market.live_citation_count} live search results"
+            ),
+            evidence_count=market.live_citation_count,
+            citations=live_urls[:3],
             details={
-                "thinking": "Queried web search index for existing market solutions and formulated modern stack architecture.",
-                "tool": "Live Web Search (DuckDuckGo)",
+                "thinking": "Searched the web for existing solutions and formulated a stack architecture.",
+                "tool": f"Web search: {market.search_backend}",
                 "findings": [
+                    f"Live search results: {market.live_citation_count}",
                     f"Found {len(market.competitors)} existing market solutions",
-                    f"Top competitors: {', '.join(c.get('name', '') for c in market.competitors[:2])}",
+                    f"Top competitors: {', '.join(c.get('name', '') for c in market.competitors[:2]) or 'None identified'}",
                     f"Recommended Backend: {market.tech_stack.get('backend', {}).get('choice', '')}",
                     f"Recommended Frontend: {market.tech_stack.get('frontend', {}).get('choice', '')}",
                 ],
                 "handoff": "Passed competitor data and stack to Adversarial Kill Agent.",
+                **self._source_note(market),
             },
         )
 
-        # Step 3: Adversarial Kill Agent (Task 9.3)
-        kill_report = self.kill_agent.critique(decomposed, market)
-        state.add_trace(
-            agent_name="Adversarial Kill Agent",
-            action=f"Identified {len(kill_report.fatal_flaws)} potential fatal flaws and bear-case risks",
-            status="completed",
-            agent_role="Devil's Advocate & Risk Critic",
-            input_summary="Project thesis, competitors, and differentiators",
-            output_summary=f"Uncovered {len(kill_report.fatal_flaws)} fatal flaws and {len(kill_report.incumbent_threats)} incumbent threats",
-            evidence_count=len(kill_report.fatal_flaws),
-            details={
-                "thinking": "Challenged unproven assumptions, modeled incumbent replication risks, and located distribution traps.",
-                "tool": "Adversarial Stress-Test Engine",
-                "findings": [
-                    f"Bear Case: {kill_report.bear_case_summary[:120]}...",
-                    f"Fatal Flaws: {', '.join([f.title for f in kill_report.fatal_flaws[:2]])}",
-                    f"Incumbent Threat: {kill_report.incumbent_threats[0] if kill_report.incumbent_threats else 'None'}",
-                ],
-                "handoff": "Passed adversarial critique to Evidence Reconciler.",
-            },
+        # Step 7 starts now on a worker thread: it only needs the brief and the stack.
+        executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="roadmap")
+        roadmap_future = executor.submit(
+            self._run_step, state, "Roadmap & Risk Assessor",
+            lambda: self.roadmap_agent.generate(decomposed, market),
         )
 
-        # Step 4: Evidence Reconciler (Task 9.3)
-        reconciler_result = self.reconciler_agent.reconcile(decomposed, market, kill_report)
-        state.add_trace(
-            agent_name="Evidence Reconciler",
-            action=f"Synthesized debate verdict: '{reconciler_result.verdict}' with {len(reconciler_result.must_have_mitigations)} mitigations",
-            status="completed",
-            agent_role="Impartial Systems Arbiter",
-            input_summary="Thesis (Value Prop) vs Antithesis (Fatal Flaws)",
-            output_summary=f"Balanced {len(reconciler_result.key_tradeoffs)} tradeoffs and {len(reconciler_result.must_have_mitigations)} success preconditions",
-            evidence_count=len(reconciler_result.must_have_mitigations),
-        )
+        try:
+            # Step 3: Adversarial Kill Agent (Task 9.3)
+            kill_report = self._run_step(state, "Adversarial Kill Agent", lambda: self.kill_agent.critique(decomposed, market))
+            state.add_trace(
+                agent_name="Adversarial Kill Agent",
+                action=f"Identified {len(kill_report.fatal_flaws)} potential fatal flaws and bear-case risks",
+                status=self._source_status(kill_report),
+                agent_role="Devil's Advocate & Risk Critic",
+                input_summary="Project thesis, competitors, and differentiators",
+                output_summary=f"Uncovered {len(kill_report.fatal_flaws)} fatal flaws and {len(kill_report.incumbent_threats)} incumbent threats",
+                evidence_count=len(kill_report.fatal_flaws),
+                details={
+                    "thinking": "Challenged unproven assumptions, modeled incumbent replication risks, and located distribution traps.",
+                    "tool": "Groq LLM (adversarial persona)" if kill_report.generation_source == "llm" else "Built-in fallback critique",
+                    "findings": [
+                        f"Bear Case: {kill_report.bear_case_summary[:120]}...",
+                        f"Fatal Flaws: {', '.join([f.title for f in kill_report.fatal_flaws[:2]])}",
+                        f"Incumbent Threat: {kill_report.incumbent_threats[0] if kill_report.incumbent_threats else 'None'}",
+                    ],
+                    "handoff": "Passed adversarial critique to Evidence Reconciler.",
+                    **self._source_note(kill_report),
+                },
+            )
 
-        # Step 5: Feasibility Scorecard Engine (Task 9.5)
-        scorecard = self.scorecard_engine.evaluate(decomposed, market, kill_report, reconciler_result)
-        state.add_trace(
-            agent_name="Feasibility Scorecard Engine",
-            action=f"Evaluated 7-category rubric: Score {scorecard.total_score}/100 ({scorecard.verdict})",
-            status="completed",
-            agent_role="Deterministic Decision Scorer",
-            input_summary="Decomposition, Market data, Kill flaws, Reconciler mitigations",
-            output_summary=f"Score: {scorecard.total_score}/100 across 7 rubric categories",
-            evidence_count=7,
-        )
+            # Step 4: Evidence Reconciler (Task 9.3)
+            reconciler_result = self._run_step(
+                state, "Evidence Reconciler",
+                lambda: self.reconciler_agent.reconcile(decomposed, market, kill_report),
+            )
+            state.add_trace(
+                agent_name="Evidence Reconciler",
+                action=f"Synthesized debate verdict: '{reconciler_result.verdict}' with {len(reconciler_result.must_have_mitigations)} mitigations",
+                status=self._source_status(reconciler_result),
+                agent_role="Impartial Systems Arbiter",
+                input_summary="Thesis (Value Prop) vs Antithesis (Fatal Flaws)",
+                output_summary=f"Balanced {len(reconciler_result.key_tradeoffs)} tradeoffs and {len(reconciler_result.must_have_mitigations)} success preconditions",
+                evidence_count=len(reconciler_result.must_have_mitigations),
+                details=self._source_note(reconciler_result),
+            )
 
-        # Step 6: PRD & Architecture Engine (Task 9.4)
-        prd = self.prd_agent.generate(decomposed, market, reconciler_result)
-        state.add_trace(
-            agent_name="PRD & Architecture Specialist",
-            action=f"Generated formal PRD with {len(prd.user_stories)} user stories and 3 Mermaid diagrams",
-            status="completed",
-            agent_role="MetaGPT Product Manager & Software Architect",
-            input_summary="Product brief, stack recommendations, and success criteria",
-            output_summary=f"{len(prd.user_stories)} User Stories, {len(prd.functional_requirements)} Functional Requirements, 3 Mermaid Models",
-            evidence_count=len(prd.user_stories) + len(prd.functional_requirements),
-        )
+            # Step 5: Feasibility Scorecard Engine (Task 9.5) - deterministic, no LLM.
+            scorecard = self.scorecard_engine.evaluate(decomposed, market, kill_report, reconciler_result)
+            state.add_trace(
+                agent_name="Feasibility Scorecard Engine",
+                action=f"Evaluated 7-category rubric: Score {scorecard.total_score}/100 ({scorecard.verdict})",
+                status="completed",
+                agent_role="Deterministic Decision Scorer",
+                input_summary="Decomposition, Market data, Kill flaws, Reconciler mitigations",
+                output_summary=(
+                    f"Score: {scorecard.total_score}/100 across 7 rubric categories, "
+                    f"evidence confidence {scorecard.evidence_confidence}"
+                ),
+                evidence_count=7,
+                details={
+                    # Kept out of "findings" so the current 4-step storyboard UI is unchanged;
+                    # the roadmap step below carries the score into the storyboard.
+                    "tool": "Deterministic rubric (no LLM)",
+                    "rubric": [
+                        f"{c.category_name}: {c.score}/{c.max_score}" for c in scorecard.categories
+                    ],
+                    "notes": scorecard.verdict_notes + scorecard.confidence_notes,
+                },
+            )
 
-        # Step 7: Roadmap & Risk Assessor (Emitted as 4th Storyboard Step: Scorecard & Roadmap)
-        roadmap = self.roadmap_agent.generate(decomposed, market)
+            # Step 6: PRD & Architecture Engine (Task 9.4)
+            prd = self._run_step(
+                state, "PRD & Architecture Specialist",
+                lambda: self.prd_agent.generate(decomposed, market, reconciler_result),
+            )
+            state.add_trace(
+                agent_name="PRD & Architecture Specialist",
+                action=f"Generated formal PRD with {len(prd.user_stories)} user stories and 3 Mermaid diagrams",
+                status=self._source_status(prd),
+                agent_role="MetaGPT Product Manager & Software Architect",
+                input_summary="Product brief, stack recommendations, and success criteria",
+                output_summary=f"{len(prd.user_stories)} User Stories, {len(prd.functional_requirements)} Functional Requirements, 3 Mermaid Models",
+                evidence_count=len(prd.user_stories) + len(prd.functional_requirements),
+                details=self._source_note(prd),
+            )
+
+            # Step 7: Roadmap & Risk Assessor (ran in parallel since step 2)
+            roadmap = roadmap_future.result()
+        finally:
+            executor.shutdown(wait=True)
+
+        first_phase = roadmap.phases[0] if roadmap.phases else None
         state.add_trace(
-            agent_name="Scorecard & Roadmap",
-            action=f"Evaluated 100-point rubric ({scorecard.total_score}/100) and formulated 3-phase delivery roadmap",
-            status="completed",
-            agent_role="Deterministic Decision Scorer & Milestone Planner",
+            agent_name="Roadmap & Risk Assessor",
+            action=f"Formulated {len(roadmap.phases)}-phase delivery roadmap and {len(roadmap.risks)}-item risk matrix",
+            status=self._source_status(roadmap),
+            agent_role="Milestone Planner & Risk Assessor",
             input_summary="Architecture, MVP features, and delivery constraints",
-            output_summary=f"Score: {scorecard.total_score}/100 ({scorecard.verdict}), 3 phases, {len(roadmap.risks)} risks mapped",
-            evidence_count=7 + len(roadmap.phases) + len(roadmap.risks),
+            output_summary=f"{len(roadmap.phases)} phases, {len(roadmap.risks)} risks mapped",
+            evidence_count=len(roadmap.phases) + len(roadmap.risks),
             details={
-                "thinking": "Evaluated deterministic 100-point rubric across 7 categories and formulated delivery milestones.",
-                "tool": "Deterministic Rubric Calculator & Milestone Engine",
+                "thinking": "Formulated delivery milestones and a risk matrix (ran in parallel with the debate steps).",
+                "tool": "Groq LLM (structured JSON)" if roadmap.generation_source == "llm" else "Built-in fallback roadmap",
                 "findings": [
+                    f"Phase 1 MVP: {first_phase.phase_name} ({first_phase.duration_weeks})" if first_phase else "No phases produced",
+                    f"Cataloged {len(roadmap.risks)} operational risks",
                     f"Feasibility Score: {scorecard.total_score}/100 ({scorecard.verdict}) based on project rubric",
-                    f"Phase 1 MVP: {roadmap.phases[0].phase_name} ({roadmap.phases[0].duration_weeks})",
-                    f"Cataloged {len(roadmap.risks)} operational risks and {len(scorecard.key_strengths)} strategic strengths",
-                    f"Synthesized {len(prd.user_stories)} PRD User Stories with 3 Mermaid models",
                 ],
                 "handoff": "Compiled complete deliverables and registered persistent session memory.",
+                **self._source_note(roadmap),
             },
         )
 
@@ -538,6 +703,16 @@ class OrchestratorAgent:
         )
         full_report_md = self._render_markdown_report(sections_13, decomposed.project_title)
 
+        provenance = {
+            "idea": decomposed.generation_source,
+            "market": market.generation_source,
+            "kill_report": kill_report.generation_source,
+            "reconciliation": reconciler_result.generation_source,
+            "scorecard": "deterministic",
+            "prd": prd.generation_source,
+            "roadmap": roadmap.generation_source,
+        }
+
         state.final_output = {
             "type": "idea_validation",
             "project_title": decomposed.project_title,
@@ -550,11 +725,14 @@ class OrchestratorAgent:
             "tech_stack": market.tech_stack,
             "key_differentiators": market.key_differentiators,
             "citations": market.citations,
+            "search_backend": market.search_backend,
+            "live_citation_count": market.live_citation_count,
             "implementation_pitfall": market.implementation_pitfall,
             # Phase 9 Scorecard & Adversarial Data
             "feasibility_score": scorecard.total_score,
             "feasibility_verdict": scorecard.verdict,
             "rubric_disclaimer": scorecard.rubric_disclaimer,
+            "evidence_confidence": scorecard.evidence_confidence,
             "scorecard": scorecard.to_dict(),
             "kill_report": kill_report.to_dict(),
             "bear_case_critic": kill_report.bear_case_summary,
@@ -563,6 +741,9 @@ class OrchestratorAgent:
             "phases": [p.to_dict() if hasattr(p, "to_dict") else p.__dict__ for p in roadmap.phases],
             "risks": [r.to_dict() if hasattr(r, "to_dict") else r.__dict__ for r in roadmap.risks],
             "evaluation_tips": roadmap.evaluation_tips,
+            # Which sections the LLM wrote and which used built-in fallbacks.
+            "provenance": provenance,
+            "used_fallback": any(v == "fallback" for v in provenance.values()),
             # Structured 13-Section Report
             "sections_13": sections_13,
             "full_report_markdown": full_report_md,
@@ -721,12 +902,7 @@ class OrchestratorAgent:
             {
                 "section_number": 12,
                 "title": "Resource Requirements & Infrastructure Budget",
-                "content": (
-                    "**Resource Footprint**:\n"
-                    "- **Hosting & Infrastructure**: Standard containerized deployment on free/low-cost tiers (estimated $0-$20/mo in initial MVP phase).\n"
-                    "- **API & External Services**: Local open-source embeddings, free search tooling, and rate-limited LLM inference tiers.\n"
-                    "- **Team Requirements**: 1-2 full-stack engineers focusing on fast-cycle validation."
-                ),
+                "content": self._resource_section(decomposed, market, scorecard, roadmap),
             },
             {
                 "section_number": 13,
@@ -741,6 +917,31 @@ class OrchestratorAgent:
                 ),
             },
         ]
+
+    @staticmethod
+    def _resource_section(decomposed: Any, market: Any, scorecard: Any, roadmap: Any) -> str:
+        """Section 12, built from this idea's stack, features, roadmap and rubric findings."""
+        stack_lines = [
+            f"- **{k.replace('_', ' ').capitalize()}**: `{v.get('choice', '')}`"
+            for k, v in (market.tech_stack or {}).items()
+            if isinstance(v, dict) and v.get("choice")
+        ]
+        resource_cat = next(
+            (c for c in scorecard.categories if c.category_name == "Resource Requirements"), None
+        )
+        cost_lines = [f"- {g}" for g in (resource_cat.gaps if resource_cat else [])] or [
+            "- Software-only build on open-source components; hosting fits free or low-cost tiers during the MVP."
+        ]
+        features = len(decomposed.mvp_features)
+        team = "1 developer" if features <= 2 else "2 developers" if features <= 4 else "3 developers"
+        weeks = [w for w in (_phase_weeks(p.duration_weeks) for p in roadmap.phases) if w]
+        timeline = f"about {sum(weeks)} weeks across {len(roadmap.phases)} phases" if weeks else f"{len(roadmap.phases)} phases"
+        return (
+            "**Technology Footprint**:\n" + ("\n".join(stack_lines) or "- Stack not specified") + "\n\n"
+            "**Cost & Effort Drivers** (from the rubric's Resource Requirements check):\n" + "\n".join(cost_lines) + "\n\n"
+            f"**Team & Timeline**: {team} for {features} MVP features, {timeline}.\n\n"
+            f"**Resource Score**: {resource_cat.score if resource_cat else '?'}/10 on the project rubric."
+        )
 
     def _render_markdown_report(self, sections: List[Dict[str, Any]], title: str) -> str:
         """Renders the 13 sections into clean markdown document without horizontal rule dashes."""

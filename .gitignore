@@ -31,6 +31,8 @@ ENV/
 .chroma/
 *.db
 *.sqlite3
+*.sqlite
+.cache/
 eval_results/
 data/cache/
 

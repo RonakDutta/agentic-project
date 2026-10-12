@@ -4,6 +4,7 @@ Specialized in navigating codebases using program structure (AST) and hybrid ret
 Narrows down from high-level queries or error traces to candidate files, classes, and functions.
 """
 
+import re
 from dataclasses import dataclass
 from typing import Any, Dict, List, Set
 from indexer.ast_parser import CodeChunk, CodebaseIndex
@@ -56,9 +57,15 @@ class CodeNavigationAgent:
         trace.append(f"Received query: '{query}'")
 
         # 1. Deterministic Symbol Extraction:
-        # Check if any declared symbol in the repository is explicitly mentioned in the query
+        # A declared symbol counts as mentioned only as a whole identifier, so
+        # short names like "get", "run" or "id" do not match inside other words.
+        query_identifiers = {t.lower() for t in re.findall(r"[A-Za-z_][A-Za-z0-9_]*", query)}
+        query_identifiers |= {t.split(".")[-1] for t in query_identifiers}
         for sym_name in self.codebase_index.symbol_table.keys():
-            if sym_name.lower() in query.lower():
+            short = sym_name.split(".")[-1]
+            if len(short) < 3 or (short.startswith("__") and short.endswith("__")):
+                continue
+            if sym_name.lower() in query_identifiers or short.lower() in query_identifiers:
                 identified_symbols.append(sym_name)
                 # Fetch definition chunk
                 entries = self.codebase_index.symbol_table[sym_name]

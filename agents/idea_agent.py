@@ -6,7 +6,7 @@ target user personas, core value propositions, and essential MVP features.
 
 from dataclasses import dataclass, asdict
 from typing import Any, Dict, List
-from core.llm import llm_client
+from core.llm import llm_client, AGENT_MAX_TOKENS
 
 
 @dataclass
@@ -19,6 +19,8 @@ class DecomposedIdea:
     key_assumptions: List[str]
     mvp_features: List[str]
     trace: List[str]
+    generation_source: str = "llm"  # "llm" or "fallback"
+    fallback_reason: str = ""
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -70,6 +72,7 @@ class IdeaDecompositionAgent:
 
         user_prompt = f"Deconstruct and structure this project idea:\n\n{raw_idea}"
 
+        generation_source, fallback_reason = "llm", ""
         try:
             json_output = self.llm.generate_json(
                 messages=[
@@ -77,9 +80,11 @@ class IdeaDecompositionAgent:
                     {"role": "user", "content": user_prompt},
                 ],
                 temperature=0.2,
+                max_tokens=AGENT_MAX_TOKENS["idea"],
             )
         except Exception as err:
             trace.append(f"LLM decomposition note ({err}). Using structured fallback brief.")
+            generation_source, fallback_reason = "fallback", f"LLM unavailable: {err}"
             clean_title = " ".join(raw_idea.split()[:4]).title() or "Engineering Project"
             json_output = {
                 "project_title": clean_title,
@@ -98,8 +103,8 @@ class IdeaDecompositionAgent:
 
         trace.append(f"Decomposition complete: Title '{json_output.get('project_title')}' generated.")
 
-        target_personas = json_output.get("target_personas") or []
-        if not isinstance(target_personas, list) or len(target_personas) == 0:
+        target_personas = [p for p in (json_output.get("target_personas") or []) if isinstance(p, dict)]
+        if not target_personas:
             target_personas = [
                 {"persona": "Primary Operator", "pain_point": "Manual bottlenecks and lack of real-time insights.", "expected_benefit": "Automated workflow and operational visibility."}
             ]
@@ -107,6 +112,7 @@ class IdeaDecompositionAgent:
         mvp_features = json_output.get("mvp_features") or json_output.get("features") or []
         if not isinstance(mvp_features, list):
             mvp_features = [str(mvp_features)]
+        mvp_features = [str(f) for f in mvp_features if f]
         if len(mvp_features) < 2:
             clean_title = json_output.get("project_title") or "Core System"
             mvp_features = [
@@ -119,13 +125,19 @@ class IdeaDecompositionAgent:
             f"Automated intelligence and streamlined operations for {json_output.get('project_title', 'modern workloads')}."
         )
 
+        assumptions = json_output.get("key_assumptions")
+        if not isinstance(assumptions, list) or not assumptions:
+            assumptions = ["System endpoints are accessible.", "Domain data schemas are consistent."]
+
         return DecomposedIdea(
             raw_idea=raw_idea,
-            project_title=json_output.get("project_title", "Engineering Project"),
-            problem_statement=json_output.get("problem_statement", raw_idea),
+            project_title=str(json_output.get("project_title") or "Engineering Project"),
+            problem_statement=str(json_output.get("problem_statement") or raw_idea),
             target_personas=target_personas,
-            core_value_prop=core_value,
-            key_assumptions=json_output.get("key_assumptions", ["System endpoints are accessible.", "Domain data schemas are consistent."]),
+            core_value_prop=str(core_value),
+            key_assumptions=[str(a) for a in assumptions],
             mvp_features=mvp_features,
             trace=trace,
+            generation_source=generation_source,
+            fallback_reason=fallback_reason,
         )

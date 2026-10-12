@@ -6,7 +6,7 @@ and a technical risk mitigation matrix with defense tips for college evaluations
 
 from dataclasses import dataclass, asdict
 from typing import Any, Dict, List
-from core.llm import llm_client
+from core.llm import llm_client, AGENT_MAX_TOKENS
 from agents.idea_agent import DecomposedIdea
 from agents.market_agent import MarketAnalysis
 
@@ -36,9 +36,13 @@ class RoadmapAndRiskReport:
     risks: List[RiskItem]
     evaluation_tips: List[str]
     trace: List[str]
-    feasibility_score: int = 85
-    feasibility_verdict: str = "Feasible with Standard Mitigations"
-    bear_case_critic: str = "Main risk involves hardware integration delays or third-party API rate limits."
+    # Kept for backwards compatibility. The official score comes from the
+    # deterministic scorecard; the roadmap no longer asks the model for one.
+    feasibility_score: int = 0
+    feasibility_verdict: str = ""
+    bear_case_critic: str = ""
+    generation_source: str = "llm"
+    fallback_reason: str = ""
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -50,6 +54,8 @@ class RoadmapAndRiskReport:
             "feasibility_score": self.feasibility_score,
             "feasibility_verdict": self.feasibility_verdict,
             "bear_case_critic": self.bear_case_critic,
+            "generation_source": self.generation_source,
+            "fallback_reason": self.fallback_reason,
         }
 
 
@@ -84,9 +90,6 @@ CRITICAL INSTRUCTIONS:
       "mitigation": "Implement local SQLite buffer on the gateway device with automatic retry sync."
     }
   ],
-  "feasibility_score": 85,
-  "feasibility_verdict": "Feasible with Standard Mitigations",
-  "bear_case_critic": "1-2 sentence plain-English summary of what could cause this project to fail if not addressed",
   "evaluation_tips": [
     "Tip 1: Highlight the separation of concerns between ingestion and analytics."
   ]
@@ -122,9 +125,10 @@ class RoadmapRiskAgent:
             f"MVP Features: {', '.join(idea.mvp_features)}\n"
             f"Selected Tech Stack: {tech_summary}\n"
             f"Key Differentiators: {', '.join(market.key_differentiators)}\n\n"
-            f"Generate the 3-phase roadmap, feasibility score (0-100), verdict, bear case risk, and evaluation tips in the required JSON format."
+            f"Generate the 3-phase roadmap, risk matrix and evaluation tips in the required JSON format."
         )
 
+        generation_source, fallback_reason = "llm", ""
         try:
             json_output = self.llm.generate_json(
                 messages=[
@@ -132,9 +136,11 @@ class RoadmapRiskAgent:
                     {"role": "user", "content": user_prompt},
                 ],
                 temperature=0.2,
+                max_tokens=AGENT_MAX_TOKENS["roadmap"],
             )
         except Exception as err:
             trace.append(f"LLM roadmap generation note ({err}). Synthesizing deterministic milestones.")
+            generation_source, fallback_reason = "fallback", f"LLM unavailable: {err}"
             first_feat = idea.mvp_features[0] if idea.mvp_features else "Core Pipeline Engine"
             second_feat = idea.mvp_features[1] if len(idea.mvp_features) > 1 else "Interactive Dashboard"
             json_output = {
@@ -229,17 +235,18 @@ class RoadmapRiskAgent:
             ),
         ]
 
-        raw_phases = json_output.get("phases", [])
+        raw_phases = json_output.get("phases") or []
         phases = [
             RoadmapPhase(
-                phase_number=p.get("phase_number", i + 1),
-                phase_name=p.get("phase_name", f"Phase {i+1}"),
-                duration_weeks=p.get("duration_weeks", "4 weeks"),
-                goals=p.get("goals", []),
-                deliverables=p.get("deliverables", []),
-                exit_criteria=p.get("exit_criteria", ""),
+                phase_number=int(p.get("phase_number") or i + 1) if str(p.get("phase_number") or i + 1).isdigit() else i + 1,
+                phase_name=str(p.get("phase_name") or f"Phase {i+1}"),
+                duration_weeks=str(p.get("duration_weeks") or "4 weeks"),
+                goals=[str(g) for g in (p.get("goals") or [])] if isinstance(p.get("goals"), list) else [str(p.get("goals"))],
+                deliverables=[str(d) for d in (p.get("deliverables") or [])] if isinstance(p.get("deliverables"), list) else [str(p.get("deliverables"))],
+                exit_criteria=str(p.get("exit_criteria") or ""),
             )
-            for i, p in enumerate(raw_phases)
+            for i, p in enumerate(raw_phases if isinstance(raw_phases, list) else [])
+            if isinstance(p, dict)
         ]
         if len(phases) < 3:
             for dp in default_phases[len(phases):3]:
@@ -266,15 +273,15 @@ class RoadmapRiskAgent:
             ),
         ]
 
-        raw_risks = json_output.get("risks", []) or json_output.get("risk_matrix", []) or json_output.get("risks_and_mitigations", [])
+        raw_risks = json_output.get("risks") or json_output.get("risk_matrix") or json_output.get("risks_and_mitigations") or []
         risks = [
             RiskItem(
-                category=r.get("category", "Technical"),
-                risk=r.get("risk", ""),
-                severity=r.get("severity", "Medium"),
-                mitigation=r.get("mitigation", ""),
+                category=str(r.get("category") or "Technical"),
+                risk=str(r.get("risk")),
+                severity=_normalize_risk_severity(r.get("severity")),
+                mitigation=str(r.get("mitigation") or ""),
             )
-            for r in raw_risks
+            for r in (raw_risks if isinstance(raw_risks, list) else [])
             if isinstance(r, dict) and r.get("risk")
         ]
         if len(risks) < 2:
@@ -286,16 +293,9 @@ class RoadmapRiskAgent:
 
         trace.append(f"Roadmap generated with {len(phases)} phases and {len(risks)} risk mitigations.")
 
-        feasibility_score = int(json_output.get("feasibility_score", 85))
-        feasibility_verdict = str(json_output.get("feasibility_verdict", "Feasible with Standard Mitigations"))
-        bear_case_critic = str(
-            json_output.get(
-                "bear_case_critic",
-                "High initial hardware or API integration friction could slow down user onboarding."
-            )
-        )
-
-        eval_tips = json_output.get("evaluation_tips", []) or json_output.get("tips", [])
+        eval_tips = json_output.get("evaluation_tips") or json_output.get("tips") or []
+        if not isinstance(eval_tips, list):
+            eval_tips = [str(eval_tips)]
         if not eval_tips:
             eval_tips = [
                 "Demo the live working prototype first during evaluation.",
@@ -308,8 +308,16 @@ class RoadmapRiskAgent:
             risks=risks,
             evaluation_tips=eval_tips,
             trace=trace,
-            feasibility_score=feasibility_score,
-            feasibility_verdict=feasibility_verdict,
-            bear_case_critic=bear_case_critic,
+            generation_source=generation_source,
+            fallback_reason=fallback_reason,
         )
+
+
+def _normalize_risk_severity(value: Any) -> str:
+    text = str(value or "").strip().lower()
+    if text.startswith(("crit", "high", "severe", "major")):
+        return "High"
+    if text.startswith(("low", "minor")):
+        return "Low"
+    return "Medium"
 

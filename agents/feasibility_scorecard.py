@@ -22,10 +22,16 @@ Decision Thresholds:
 - Score < 50: NO-GO (High Fatal Flaw Probability / Reconsider Thesis)
 """
 
+import re
 from dataclasses import dataclass, field, asdict
 from typing import Any, Dict, List, Optional
 from agents.idea_agent import DecomposedIdea
 from agents.market_agent import MarketAnalysis
+
+# Stack signals for the Resource Requirements category.
+_HARDWARE_RE = re.compile(r"\b(esp32|arduino|raspberry|sensors?|lorawan|lora|zigbee|hardware|pcb|ct clamp|gateway device|drone|robot)\b", re.IGNORECASE)
+_PAID_SERVICE_RE = re.compile(r"\b(aws|azure|gcp|google cloud|openai|gpt-4|twilio|stripe|snowflake|datadog|kafka|kubernetes|k8s|ecs|eks)\b", re.IGNORECASE)
+_OPEN_SOURCE_RE = re.compile(r"\b(fastapi|django|flask|react|vue|svelte|postgres|postgresql|sqlite|mysql|python|node|tailwind|mosquitto|grafana|docker)\b", re.IGNORECASE)
 
 
 @dataclass
@@ -52,6 +58,11 @@ class FeasibilityScorecard:
     key_strengths: List[str] = field(default_factory=list)
     key_risks: List[str] = field(default_factory=list)
     recommended_actions: List[str] = field(default_factory=list)
+    # How much real evidence the score rests on: "High", "Medium" or "Low".
+    evidence_confidence: str = "Medium"
+    confidence_notes: List[str] = field(default_factory=list)
+    # Set when the reconciler's verdict and the rubric verdict disagree.
+    verdict_notes: List[str] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -64,6 +75,9 @@ class FeasibilityScorecard:
             "key_strengths": self.key_strengths,
             "key_risks": self.key_risks,
             "recommended_actions": self.recommended_actions,
+            "evidence_confidence": self.evidence_confidence,
+            "confidence_notes": self.confidence_notes,
+            "verdict_notes": self.verdict_notes,
         }
 
     def to_markdown(self) -> str:
@@ -80,6 +94,13 @@ class FeasibilityScorecard:
             status = "Strong" if c.score >= (c.max_score * 0.75) else ("Moderate" if c.score >= (c.max_score * 0.5) else "Weak")
             crit = "; ".join(c.criteria_met[:2]) if c.criteria_met else "None"
             lines.append(f"| {c.category_name} | {c.score} | {c.max_score} | {status} | {crit} |")
+
+        lines.append("")
+        lines.append(f"**Evidence Confidence**: {self.evidence_confidence}")
+        for n in self.confidence_notes:
+            lines.append(f"- {n}")
+        for n in self.verdict_notes:
+            lines.append(f"- {n}")
 
         lines.extend([
             "",
@@ -134,7 +155,11 @@ class FeasibilityScorecardEngine:
         p_score = 0
         p_criteria = []
         p_gaps = []
-        if decomposed.problem_statement and len(decomposed.problem_statement) > 50:
+        idea_is_fallback = getattr(decomposed, "generation_source", "llm") == "fallback"
+        if idea_is_fallback:
+            p_score += 3
+            p_gaps.append("Problem brief could not be structured (LLM unavailable); scored on the raw idea text only")
+        elif decomposed.problem_statement and len(decomposed.problem_statement) > 50:
             p_score += 7
             p_criteria.append("Articulated specific problem statement")
         else:
@@ -172,22 +197,31 @@ class FeasibilityScorecardEngine:
         m_score = 0
         m_criteria = []
         m_gaps = []
-        comp_count = len(market.competitors) if market else 0
+        competitors = market.competitors if market else []
+        comp_count = len(competitors)
+        searched_comp = sum(1 for c in competitors if isinstance(c, dict) and c.get("evidence") == "search")
         if comp_count >= 2:
-            m_score += 7
-            m_criteria.append(f"Validated market demand through {comp_count} existing industry solutions")
+            m_score += 7 if searched_comp >= 1 else 5
+            m_criteria.append(
+                f"Identified {comp_count} existing solutions ({searched_comp} confirmed by live search)"
+            )
         elif comp_count == 1:
             m_score += 4
             m_criteria.append("Identified 1 existing competitor")
         else:
-            m_gaps.append("Limited search evidence of existing market solutions")
+            m_gaps.append("No existing market solutions identified")
 
-        if market and market.citations and len(market.citations) >= 2:
+        # Only live search results count as citations; offline references do not.
+        live_citations = [c for c in (market.citations if market else []) if c.get("is_live")]
+        if len(live_citations) >= 2:
             m_score += 5
-            m_criteria.append(f"Backed by {len(market.citations)} verified search citations")
+            m_criteria.append(f"Backed by {len(live_citations)} live web search citations")
+        elif len(live_citations) == 1:
+            m_score += 3
+            m_gaps.append("Only 1 live web search citation found")
         else:
-            m_score += 2
-            m_gaps.append("Few external references or market intelligence citations")
+            m_score += 1
+            m_gaps.append("No live web search evidence (offline references or model knowledge only)")
 
         if decomposed.mvp_features and len(decomposed.mvp_features) >= 3:
             m_score += 4
@@ -339,20 +373,40 @@ class FeasibilityScorecardEngine:
         )
 
         # 6. Resource Requirements (Max 10)
-        r_score = 0
+        r_score = 10
         r_criteria = []
         r_gaps = []
-        stack_text = str(stack).lower()
-        if any(tool in stack_text for tool in ["fastapi", "react", "postgres", "sqlite", "python", "tailwind"]):
-            r_score += 5
-            r_criteria.append("Built on mature, zero-license open-source foundations")
+        # Look at what this idea actually needs: its stack, features and assumptions.
+        resource_text = " ".join([
+            str(stack),
+            " ".join(decomposed.mvp_features),
+            " ".join(decomposed.key_assumptions),
+            decomposed.raw_idea or "",
+        ])
+        open_source_hits = sorted({m.lower() for m in _OPEN_SOURCE_RE.findall(resource_text)})
+        hardware_hits = sorted({m.lower() for m in _HARDWARE_RE.findall(resource_text)})
+        paid_hits = sorted({m.lower() for m in _PAID_SERVICE_RE.findall(str(stack))})
+        if open_source_hits:
+            r_criteria.append(f"Open-source foundations: {', '.join(open_source_hits[:4])}")
         else:
-            r_score += 3
-            r_criteria.append("Standard commercial software dependencies")
-
-        r_score += 2
-        r_criteria.append("Lean initial engineering resource footprint")
-        r_gaps.append("Inference API usage and infrastructure scaling require strict token budgets")
+            r_score -= 2
+            r_gaps.append("No clearly open-source core stack; licensing cost unknown")
+        if hardware_hits:
+            r_score -= 3
+            r_gaps.append(f"Physical hardware needed ({', '.join(hardware_hits[:3])}): unit cost, procurement and field testing")
+        if paid_hits:
+            r_score -= min(3, len(paid_hits))
+            r_gaps.append(f"Paid managed services in the stack: {', '.join(paid_hits[:4])}")
+        layers = len([k for k, v in stack.items() if v]) if isinstance(stack, dict) else 0
+        if layers > 4:
+            r_score -= 1
+            r_gaps.append(f"{layers} separate stack layers to build and operate")
+        if len(decomposed.mvp_features) > 5:
+            r_score -= 1
+            r_gaps.append(f"{len(decomposed.mvp_features)} MVP features is a large first build")
+        if not r_gaps:
+            r_criteria.append("Small software-only footprint")
+        r_score = max(2, r_score)
 
         categories.append(
             CategoryScore(
@@ -404,13 +458,49 @@ class FeasibilityScorecardEngine:
 
         if total_score >= 75:
             verdict = "GO"
-            verdict_summary = "Proceed with MVP development while adhering to documented mitigations."
         elif total_score >= 50:
             verdict = "PIVOT"
-            verdict_summary = "Refine target persona pain points and tighten defensibility before scaling."
         else:
             verdict = "NO-GO"
-            verdict_summary = "Core thesis carries critical fatal flaw probability; pivot or reconsider scope."
+
+        # The rubric and the reconciler must not contradict each other in the report.
+        verdict_notes: List[str] = []
+        rec_verdict = getattr(reconciler_result, "verdict", "") if reconciler_result else ""
+        if rec_verdict == "High Rejection Risk" and verdict == "GO":
+            verdict = "PIVOT"
+            verdict_notes.append(
+                f"Rubric score {total_score}/100 would be GO, but the Evidence Reconciler found high rejection risk, so the verdict is capped at PIVOT."
+            )
+        elif rec_verdict == "Proceed with Defined Mitigations" and verdict == "NO-GO":
+            verdict_notes.append(
+                "The Evidence Reconciler leaned towards proceeding, but the rubric score is below 50, so the verdict stays NO-GO."
+            )
+
+        verdict_summary = {
+            "GO": "Proceed with MVP development while adhering to documented mitigations.",
+            "PIVOT": "Refine target persona pain points and tighten defensibility before scaling.",
+            "NO-GO": "Core thesis carries critical fatal flaw probability; pivot or reconsider scope.",
+        }[verdict]
+
+        # Evidence confidence: how much of the input was real model output and live evidence.
+        confidence_notes: List[str] = []
+        fallback_parts = [
+            name for name, obj in (
+                ("idea brief", decomposed), ("market analysis", market),
+                ("kill critique", kill_report), ("reconciliation", reconciler_result),
+            )
+            if obj is not None and getattr(obj, "generation_source", "llm") == "fallback"
+        ]
+        if fallback_parts:
+            confidence_notes.append(f"Built-in fallback text was used for: {', '.join(fallback_parts)}")
+        if not live_citations:
+            confidence_notes.append("No live web search results were available")
+        if not fallback_parts and len(live_citations) >= 2:
+            evidence_confidence = "High"
+        elif len(fallback_parts) >= 2 or (fallback_parts and not live_citations):
+            evidence_confidence = "Low"
+        else:
+            evidence_confidence = "Medium"
 
         disclaimer = f"Feasibility Score: {total_score}/100 based on the defined project rubric."
 
@@ -436,14 +526,22 @@ class FeasibilityScorecardEngine:
                     if len(risks) < 4:
                         risks.append(f"Market Threat: {t}")
 
+        # Close the weakest categories first, then add the reconciler's preconditions.
+        weakest = sorted(categories, key=lambda c: c.score / c.max_score)[:2]
+        for c in weakest:
+            if c.gaps:
+                actions.append(f"Close the {c.category_name} gap: {c.gaps[0]}")
+        if reconciler_result is not None:
+            for m in getattr(reconciler_result, "must_have_mitigations", [])[:2]:
+                actions.append(m)
         if verdict == "GO":
             actions.append("Freeze MVP specifications and initiate Sprint 1 foundational development.")
-            actions.append("Establish automated regression testing for core customer journeys.")
         elif verdict == "PIVOT":
             actions.append("Interview 5 prospective target users to validate pain point willingness-to-pay.")
-            actions.append("Re-evaluate competitive differentiation against leading market alternatives.")
         else:
             actions.append("Re-examine core technical assumptions and distribution viability.")
+        if evidence_confidence == "Low":
+            actions.append("Re-run the analysis when the Groq API and web search are reachable; this score rests on fallback data.")
 
         return FeasibilityScorecard(
             project_title=decomposed.project_title,
@@ -455,6 +553,9 @@ class FeasibilityScorecardEngine:
             key_strengths=strengths,
             key_risks=risks,
             recommended_actions=actions,
+            evidence_confidence=evidence_confidence,
+            confidence_notes=confidence_notes,
+            verdict_notes=verdict_notes,
         )
 
 
