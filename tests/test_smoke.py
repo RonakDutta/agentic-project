@@ -9,10 +9,18 @@ from pathlib import Path
 ROOT_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT_DIR))
 
+import pytest
+
 from core.config import settings
 from core.llm import llm_client
 
+# These tests talk to the real Groq API, so they only run when a key is set.
+needs_key = pytest.mark.skipif(
+    not settings.groq_api_key, reason="GROQ_API_KEY not set; live Groq smoke tests skipped"
+)
 
+
+@needs_key
 def test_configuration():
     print("[1/4] Checking settings configuration...")
     settings.validate()
@@ -35,6 +43,7 @@ def _skip_if_rate_limited(err: Exception) -> None:
     raise err
 
 
+@needs_key
 def test_text_generation():
     print("[2/4] Testing LLM text generation with primary model...")
     try:
@@ -48,6 +57,7 @@ def test_text_generation():
         _skip_if_rate_limited(e)
 
 
+@needs_key
 def test_json_generation():
     print("[3/4] Testing structured JSON generation...")
     schema_prompt = (

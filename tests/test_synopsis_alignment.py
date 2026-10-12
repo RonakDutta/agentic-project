@@ -19,10 +19,25 @@ def test_canonical_agents_match_synopsis_table2():
             "Diagnosis Agent", "Critic Agent"} <= names
 
 
-def test_graph_spec_lists_six_plus_orchestrator():
+def test_graph_spec_describes_the_real_nodes():
     spec = graph_spec()
-    assert "orchestrator" in spec["nodes"] and "critic" in spec["nodes"]
-    assert ("diagnosis", "critic") in spec["edges"]
+    assert spec["nodes"] == ["classify", "codebase_pipeline", "idea_pipeline", "finalize"]
+    assert ["classify", "codebase_pipeline"] in spec["edges"]
+    assert ["classify", "idea_pipeline"] in spec["edges"]
+    # The critic runs inside the code pipeline node.
+    assert "Deterministic Critic" in spec["node_agents"]["codebase_pipeline"]
+
+
+def test_graph_run_executes_real_agents():
+    from pathlib import Path
+    from agents.graph import run
+    sample = str(Path(__file__).resolve().parent.parent / "sample_repo")
+    result = run("who calls verify_token", repo_path=sample, force_intent="codebase_analysis")
+    assert result["graph"]["visited"][0] == "classify"
+    assert result["graph"]["visited"][-1] == "finalize"
+    assert result["final_output"]["type"] == "codebase_analysis"
+    agents_ran = {t["agent_name"] for t in result["execution_trace"]}
+    assert {"Code Navigation Agent", "Deterministic Critic"} <= agents_ran
 
 
 def test_knowledge_base_offline_lookup():

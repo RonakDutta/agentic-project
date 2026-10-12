@@ -33,7 +33,7 @@ The system is balanced into two 50-50 first-class pillars:
        - Function & Class Chunks                                       - Problem Statement & Personas
        - Alias-Aware Import Graph                                      - MVP Scopes & Assumptions
        - Call Confidence & Graphs                                   3. Market & Stack Specialist
-    3. Static Code Analyzer                                            - DuckDuckGo Web Search
+    3. Static Code Analyzer                                            - Tavily / DuckDuckGo Search
        - McCabe Complexity & SLOC                                      - Competitors & Tradeoffs
     4. Code Navigation Agent                                        4. Adversarial Kill Agent
        - Hybrid Search (BM25 + Dense)                                  - Devil's Advocate Flaws
@@ -60,97 +60,88 @@ The system is balanced into two 50-50 first-class pillars:
                                             ▼
                             [ Interactive Browser Dashboard ]
                        (FastAPI + Tailwind CSS + Mermaid.js +
-                        Sequential Storyboard + Session Memory)
+                        Sequential Storyboard + SQLite Session Memory)
 ```
 
 ---
 
-## ⚡ Key Technical Capabilities & Innovations (Phase 9)
+## ⚡ Key Technical Capabilities
 
 ### 1. AST Codebase Parsing & Alias-Aware Call Graphs
-Standard text chunking breaks functions in half and destroys lexical context. Inspired by *AutoCodeRover (ISSTA 2024)* and *Tree-sitter RAG*, our indexer uses Python's standard `ast` module:
-* Indexes code at class and function boundaries.
+Standard text chunking breaks functions in half. Inspired by *AutoCodeRover (ISSTA 2024)*, the indexer uses Python's `ast` module:
+* Indexes code at class and function boundaries; module headers stop before the first definition.
 * Resolves imported aliases (such as `from auth import login as do_login`).
 * Maps caller and callee relationships with explicit confidence levels (`CERTAIN`, `HIGH`, `LOW`, `UNRESOLVED`).
-* Dynamic dispatches and external library calls are explicitly marked as `UNRESOLVED` rather than guessing.
+* Indexes are cached per repository and rebuilt only when a `.py` file changes (`indexer/index_cache.py`).
 
-### 2. Static Code Analysis & Blast Radius Impact
-* **Static Analyzer (`tools/static_analyzer.py`):** Calculates McCabe cyclomatic complexity, source lines of code (SLOC), and maintainability grades for indexed symbols.
-* **Flow Trace Agent (`agents/flow_trace_agent.py`):** Traces execution pathways across files, generating Mermaid sequence models and highlighting unresolved external boundaries.
-* **Change Impact Agent (`agents/change_impact_agent.py`):** Evaluates transitive blast radius (2 to 3 call levels), discovers associated unit tests, and computes a composite risk score (LOW, MEDIUM, HIGH, CRITICAL).
+Measured by `python evaluation/compare_baseline.py` on this repository: **91% of naive 500-character chunks cut through a function** and 68% of functions are never held whole by any naive chunk, while **100% of AST chunks parse as complete Python** (462/462).
 
-### 3. Strict Read-Only Educational Code Guidance (Task 9.2)
-In accordance with our project synopsis, the system never applies unsupervised patches or edits user code:
-* **Current / Risky Implementation:** Displays the exact retrieved lines from disk with file and symbol citations.
-* **Why It Is Problematic:** Explains the root cause mechanism clearly.
-* **Correct / Recommended Pattern:** Shows the educational fix pattern for human review.
-* **Explanation of Change:** Details why the recommended approach resolves the fault.
+### 2. Hybrid Retrieval (BM25 + Vectors, Reciprocal Rank Fusion)
+* BM25 with a code-aware tokenizer (`jwtAuthService` -> `jwt`, `auth`, `service`).
+* Dense vectors from `all-MiniLM-L6-v2` (loaded once per process), with a TF-IDF fallback for offline machines.
+* Exact symbol mentions are matched as whole identifiers, so short names like `get` or `id` do not match everything.
+* `python evaluation/retrieval_benchmark.py` scores BM25, vector and hybrid retrieval (Top-1, Top-3, MRR) on 18 plain-English questions about this codebase. Results depend on whether MiniLM is available on your machine; the script prints the backend it used.
 
-### 4. Adversarial Kill Agent & Evidence Reconciler (Task 9.3)
-Inspired by *Idea-Research*:
-* **Adversarial Kill Agent (Devil's Advocate):** Specifically searches for reasons the idea may fail, including unproven user assumptions, incumbent replication threats, and distribution traps.
-* **Evidence Reconciler:** Impartially balances the thesis (Value Proposition) against the antithesis (Adversarial Critique), extracting key tradeoffs and non-negotiable success preconditions.
+### 3. Grounded Diagnosis with a Deterministic Critic
+"Agents reason, tools compute." The Diagnosis Agent receives line-numbered code plus static analysis (complexity via the built-in analyzer and `radon`, last commit via `git blame` when available). The Critic then checks, without an LLM:
+* the cited file exists and the symbol is in the AST symbol table (preferring the definition in the cited file);
+* the cited line range is inside the file and overlaps the symbol;
+* the citation was in the evidence actually retrieved for this query;
+* the quoted "current code" really exists in the file (if not, it is replaced by the real lines from disk and flagged);
+* the recommended fix compiles (`ast.parse`).
 
-### 5. Deterministic Feasibility Scorecard Engine (Task 9.5)
-A transparent 100-point evaluation system across 7 project-defined categories:
-* Problem Validation (Max 20 pts)
-* Market Demand (Max 20 pts)
-* Defensibility & Moat (Max 15 pts)
-* Technical Feasibility (Max 15 pts)
-* Go-To-Market Execution (Max 10 pts)
-* Resource Efficiency (Max 10 pts)
-* Risk Profile (Max 10 pts)
-* **Academic Framing Disclaimer:** Emitted explicitly on all scorecards:
-  `"Feasibility Score: X/100 based on the defined project rubric."`
+If verification fails, the Critic's flags and repair hints are sent back to the Diagnosis Agent for **one revision with a different prompt**, and the better-grounded answer is kept. The trace reports real counts (for example "3/3 quoted code blocks match the file").
 
-### 6. MetaGPT-Style PRD & Architecture Engine (Task 9.4)
-Generates structured Agile specifications:
-* Formal User Stories (`US-01`, `US-02`) with role, goal, business benefit, and acceptance criteria.
-* Prioritized Functional Requirements (`FR-01`, `FR-02` with Must Have, Should Have, Nice to Have).
-* Non-Functional Requirements covering performance, security, scalability, and observability.
-* 3 Interactive Mermaid Diagrams: High-Level System Architecture, Component Topology, and End-to-End Dataflow Sequence.
+The system is read-only by design: it explains the root cause and shows a recommended pattern for human review; it never edits code. Without an LLM it ranks locations by retrieval and static analysis and says so, instead of inventing a fix.
 
-### 7. Persistent Conversational Follow-Up Session Engine (Task 9.1)
-* Preserves multi-turn conversation history and repository context using a persistent session manager.
-* Resolves anaphoric references (such as "What calls that function?" or "What is its blast radius?").
-* Automatically dispatches to specialized tools (`symbol_lookup`, `callers`, `callees`, `blast_radius`, `flow_trace`).
-* Uses bounded greedy token budgeting (`indexer/context_budget.py`) to respect `CONTEXT_TOKEN_BUDGET=4000`.
+### 4. Adversarial Kill Agent & Evidence Reconciler
+* **Kill Agent (Devil's Advocate):** fatal flaws, incumbent threats, distribution traps and over-engineering risks. Severity and category labels from the model are normalised (`critical`, `HIGH`, `severe` -> Critical/High/Medium).
+* **Evidence Reconciler:** weighs the thesis against the critique and gives one of three verdicts. If the model gives none, the verdict is derived from the number of critical flaws instead of defaulting to "Proceed".
 
-### 8. Programmatic Fact & Code Critic (Task 9.10)
-"Agents reason, tools compute." Rather than asking an LLM to verify code lines, our Critic executes pure Python deterministic logic:
-* Checks if cited files physically exist on disk.
-* Verifies symbols against the AST symbol table.
-* Verifies that start and end line bounds match actual physical file boundaries.
+### 5. Deterministic Feasibility Scorecard
+A transparent 100-point rubric across 7 categories (Problem Validation 20, Market Demand 20, Defensibility 15, Technical Feasibility 15, Go-To-Market 10, Resources 10, Risk 10), framed as `"Feasibility Score: X/100 based on the defined project rubric."`
+* Only **live** web search results count as citations; offline references and model knowledge do not.
+* Resource Requirements reads the actual stack and idea (hardware, paid managed services, number of layers, feature count).
+* The verdict cannot contradict the Reconciler: a GO is capped at PIVOT when the Reconciler finds high rejection risk.
+* Every scorecard carries an **evidence confidence** (High / Medium / Low) that drops when fallbacks were used or no live search was reachable.
+
+### 6. PRD & Architecture Engine
+User stories, prioritized functional requirements, non-functional requirements, and three Mermaid diagrams generated from **this idea's** stack, persona and MVP features (labels are escaped so model text cannot break the diagram).
+
+### 7. Honest Provenance on Every Section
+Each agent output records `generation_source` (`llm` or `fallback`) and a reason. The final report includes a `provenance` map, `used_fallback`, the web search backend used and the number of live citations. Trace steps that used a fallback are marked `warning`. A step that crashes is re-run on its own built-in fallback, so one bad model reply never fails the whole run.
+
+### 8. Explicit LangGraph State Graph
+`agents/graph.py` compiles a real LangGraph `StateGraph` whose nodes run the orchestrator's actual steps: `classify -> (codebase_pipeline | idea_pipeline) -> finalize`, with a conditional edge on the classified intent. `GET /api/graph` reports the active backend and `POST /api/graph/run` returns the nodes visited. Without `langgraph` installed, the same steps run in sequence.
+
+### 9. Persistent Conversational Follow-Ups
+* Multi-turn sessions with anaphora resolution ("What calls that function?").
+* Sessions are saved to SQLite after every turn and restored after a server restart; memory is bounded (LRU + idle TTL).
+* Follow-ups on a GitHub repository use its local clone, so caller, impact and flow-trace routers work on remote repos too.
+* `@mention` a specialist: idea track `@idea`, `@market`, `@roadmap`, `@critic`; code track `@planner`, `@navigate`, `@diagnose`, `@critic`. These replies are built from the session's stored evidence with zero LLM quota.
 
 ---
 
-## 🧬 Differentiating Novelty Features (vs. ChatGPT / Claude)
+## 🧮 Built for the Groq Free Tier
 
-Generic chatbots emit a static, unverifiable opinion. This co-pilot is built to be **poke-able, transparent, and evidence-grounded**:
+Each model in the chain has its own free-tier budget. Secondary sources (September 2026) list **30 requests/min, 1,000 requests/day, 8,000 tokens/min and 200,000 tokens/day** for `openai/gpt-oss-120b`, `openai/gpt-oss-20b` and `qwen/qwen3.8-27b`. Check your own limits at console.groq.com/settings/limits and set `FREE_TIER_*` in `.env` if they differ.
 
-### 1. Decision Simulator: Interactive What-If Verdict Re-Scoring
-Every idea report ships with a live simulator bound to the deterministic 7-category rubric. Drag any category slider to model your fixes (e.g. "interview 5 users" closes the Problem Validation gap) and the projected verdict recomputes instantly - client-side, on the exact same thresholds the backend engine used (75+ GO, 50+ PIVOT, below NO-GO). One click of **Auto-apply top gap fixes** models closing every detected gap and shows the verdict flip (e.g. `PIVOT -> GO`). ChatGPT gives you one static score; this gives you a decision model you can stress-test.
+How the client stays inside them (`core/llm.py`):
+* **Local ledger:** per-model sliding 60-second windows (requests and tokens, including calls in flight) and per-day totals, enforced from the very first call. Daily totals are saved to `.cache/llm_usage.sqlite`.
+* **Right-sized answers:** each agent asks only for the tokens its JSON needs (`AGENT_MAX_TOKENS`). A truncated JSON answer is retried once with 1,024 more tokens.
+* **Reasoning controls:** `reasoning_effort=low` for gpt-oss and hidden reasoning for Qwen3, so thinking tokens do not eat the answer budget or leak `<think>` text into JSON.
+* **Header-aware routing:** reads `x-ratelimit-*` headers, spreads short prompts across models, keeps long prompts on the strongest model with budget, and parses `retry-after` hints (including long daily waits like `14m22s`).
+* **Parallel steps:** the roadmap runs alongside the debate steps, on a different model's window.
+* **Caching:** identical prompts are free for 10 minutes in memory and for 7 days on disk (`.cache/llm_cache.sqlite`), so re-running a demo idea costs nothing.
+* **Wrong model ids** (`model_not_found`, `decommissioned`) are parked for an hour instead of retried.
 
-### 2. Direct Agent Interrogation (`@agent` Mentions)
-Instead of one blended chatbot persona, users address a specific specialist directly: `@kill why will this fail?`, `@scorecard`, `@roadmap`, `@prd`, `@market`, `@arbiter`, `@architect` (idea track) and `@code`, `@risk` (code track). Each reply is assembled **deterministically from that agent's persisted session evidence with zero LLM quota**, so specialist interrogation works even while the free tier is rate-limited. Unaddressed questions still flow through the keyword routers and bounded-context LLM pass as before.
-
-### 3. Rate-Limit-Resilient Model Rotation & Completion Cache
-Groq free-tier 429s are absorbed rather than surfaced:
-* An ordered **model chain** (`MODEL_CHAIN`: `openai/gpt-oss-120b` -> `openai/gpt-oss-20b` -> `qwen/qwen3.8-27b`) pools the per-model RPM/TPM budgets.
-* 429 payloads are parsed for the exact **retry-after** hint, placing models on precise cooldowns instead of a fixed 60s penalty.
-* Exponential backoff with jitter, jittered inter-call pacing (`PACE_SECONDS`), and a short-TTL **completion cache** (`LLM_CACHE_TTL_SECONDS`) make repeated follow-ups cost zero quota.
-* Intent classification is deterministic-first: the LLM classifier is only invoked for genuinely ambiguous queries (the dashboard's pillar buttons force intent anyway).
-* The header health chip polls `/api/health` and shows live per-model cooldown state; follow-up errors render as in-thread guidance cards instead of silent failures.
-
-### 4. Diagrams Render Inside Chat Replies
-Mermaid models emitted by the Change Impact and Flow Trace routers are rendered as real diagrams inside the follow-up thread (with a graceful definition fallback), not dumped as raw code fences.
+`python evaluation/free_tier_budget.py` measures the real prompts without spending quota. Current result: an idea run makes 6 calls and reserves about **12.8k tokens** (fits the pooled 24k tokens/min of three models), uses about 8.7k tokens in practice, which allows roughly **69 idea runs per day**. A code run makes 1-2 calls of about 4k tokens. `GET /api/health` shows live per-model usage and an estimate of idea runs left today.
 
 ---
 
 ## 🚀 Quick Start Guide
 
 ### 1. Installation
-Clone the repository and install dependencies:
 ```bash
 git clone https://github.com/RonakDutta/agentic-project.git
 cd agentic-project
@@ -158,67 +149,30 @@ pip install -r requirements.txt
 ```
 
 ### 2. Environment Configuration
-Create a `.env` file from the provided template:
 ```bash
 cp .env.example .env
 ```
-Ensure your free Groq API key is configured in `.env`:
-```ini
-GROQ_API_KEY=your_groq_api_key_here
-PRIMARY_MODEL=openai/gpt-oss-20b
-FAST_MODEL=qwen/qwen3.8-27b
-MODEL_CHAIN=openai/gpt-oss-20b,qwen/qwen3.8-27b,openai/gpt-oss-120b
-CONTEXT_TOKEN_BUDGET=2500
-LLM_CACHE_TTL_SECONDS=600
-PACE_SECONDS=0.15
-```
+Set your free Groq key in `.env` (`GROQ_API_KEY=...`). Optional: `TAVILY_API_KEY` for better web search (DuckDuckGo via `ddgs` is used otherwise).
 
-The app starts (and serves the dashboard) even without `GROQ_API_KEY`: AST indexing, deterministic follow-up routers, and the Decision Simulator all work offline, and LLM-backed agents fall back to grounded structured responses with a clear warning.
+The app starts without a key: AST indexing, retrieval, the Critic, the scorecard and the deterministic follow-up routers work offline, and LLM-backed agents fall back to clearly labelled built-in output.
 
-### 3. Launch the Interactive Dashboard
-Start the FastAPI server:
+### 3. Launch the Dashboard
 ```bash
 python app.py
 ```
-Open your web browser and visit:
-👉 **`http://127.0.0.1:8000`**
+Open **`http://127.0.0.1:8000`**. Before exposing the app to other people, set `ALLOWED_REPO_ROOTS` (which local folders may be indexed) and keep `RUNS_PER_MINUTE` low, since every visitor shares your Groq key.
 
 ---
 
-## 🧪 Automated Test Suites & Benchmarks
-
-Run the complete test suite (28+ automated tests):
+## 🧪 Tests & Benchmarks
 
 ```bash
-# Run all unit and integration tests
-pytest -v
-```
+pytest -q                                   # 88 tests; 3 live-Groq smoke tests skip without a key
+python -m pytest tests/test_backend_fixes.py -v   # regression tests for the Phase 1 fixes
 
-Individual test suites:
-```bash
-# Phase 9A: Context Budget, Repo Map & Critic Citations
-python -m pytest tests/test_phase9a.py -v
-
-# Phase 9B: GitHub Ingest, Static Analysis, Call Graphs, Flow Trace & Blast Radius
-python -m pytest tests/test_phase9b.py -v
-
-# Phase 9C: Conversational Session, Educational Slices & Trace Schema
-python -m pytest tests/test_phase9c.py -v
-
-# Phase 9D: Feasibility Scorecard, Kill Agent, PRD & 13-Section Report
-python -m pytest tests/test_phase9d.py -v
-
-# Core Engine Tests
-python -m pytest tests/test_smoke.py -v
-python -m pytest tests/test_ast_parser.py -v
-python -m pytest tests/test_hybrid_retriever.py -v
-python -m pytest tests/test_code_agents.py -v
-python -m pytest tests/test_idea_agents.py -v
-python -m pytest tests/test_orchestrator.py -v
-python -m pytest tests/test_app.py -v
-
-# Quantitative Baseline Benchmark (Naive RAG vs AST RAG)
-python evaluation/compare_baseline.py
+python evaluation/compare_baseline.py       # naive vs AST chunking, computed on real files
+python evaluation/retrieval_benchmark.py    # BM25 vs vector vs hybrid retrieval accuracy
+python evaluation/free_tier_budget.py       # token plan vs Groq free-tier limits
 ```
 
 ---
@@ -226,16 +180,19 @@ python evaluation/compare_baseline.py
 ## 💡 Architecture & Technical FAQ
 
 ### Q1: How is this system "Agentic" rather than a standard chatbot?
-> *"A chatbot performs single-turn text completion without introspection. Our system is agentic because it performs autonomous goal decomposition, selects tools dynamically (AST indexer vs live web search), executes multi-agent debate (Kill Agent vs Reconciler), and runs a programmatic Critic that rejects ungrounded claims."*
+> *"It decomposes the goal, routes it through an explicit state graph, picks tools per step (AST index, hybrid retrieval, web search, static analysis, git history), runs an adversarial debate (Kill Agent vs Reconciler), and a deterministic Critic sends ungrounded answers back for revision with concrete feedback."*
 
 ### Q2: Why use AST parsing instead of naive text splitting?
-> *"Code has rigorous grammar and indentation structure. Standard text splitters slice files at arbitrary character boundaries, corrupting class scopes and function signatures. Our AST parser preserves semantic units, extracts exact physical line numbers, and maps call graphs."*
+> *"On this repository, 91% of 500-character chunks cut through a function. AST chunks are whole functions or classes with exact line numbers, which is what lets the Critic verify every citation."*
 
 ### Q3: Why is the Feasibility Scorecard framed as a project rubric rather than an absolute truth?
-> *"LLMs cannot scientifically compute startup success probabilities. To remain academically sound and transparent, our scorecard is explicitly framed as: 'Feasibility Score: X/100 based on the defined project rubric.' The score evaluates 7 concrete categories deterministically rather than making ungrounded predictions."*
+> *"An LLM cannot compute the probability that a startup succeeds. The score is a transparent, deterministic rubric over the agents' evidence, it shows how confident it is in that evidence, and it says so on every report."*
 
 ### Q4: Why does the system not apply patches automatically?
-> *"Our approved Minor Project synopsis mandates a strict read-only scope. Blind automatic code modifications can introduce regressions or security vulnerabilities. Our co-pilot operates as an educational advisor, presenting root-cause diagnoses, recommended patterns, and blast radius impact for human engineer review."*
+> *"The approved synopsis mandates read-only scope. The system explains the cause and shows a recommended pattern; a human decides. The Critic even checks that the recommended code compiles before it is shown."*
 
-### Q5: Why combine BM25 with Vector Search?
-> *"Vector embeddings capture high-level conceptual similarity ('validate user token') but frequently miss exact technical identifiers like error types ('ValueError') or function names. BM25 guarantees exact keyword matching, and Reciprocal Rank Fusion combines both candidate rankings."*
+### Q5: Why combine BM25 with vector search?
+> *"Embeddings capture meaning ('validate the user token') but miss exact identifiers ('ValueError', 'verify_token'); BM25 catches those. Reciprocal Rank Fusion combines both. Our retrieval benchmark measures each one separately so the trade-off is visible."*
+
+### Q6: What happens when the free Groq tier runs out mid-demo?
+> *"The client enforces the limits itself, rotates across three models, and caches answers on disk. If everything is exhausted, each agent falls back to labelled built-in output and the report marks those sections and lowers its evidence confidence, instead of failing or pretending."*

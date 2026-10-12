@@ -13,6 +13,16 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(ROOT_DIR / ".env")
 
 
+# One place for the default model names, so config, .env.example and README agree.
+DEFAULT_PRIMARY_MODEL = "openai/gpt-oss-120b"
+DEFAULT_FAST_MODEL = "openai/gpt-oss-20b"
+DEFAULT_CODE_MODEL = "qwen/qwen3.8-27b"
+
+
+def _flag(name: str, default: str = "1") -> bool:
+    return os.getenv(name, default) not in ("0", "false", "False", "")
+
+
 def _parse_model_chain() -> list:
     """
     Builds the fallback model chain used to absorb Groq free-tier rate limits.
@@ -23,9 +33,9 @@ def _parse_model_chain() -> list:
         chain = [m.strip() for m in raw.split(",") if m.strip()]
     else:
         chain = [
-            os.getenv("PRIMARY_MODEL", "openai/gpt-oss-120b"),
-            os.getenv("FAST_MODEL", "qwen/qwen3.8-27b"),
-            os.getenv("CODE_MODEL", "openai/gpt-oss-20b"),
+            os.getenv("PRIMARY_MODEL", DEFAULT_PRIMARY_MODEL),
+            os.getenv("FAST_MODEL", DEFAULT_FAST_MODEL),
+            os.getenv("CODE_MODEL", DEFAULT_CODE_MODEL),
         ]
     # Deduplicate while preserving order
     seen = set()
@@ -43,9 +53,9 @@ class Settings:
     groq_api_key: str = os.getenv("GROQ_API_KEY", "")
 
     # Models (model_chain is the ordered rate-limit fallback rotation)
-    primary_model: str = os.getenv("PRIMARY_MODEL", "openai/gpt-oss-120b")
-    fast_model: str = os.getenv("FAST_MODEL", "openai/gpt-oss-20b")
-    code_model: str = os.getenv("CODE_MODEL", "qwen/qwen3.8-27b")
+    primary_model: str = os.getenv("PRIMARY_MODEL", DEFAULT_PRIMARY_MODEL)
+    fast_model: str = os.getenv("FAST_MODEL", DEFAULT_FAST_MODEL)
+    code_model: str = os.getenv("CODE_MODEL", DEFAULT_CODE_MODEL)
     model_chain: list = field(default_factory=_parse_model_chain)
 
     # Execution limits (tuned for Groq free-tier rate limit guardrails)
@@ -53,7 +63,8 @@ class Settings:
     max_tokens_cap: int = int(os.getenv("MAX_TOKENS_CAP", "4096"))
     context_token_budget: int = int(os.getenv("CONTEXT_TOKEN_BUDGET", "2500"))
     temperature: float = float(os.getenv("TEMPERATURE", "0.2"))
-    request_timeout_seconds: int = int(os.getenv("REQUEST_TIMEOUT_SECONDS", "10"))
+    # gpt-oss-120b needs well over 10s for a 2-3k token JSON answer on the free tier.
+    request_timeout_seconds: int = int(os.getenv("REQUEST_TIMEOUT_SECONDS", "30"))
     retry_attempts: int = int(os.getenv("RETRY_ATTEMPTS", "2"))
 
     # Inter-call pacing (seconds, jittered) to smooth RPM bursts across agents
@@ -75,12 +86,42 @@ class Settings:
     # so later agent steps rotate immediately instead of hanging again.
     slow_model_cooldown_seconds: float = float(os.getenv("SLOW_MODEL_COOLDOWN_SECONDS", "180"))
 
+    # Reasoning models (gpt-oss, qwen3) spend hidden "thinking" tokens out of
+    # max_tokens. "low" keeps answers fast and inside the free token window.
+    reasoning_effort: str = os.getenv("REASONING_EFFORT", "low")
+
+    # Groq free-tier limits per model (secondary sources, Sept 2026, for
+    # gpt-oss-120b, gpt-oss-20b and qwen3.8-27b): 30 RPM, 1,000 RPD, 8,000 TPM,
+    # 200,000 TPD. Check console.groq.com/settings/limits for your account and
+    # override here. The client enforces these locally from the first call,
+    # before any x-ratelimit-* header has been seen.
+    free_tier_rpm: int = int(os.getenv("FREE_TIER_RPM", "30"))
+    free_tier_rpd: int = int(os.getenv("FREE_TIER_RPD", "1000"))
+    free_tier_tpm: int = int(os.getenv("FREE_TIER_TPM", "8000"))
+    free_tier_tpd: int = int(os.getenv("FREE_TIER_TPD", "200000"))
+    # Persist today's per-model usage so the daily budget survives restarts.
+    llm_usage_ledger_enabled: bool = _flag("LLM_USAGE_LEDGER")
+
     # Plain-language output: ask the model for everyday wording and strip filler.
-    plain_language: bool = os.getenv("PLAIN_LANGUAGE", "1") not in ("0", "false", "False")
+    plain_language: bool = _flag("PLAIN_LANGUAGE")
 
     # Short-TTL completion cache: identical agent prompts within the TTL cost zero quota
-    llm_cache_enabled: bool = os.getenv("LLM_CACHE_ENABLED", "1") not in ("0", "false", "False")
+    llm_cache_enabled: bool = _flag("LLM_CACHE_ENABLED")
     llm_cache_ttl_seconds: int = int(os.getenv("LLM_CACHE_TTL_SECONDS", "600"))
+    # Persistent SQLite copy of the cache, so a demo re-run after a restart is free.
+    llm_disk_cache_enabled: bool = _flag("LLM_DISK_CACHE")
+    llm_disk_cache_ttl_seconds: int = int(os.getenv("LLM_DISK_CACHE_TTL_SECONDS", str(7 * 24 * 3600)))
+    llm_disk_cache_path: str = os.getenv("LLM_DISK_CACHE_PATH", str(ROOT_DIR / ".cache" / "llm_cache.sqlite"))
+
+    # Web search: TAVILY_API_KEY (free tier) is used first when set.
+    tavily_api_key: str = os.getenv("TAVILY_API_KEY", "")
+
+    # Repository ingestion limits. ALLOWED_REPO_ROOTS (os.pathsep-separated)
+    # restricts which local folders /api/inspect-repo may index; empty = any
+    # (fine for a local demo, set it before hosting the app anywhere).
+    allowed_repo_roots: str = os.getenv("ALLOWED_REPO_ROOTS", "")
+    max_repo_files: int = int(os.getenv("MAX_REPO_FILES", "400"))
+    max_clone_mb: int = int(os.getenv("MAX_CLONE_MB", "200"))
 
     # Project directories
     root_dir: Path = ROOT_DIR

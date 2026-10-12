@@ -16,8 +16,10 @@ import os
 import re
 import time
 import uuid
+import threading
+from collections import OrderedDict
 from dataclasses import dataclass, field, asdict
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +69,8 @@ class ConversationSession:
     cached_index: Optional[CodebaseIndex] = None
     created_at: float = field(default_factory=time.time)
     updated_at: float = field(default_factory=time.time)
+    # Set by SessionManager: saves the session to SQLite after every turn.
+    on_change: Optional[Callable[["ConversationSession"], None]] = field(default=None, repr=False, compare=False)
 
     def add_turn(
         self,
@@ -112,6 +116,11 @@ class ConversationSession:
                     existing_files.append(f)
             self.active_entities["referenced_files"] = existing_files
 
+        if self.on_change is not None:
+            try:
+                self.on_change(self)
+            except Exception as err:  # persistence must never break a reply
+                logger.warning(f"[Session] Could not persist session {self.session_id}: {err}")
         return turn
 
     def resolve_anaphora(self, query: str) -> str:
@@ -199,11 +208,67 @@ class ConversationSession:
 
 class SessionManager:
     """
-    Manages active in-memory conversation sessions and cached codebase indexes.
+    Manages conversation sessions.
+
+    - In memory: bounded LRU (MAX_SESSIONS) with an idle TTL, so a long demo day
+      cannot grow memory without limit.
+    - On disk: every turn is saved to SQLite (agents/session_store.py) and a
+      session missing from memory (e.g. after a server restart) is restored.
+    - Repository indexes come from the shared index cache, and GitHub URLs are
+      resolved to their local clone.
     """
 
-    def __init__(self):
-        self._sessions: Dict[str, ConversationSession] = {}
+    MAX_SESSIONS = 200
+    IDLE_TTL_SECONDS = 6 * 3600
+
+    def __init__(self, persist: bool = True):
+        self._sessions: "OrderedDict[str, ConversationSession]" = OrderedDict()
+        self._lock = threading.RLock()
+        self._persist_enabled = persist
+
+    # ---------------- persistence ----------------
+
+    def _save(self, session: ConversationSession) -> None:
+        if not self._persist_enabled:
+            return
+        from agents import session_store
+        session_store.save_session(
+            session.session_id,
+            session.repo_path,
+            [t.to_dict() for t in session.history],
+            entities=session.active_entities,
+        )
+
+    def _restore(self, session_id: str) -> Optional[ConversationSession]:
+        if not self._persist_enabled:
+            return None
+        try:
+            from agents import session_store
+            data = session_store.load_session(session_id)
+        except Exception as err:
+            logger.warning(f"[Session] Could not load session {session_id}: {err}")
+            return None
+        if not data:
+            return None
+        session = ConversationSession(session_id=session_id, repo_path=data.get("repo_path") or None)
+        for raw in data.get("history") or []:
+            try:
+                session.history.append(ConversationTurn(**{
+                    k: raw[k] for k in ConversationTurn.__dataclass_fields__ if k in raw
+                }))
+            except TypeError:
+                continue
+        session.active_entities = data.get("entities") or {}
+        return session
+
+    def _evict(self) -> None:
+        now = time.time()
+        for sid in [sid for sid, sess in self._sessions.items() if now - sess.updated_at > self.IDLE_TTL_SECONDS]:
+            self._sessions.pop(sid, None)
+        while len(self._sessions) > self.MAX_SESSIONS:
+            self._sessions.popitem(last=False)
+
+    # ---------------- public API ----------------
 
     def get_or_create_session(
         self,
@@ -211,32 +276,57 @@ class SessionManager:
         repo_path: Optional[str] = None,
     ) -> ConversationSession:
         sid = session_id or str(uuid.uuid4())[:8]
-        if sid not in self._sessions:
-            self._sessions[sid] = ConversationSession(session_id=sid, repo_path=repo_path)
-        else:
-            if repo_path and not self._sessions[sid].repo_path:
-                self._sessions[sid].repo_path = repo_path
-        return self._sessions[sid]
+        with self._lock:
+            session = self._sessions.get(sid)
+            if session is None and session_id:
+                session = self._restore(sid)
+            if session is None:
+                session = ConversationSession(session_id=sid, repo_path=repo_path)
+            elif repo_path and not session.repo_path:
+                session.repo_path = repo_path
+            session.on_change = self._save
+            self._sessions[sid] = session
+            self._sessions.move_to_end(sid)
+            self._evict()
+            return session
 
     def get_session(self, session_id: str) -> Optional[ConversationSession]:
-        return self._sessions.get(session_id)
+        with self._lock:
+            session = self._sessions.get(session_id)
+            if session is None:
+                session = self._restore(session_id)
+                if session is not None:
+                    session.on_change = self._save
+                    self._sessions[session_id] = session
+            return session
+
+    @staticmethod
+    def resolve_repo_path(repo_path: Optional[str]) -> Optional[str]:
+        """Local folder for a repo path or GitHub URL (cloning it if needed), else None."""
+        if not repo_path:
+            return None
+        target = repo_path.strip()
+        from indexer.github_ingest import github_ingest_service
+        if github_ingest_service.is_valid_github_url(target):
+            res = github_ingest_service.ingest(target)
+            return res.local_path if res.status == "ok" else None
+        return target if os.path.isdir(target) else None
 
     def get_or_index_repo(self, session_id: str, repo_path: str) -> CodebaseIndex:
+        from indexer import index_cache
         session = self.get_or_create_session(session_id, repo_path)
-        if session.cached_index and session.repo_path == repo_path:
-            return session.cached_index
-
-        indexer = ASTCodeIndexer(repo_path=repo_path)
-        index = indexer.index()
+        local = self.resolve_repo_path(repo_path) or repo_path
+        index = index_cache.get_index(local)
         session.cached_index = index
-        session.repo_path = repo_path
+        session.repo_path = local
         return index
 
     def clear_session(self, session_id: str) -> bool:
-        if session_id in self._sessions:
-            del self._sessions[session_id]
-            return True
-        return False
+        with self._lock:
+            if session_id in self._sessions:
+                del self._sessions[session_id]
+                return True
+            return False
 
 
 class ConversationalFollowupEngine:
@@ -578,8 +668,10 @@ class ConversationalFollowupEngine:
 
         # 2. Check if repo index is available
         codebase_index = None
-        target_repo = repo_path or session.repo_path
-        if target_repo and os.path.exists(target_repo):
+        # A GitHub URL resolves to its local clone here, so the caller, impact and
+        # flow routers also work on remote repositories.
+        target_repo = self.session_manager.resolve_repo_path(repo_path or session.repo_path)
+        if target_repo:
             codebase_index = self.session_manager.get_or_index_repo(session.session_id, target_repo)
 
         # Extract active target symbol

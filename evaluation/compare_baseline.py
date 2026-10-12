@@ -1,13 +1,21 @@
 """
-Academic Evaluation Baseline Comparison Harness.
-Compares Baseline A (Naive 500-character fixed-window chunking)
-against Our Approach (AST-based semantic boundary chunking).
-Demonstrates quantitative proof of why AST indexing prevents slicing functions in half.
+Chunking Baseline Comparison: naive fixed-size text chunks vs AST chunks.
+
+Measures, on real files, how often each chunking strategy cuts a Python
+function or class in the middle. Every number is computed on this run.
+
+- A naive chunk "breaks" a function when the chunk starts or ends strictly
+  inside that function's line range (so neither piece holds the whole function).
+- An AST chunk is "intact" when its code parses on its own with ast.parse.
+
+Run: python evaluation/compare_baseline.py [repo_path]   (default: sample_repo + this project)
 """
 
+import ast
 import sys
+import textwrap
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import Dict, List, Tuple
 
 if sys.platform == "win32":
     try:
@@ -19,74 +27,102 @@ if sys.platform == "win32":
 ROOT_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT_DIR))
 
-from indexer.ast_parser import ASTCodeIndexer
+from indexer.ast_parser import ASTCodeIndexer  # noqa: E402
 
 
-def naive_text_chunk(file_path: Path, chunk_size: int = 500, overlap: int = 50) -> List[Dict[str, Any]]:
-    """Simulates standard RAG naive text chunking."""
-    with open(file_path, "r", encoding="utf-8", errors="replace") as f:
-        text = f.read()
-
-    chunks = []
+def naive_text_chunks(text: str, chunk_size: int = 500, overlap: int = 50) -> List[Tuple[int, int]]:
+    """Standard RAG character-window chunking. Returns (start_line, end_line) per chunk, 1-based."""
+    spans = []
     start = 0
     while start < len(text):
         end = min(start + chunk_size, len(text))
-        chunks.append({
-            "start_char": start,
-            "end_char": end,
-            "content": text[start:end],
-            "broken_function": ("def " in text[start:end] and "return" not in text[start:end]),
-        })
+        start_line = text.count("\n", 0, start) + 1
+        end_line = text.count("\n", 0, max(start, end - 1)) + 1
+        spans.append((start_line, end_line))
+        if end == len(text):
+            break
         start += chunk_size - overlap
-    return chunks
+    return spans
 
 
-def run_benchmark():
-    sample_file = ROOT_DIR / "sample_repo" / "auth" / "jwt_handler.py"
-    if not sample_file.exists():
-        print(f"Error: Sample file '{sample_file}' not found.")
-        return
+def function_spans(source: str) -> List[Tuple[int, int]]:
+    tree = ast.parse(source)
+    return [
+        (node.lineno, node.end_lineno)
+        for node in ast.walk(tree)
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) and node.end_lineno
+    ]
 
-    print("================================================================================")
-    print("ACADEMIC BENCHMARK: NAIVE 500-CHAR CHUNKING VS. AST SEMANTIC CHUNKING")
-    print("================================================================================")
 
-    # 1. Evaluate Naive Text Chunking
-    naive_chunks = naive_text_chunk(sample_file, chunk_size=500, overlap=50)
-    broken_count = sum(1 for c in naive_chunks if c["broken_function"])
-    naive_intact_rate = round((1 - (broken_count / len(naive_chunks))) * 100, 1) if naive_chunks else 0
+def evaluate_repo(repo_path: Path) -> Dict[str, float]:
+    index = ASTCodeIndexer(repo_path=str(repo_path), max_files=400).index()
+    naive_total = naive_broken = 0
+    funcs_total = funcs_split = 0
 
-    print(f"\n[Baseline A] Naive Fixed-Size Text Chunking (Standard RAG):")
-    print(f"  - Total Text Chunks: {len(naive_chunks)}")
-    print(f"  - Sliced / Incomplete Function Boundaries: {broken_count}")
-    print(f"  - Syntactic Boundary Integrity: {naive_intact_rate}%")
-    print(f"  - Line Range Preservation: None (Character offsets only)")
-    print(f"  - Symbol Table Awareness: No")
+    for rel in index.file_list:
+        source = (repo_path / rel).read_text(encoding="utf-8", errors="replace")
+        try:
+            spans = function_spans(source)
+        except SyntaxError:
+            continue
+        chunks = naive_text_chunks(source)
+        naive_total += len(chunks)
+        for c_start, c_end in chunks:
+            if any(f_start < c_start <= f_end or f_start <= c_end < f_end for f_start, f_end in spans):
+                naive_broken += 1
+        for f_start, f_end in spans:
+            funcs_total += 1
+            # Split = no single naive chunk contains the whole function.
+            if not any(c_start <= f_start and f_end <= c_end for c_start, c_end in chunks):
+                funcs_split += 1
 
-    # 2. Evaluate Our AST Indexer
-    indexer = ASTCodeIndexer(repo_path=str(ROOT_DIR / "sample_repo"))
-    index = indexer.index()
-    jwt_chunks = index.get_file_chunks("auth/jwt_handler.py")
+    ast_total = ast_intact = 0
+    for chunk in index.chunks:
+        ast_total += 1
+        code = textwrap.dedent(chunk.code or "")
+        try:
+            ast.parse(code)
+            ast_intact += 1
+        except SyntaxError:
+            try:  # methods quoted without their class
+                ast.parse("class _W:\n" + textwrap.indent(code, "    "))
+                ast_intact += 1
+            except SyntaxError:
+                pass
 
-    print(f"\n[Our Approach] AST Program-Structure Indexer (Agentic RAG):")
-    print(f"  - Total Semantic Units: {len(jwt_chunks)}")
-    print(f"  - Functions & Classes Extracted Intact: 100.0%")
-    print(f"  - Exact Start/End Line Numbers: Yes (e.g. verify_token @ lines 21-50)")
-    print(f"  - Symbol Table & Call Graph Extracted: Yes ({len(index.symbol_table)} symbols mapped)")
-    print(f"  - Deterministic Verification Compatibility: Yes")
+    return {
+        "files": len(index.file_list),
+        "functions": funcs_total,
+        "naive_chunks": naive_total,
+        "naive_chunks_cutting_a_function": naive_broken,
+        "functions_split_by_naive": funcs_split,
+        "ast_chunks": ast_total,
+        "ast_chunks_parsing_alone": ast_intact,
+    }
 
-    print("\n--------------------------------------------------------------------------------")
-    print("SUMMARY COMPARISON TABLE FOR EVALUATORS:")
-    print("--------------------------------------------------------------------------------")
-    print(f"{'Evaluation Metric':<32} | {'Naive RAG (Baseline)':<22} | {'Our AST Co-Pilot':<20}")
-    print(f"{'-'*32} | {'-'*22} | {'-'*20}")
-    print(f"{'Boundary Integrity':<32} | {f'{naive_intact_rate}%':<22} | {'100.0% [PASSED]':<20}")
-    print(f"{'Preserves Function Signatures':<32} | {'Frequent Splits':<22} | {'100% Intact':<20}")
-    print(f"{'Physical Line Citations':<32} | {'No':<22} | {'Exact Lines':<20}")
-    print(f"{'Symbol Table Lookup':<32} | {'Unsupported':<22} | {'Deterministic':<20}")
-    print(f"{'Hallucination Verification':<32} | {'LLM-only (Unreliable)':<22} | {'Deterministic Critic':<20}")
-    print("================================================================================\n")
+
+def _pct(part: int, whole: int) -> str:
+    return f"{100.0 * part / whole:.1f}%" if whole else "n/a"
+
+
+def run_benchmark(paths: List[Path]) -> None:
+    print("=" * 78)
+    print("CHUNKING BENCHMARK: NAIVE 500-CHAR WINDOWS VS AST FUNCTION/CLASS CHUNKS")
+    print("=" * 78)
+    for path in paths:
+        r = evaluate_repo(path)
+        print(f"\nRepository: {path.name} ({r['files']} Python files, {r['functions']} functions/classes)")
+        print(f"  Naive chunks that cut through a function: {r['naive_chunks_cutting_a_function']}/{r['naive_chunks']}"
+              f" ({_pct(r['naive_chunks_cutting_a_function'], r['naive_chunks'])})")
+        print(f"  Functions no naive chunk holds whole:     {r['functions_split_by_naive']}/{r['functions']}"
+              f" ({_pct(r['functions_split_by_naive'], r['functions'])})")
+        print(f"  AST chunks that parse on their own:       {r['ast_chunks_parsing_alone']}/{r['ast_chunks']}"
+              f" ({_pct(r['ast_chunks_parsing_alone'], r['ast_chunks'])})")
+    print("\nAST chunks also carry exact start/end lines and a symbol name, which the")
+    print("Deterministic Critic uses to verify every citation; naive chunks carry neither.")
+    print("=" * 78)
 
 
 if __name__ == "__main__":
-    run_benchmark()
+    targets = [Path(p).resolve() for p in sys.argv[1:]] or [ROOT_DIR / "sample_repo", ROOT_DIR]
+    run_benchmark(targets)

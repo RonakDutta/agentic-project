@@ -11,9 +11,10 @@ Generates formal Product Requirements Documents:
 - Multi-perspective Mermaid Diagrams (System Architecture, Component Topology, Dataflow Sequence)
 """
 
+import re
 from dataclasses import dataclass, field, asdict
 from typing import Any, Dict, List, Optional
-from core.llm import llm_client
+from core.llm import llm_client, AGENT_MAX_TOKENS
 from agents.idea_agent import DecomposedIdea
 from agents.market_agent import MarketAnalysis
 from agents.kill_agent import ReconciliationResult
@@ -54,6 +55,8 @@ class PRDDocument:
     component_diagram_mermaid: str
     dataflow_diagram_mermaid: str
     trace: List[str] = field(default_factory=list)
+    generation_source: str = "llm"
+    fallback_reason: str = ""
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -67,6 +70,8 @@ class PRDDocument:
             "component_diagram_mermaid": self.component_diagram_mermaid,
             "dataflow_diagram_mermaid": self.dataflow_diagram_mermaid,
             "trace": self.trace,
+            "generation_source": self.generation_source,
+            "fallback_reason": self.fallback_reason,
         }
 
     def to_markdown(self) -> str:
@@ -170,6 +175,22 @@ CRITICAL INSTRUCTIONS:
 """
 
 
+def mermaid_label(text: Any, limit: int = 48) -> str:
+    """Makes free text safe inside a quoted Mermaid label (quotes, brackets, pipes break the parser)."""
+    clean = re.sub(r'["`<>{}\[\]|;#]', " ", str(text or ""))
+    clean = re.sub(r"\s+", " ", clean).strip()
+    # Drop "Feature 1:" style prefixes the decomposer adds.
+    clean = re.sub(r"^(feature|mvp)\s*\d*\s*:\s*", "", clean, flags=re.IGNORECASE)
+    if len(clean) > limit:
+        clean = clean[: limit - 3].rstrip() + "..."
+    return clean or "Component"
+
+
+def mermaid_message(text: Any, limit: int = 60) -> str:
+    """Sequence-diagram message text: no colons/semicolons, which end the message early."""
+    return mermaid_label(text, limit).replace(":", " ")
+
+
 class PRDAgent:
     """
     Generates formal PRDs and multi-diagram Mermaid architectural models.
@@ -216,6 +237,7 @@ class PRDAgent:
         )
 
         trace.append("Querying Groq LLM for formal PRD user stories and functional requirements...")
+        generation_source, fallback_reason = "llm", ""
         try:
             res = self.llm.generate_json(
                 messages=[
@@ -223,22 +245,25 @@ class PRDAgent:
                     {"role": "user", "content": user_content},
                 ],
                 temperature=0.2,
+                max_tokens=AGENT_MAX_TOKENS["prd"],
             )
         except Exception as err:
             trace.append(f"PRD LLM note ({err}). Using structured MetaGPT specification fallback.")
+            generation_source, fallback_reason = "fallback", f"LLM unavailable: {err}"
             res = {}
 
         # Parse User Stories
-        raw_stories = res.get("user_stories", [])
+        raw_stories = res.get("user_stories") or []
         user_stories: List[UserStory] = []
-        for idx, s in enumerate(raw_stories, 1):
+        for idx, s in enumerate([x for x in raw_stories if isinstance(x, dict)] if isinstance(raw_stories, list) else [], 1):
+            criteria = s.get("acceptance_criteria") or ["Feature operates without uncaught exceptions"]
             user_stories.append(
                 UserStory(
                     story_id=s.get("story_id", f"US-0{idx}"),
                     persona=s.get("persona", "End User"),
                     want=s.get("want", "Access system dashboard"),
                     so_that=s.get("so_that", "I can manage project operations effectively"),
-                    acceptance_criteria=s.get("acceptance_criteria", ["Feature operates without uncaught exceptions"]),
+                    acceptance_criteria=[str(c) for c in criteria] if isinstance(criteria, list) else [str(criteria)],
                 )
             )
 
@@ -257,9 +282,9 @@ class PRDAgent:
             )
 
         # Parse Functional Requirements
-        raw_frs = res.get("functional_requirements", [])
+        raw_frs = res.get("functional_requirements") or []
         functional_reqs: List[FunctionalRequirement] = []
-        for idx, fr in enumerate(raw_frs, 1):
+        for idx, fr in enumerate([x for x in raw_frs if isinstance(x, dict)] if isinstance(raw_frs, list) else [], 1):
             functional_reqs.append(
                 FunctionalRequirement(
                     req_id=fr.get("req_id", f"FR-0{idx}"),
@@ -285,67 +310,74 @@ class PRDAgent:
                 if len(functional_reqs) >= 3:
                     break
 
-        nfrs = res.get("non_functional_requirements", {
-            "performance": "Sub-500ms p95 API response times on standard requests.",
-            "security": "Enforce strict role-based access control and TLS in transit.",
-            "scalability": "Stateless API server design supporting horizontal autoscaling.",
-            "observability": "End-to-end tracing and health check endpoints.",
-        })
+        nfrs = res.get("non_functional_requirements")
+        if not isinstance(nfrs, dict) or not nfrs:
+            nfrs = {
+                "performance": "Sub-500ms p95 API response times on standard requests.",
+                "security": "Enforce strict role-based access control and TLS in transit.",
+                "scalability": "Stateless API server design supporting horizontal autoscaling.",
+                "observability": "End-to-end tracing and health check endpoints.",
+            }
 
-        # Generate Deterministic Mermaid Diagrams
-        fe_choice = self._safe_choice(market.tech_stack, "frontend", "React Dashboard")
-        be_choice = self._safe_choice(market.tech_stack, "backend", "FastAPI Service")
-        db_choice = self._safe_choice(market.tech_stack, "database", "PostgreSQL Database")
+        # Deterministic Mermaid diagrams, built from this idea's stack and MVP
+        # features so every project gets its own topology (not a fixed template).
+        fe_choice = mermaid_label(self._safe_choice(market.tech_stack, "frontend", "React Dashboard"))
+        be_choice = mermaid_label(self._safe_choice(market.tech_stack, "backend", "FastAPI Service"))
+        db_choice = mermaid_label(self._safe_choice(market.tech_stack, "database", "PostgreSQL Database"))
+        features = [mermaid_label(f, 40) for f in decomposed.mvp_features[:4]] or ["Core Processing Engine"]
+        persona = mermaid_label(
+            decomposed.target_personas[0].get("persona", "User") if decomposed.target_personas else "User", 30
+        )
 
         # 1. High-Level Architecture Diagram
-        arch_mermaid = (
-            "graph TD\n"
-            f'    Client["Client Interface\\n({fe_choice})"] -->|HTTPS / REST API| Gateway["API Gateway / Orchestrator\\n({be_choice})"]\n'
-            '    Gateway --> Auth["Authentication & Session Manager"]\n'
-            '    Gateway --> Engine["Core Processing Engine"]\n'
-            f'    Engine --> Storage[("Persistence Layer\\n{db_choice}")]\n'
-            '    Engine --> Telemetry["Observability & Structured Logging"]\n'
-            '    classDef nodeStyle fill:#f8fafc,stroke:#475569,stroke-width:2px,color:#0f172a;\n'
-            '    class Client,Gateway,Auth,Engine,Storage,Telemetry nodeStyle;'
-        )
+        arch_lines = [
+            "graph TD",
+            f'    Client["{persona}<br/>{fe_choice}"] -->|HTTPS / REST| Gateway["API Layer<br/>{be_choice}"]',
+            '    Gateway --> Auth["Authentication & Sessions"]',
+        ]
+        for i, feat in enumerate(features, 1):
+            arch_lines.append(f'    Gateway --> F{i}["{feat}"]')
+            arch_lines.append(f"    F{i} --> Storage")
+        arch_lines.append(f'    Storage[("{db_choice}")]')
+        arch_lines.append('    Gateway --> Telemetry["Logging & Monitoring"]')
+        arch_mermaid = "\n".join(arch_lines)
 
-        # 2. Component Interaction Topology Diagram
-        comp_mermaid = (
-            "graph LR\n"
-            '    UI["Web Dashboard"] --> API["REST Controllers"]\n'
-            '    API --> Services["Domain Business Services"]\n'
-            '    Services --> Workers["Background Tasks & Jobs"]\n'
-            '    Services --> DB[("Database")]\n'
-            '    Workers --> Cache[("Cache / Queue")]\n'
-            '    classDef compStyle fill:#eff6ff,stroke:#2563eb,stroke-width:1px,color:#1e3a8a;\n'
-            '    class UI,API,Services,Workers,DB,Cache compStyle;'
-        )
+        # 2. Component Interaction Topology: one service per MVP feature.
+        comp_lines = [
+            "graph LR",
+            f'    UI["{fe_choice}"] --> API["{be_choice} controllers"]',
+            f'    DB[("{db_choice}")]',
+        ]
+        for i, feat in enumerate(features, 1):
+            comp_lines.append(f'    API --> S{i}["{feat}"]')
+            comp_lines.append(f"    S{i} --> DB")
+        if len(features) > 1:
+            comp_lines.append(f'    S1 -.->|events| S2')
+        comp_mermaid = "\n".join(comp_lines)
 
-        # 3. End-to-End Dataflow Sequence Diagram
-        dataflow_mermaid = (
-            "sequenceDiagram\n"
-            "    autonumber\n"
-            "    actor User as Client User\n"
-            "    participant UI as Frontend View\n"
-            "    participant API as Backend API\n"
-            "    participant Worker as Processing Service\n"
-            "    participant DB as Database\n"
-            "    User->>UI: Submit request or trigger action\n"
-            "    UI->>API: POST /api/v1/resource with payload\n"
-            "    API->>Worker: Validate schema and dispatch work\n"
-            "    Worker->>DB: Query or persist state record\n"
-            "    DB-->>Worker: Return transaction acknowledgment\n"
-            "    Worker-->>API: Package structured response\n"
-            "    API-->>UI: 200 OK JSON response payload\n"
-            "    UI-->>User: Render updated UI status"
-        )
+        # 3. End-to-End Dataflow Sequence for the first (primary) MVP feature.
+        primary = mermaid_message(features[0], 50)
+        dataflow_mermaid = "\n".join([
+            "sequenceDiagram",
+            "    autonumber",
+            f"    actor User as {mermaid_message(persona, 30)}",
+            f"    participant UI as {mermaid_message(fe_choice, 30)}",
+            f"    participant API as {mermaid_message(be_choice, 30)}",
+            f"    participant DB as {mermaid_message(db_choice, 30)}",
+            f"    User->>UI: Starts {primary}",
+            "    UI->>API: Sends request with validated input",
+            "    API->>DB: Reads or stores the records it needs",
+            "    DB-->>API: Returns the stored state",
+            "    API-->>UI: Returns the result as JSON",
+            "    UI-->>User: Shows the updated view",
+        ])
 
         trace.append(f"PRD generated with {len(user_stories)} user stories, {len(functional_reqs)} functional requirements, and 3 Mermaid diagrams.")
 
         return PRDDocument(
             project_title=decomposed.project_title,
-            product_vision=res.get("product_vision", f"Deliver accessible, reliable solutions for {decomposed.project_title}."),
-            target_audience_summary=res.get("target_audience_summary", "Early-adopter engineering teams and operations managers."),
+            product_vision=str(res.get("product_vision") or f"Deliver accessible, reliable solutions for {decomposed.project_title}."),
+            target_audience_summary=str(res.get("target_audience_summary") or "Early-adopter engineering teams and operations managers."),
             user_stories=user_stories,
             functional_requirements=functional_reqs,
             non_functional_requirements=nfrs,
@@ -353,6 +385,8 @@ class PRDAgent:
             component_diagram_mermaid=comp_mermaid,
             dataflow_diagram_mermaid=dataflow_mermaid,
             trace=trace,
+            generation_source=generation_source,
+            fallback_reason=fallback_reason,
         )
 
 

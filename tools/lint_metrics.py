@@ -26,9 +26,10 @@ def ruff_check(file_path: str) -> Dict[str, Any]:
 
 def radon_complexity(code: str, symbol: str = "snippet") -> Dict[str, Any]:
     try:
-        from radon.complexity import cc_visit  # type: ignore
+        from radon.complexity import cc_visit, cc_rank  # type: ignore
         blocks = cc_visit(code)
-        rows = [{"name": b.name, "complexity": b.complexity, "rank": b.rank}
+        # radon's block objects carry no rank attribute; cc_rank maps complexity to A-F.
+        rows = [{"name": b.name, "complexity": b.complexity, "rank": cc_rank(b.complexity)}
                 for b in blocks]
         return {"status": "ok", "backend": "radon", "blocks": rows}
     except Exception:

@@ -1,11 +1,19 @@
 """
 FastAPI Server and Web API for Agentic AI Co-Pilot.
 Serves the browser dashboard and exposes REST endpoints for multi-agent execution.
+
+Endpoints that run agents are plain `def` functions on purpose: the agent
+pipeline is blocking (Groq calls, git clone, AST parsing), and FastAPI runs
+`def` endpoints in its worker thread pool. As `async def` they blocked the
+event loop, so /api/health and every other request froze during a run.
 """
 
 import os
+import threading
+import time
+from collections import defaultdict, deque
 from pathlib import Path
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel
 from typing import Optional
@@ -13,7 +21,7 @@ import uvicorn
 
 from core.config import settings
 from core.llm import llm_client
-from indexer.ast_parser import ASTCodeIndexer
+from indexer import index_cache
 from agents.orchestrator import orchestrator
 
 app = FastAPI(
@@ -25,6 +33,63 @@ app = FastAPI(
 ROOT_DIR = Path(__file__).resolve().parent
 HTML_PATH = ROOT_DIR / "web" / "templates" / "index.html"
 SAMPLE_REPO_PATH = ROOT_DIR / "sample_repo"
+
+
+# Every visitor shares one free Groq key, so full pipeline runs are limited per
+# client (RUNS_PER_MINUTE, 0 = no limit). Follow-ups are cheap and not limited.
+RUNS_PER_MINUTE = int(os.getenv("RUNS_PER_MINUTE", "6"))
+_run_log: "defaultdict[str, deque]" = defaultdict(deque)
+_run_lock = threading.Lock()
+
+
+def _rate_limited(request: Request) -> Optional[JSONResponse]:
+    if RUNS_PER_MINUTE <= 0:
+        return None
+    client_id = request.client.host if request.client else "unknown"
+    now = time.time()
+    with _run_lock:
+        log = _run_log[client_id]
+        while log and now - log[0] > 60:
+            log.popleft()
+        if len(log) >= RUNS_PER_MINUTE:
+            wait = int(60 - (now - log[0])) + 1
+            return JSONResponse(
+                status_code=429,
+                content={"status": "failed", "error": f"Too many runs from this browser. Try again in {wait}s."},
+            )
+        log.append(now)
+    return None
+
+
+def _local_path_allowed(path: str) -> bool:
+    """
+    ALLOWED_REPO_ROOTS (os.pathsep-separated folders) limits which local folders
+    can be indexed. Empty means any folder, which is fine on your own laptop but
+    must be set before the app is reachable by anyone else.
+    """
+    roots = [r for r in settings.allowed_repo_roots.split(os.pathsep) if r.strip()]
+    if not roots:
+        return True
+    target = os.path.realpath(path)
+    allowed = [os.path.realpath(r) for r in roots] + [os.path.realpath(SAMPLE_REPO_PATH)]
+    return any(target == root or target.startswith(root + os.sep) for root in allowed)
+
+
+def _check_repo_path(repo_path: Optional[str]) -> Optional[JSONResponse]:
+    """Returns an error response when a local repo path is not allowed, else None."""
+    if not repo_path:
+        return None
+    from indexer.github_ingest import github_ingest_service
+    target = repo_path.strip()
+    if github_ingest_service.is_valid_github_url(target):
+        return None
+    if not _local_path_allowed(target):
+        return JSONResponse(
+            status_code=403,
+            content={"status": "error", "error": f"Path '{target}' is outside ALLOWED_REPO_ROOTS.",
+                     "message": f"Path '{target}' is outside ALLOWED_REPO_ROOTS."},
+        )
+    return None
 
 
 class QueryRequest(BaseModel):
@@ -45,7 +110,7 @@ class FollowupRequest(BaseModel):
 
 
 @app.get("/", response_class=HTMLResponse)
-async def serve_dashboard():
+def serve_dashboard():
     """Serves the main interactive dashboard."""
     if not HTML_PATH.exists():
         raise HTTPException(status_code=404, detail="Dashboard template not found.")
@@ -55,8 +120,11 @@ async def serve_dashboard():
 
 
 @app.post("/api/query")
-async def execute_query(req: QueryRequest):
+def execute_query(req: QueryRequest, request: Request):
     """Executes the multi-agent orchestrator pipeline."""
+    denied = _check_repo_path(req.repo_path) or _rate_limited(request)
+    if denied:
+        return denied
     try:
         state = orchestrator.process(
             query=req.query,
@@ -72,8 +140,11 @@ async def execute_query(req: QueryRequest):
 
 
 @app.post("/api/followup")
-async def execute_followup(req: FollowupRequest):
+def execute_followup(req: FollowupRequest):
     """Answers conversational follow-up questions with persistent repository session context."""
+    denied = _check_repo_path(req.repo_path)
+    if denied:
+        return denied
     try:
         result = orchestrator.answer_followup(
             query=req.query,
@@ -90,7 +161,7 @@ async def execute_followup(req: FollowupRequest):
 
 
 @app.post("/api/inspect-repo")
-async def inspect_repository(req: InspectRepoRequest):
+def inspect_repository(req: InspectRepoRequest):
     """Parses a local Python codebase or safely shallow-clones and indexes a remote GitHub repository."""
     target = req.repo_path.strip()
     from indexer.github_ingest import github_ingest_service
@@ -117,14 +188,18 @@ async def inspect_repository(req: InspectRepoRequest):
             }
         )
 
-    if not os.path.exists(target):
+    if not os.path.isdir(target):
         return JSONResponse(
             status_code=400,
-            content={"status": "error", "message": f"Path '{target}' does not exist on disk."},
+            content={"status": "error", "message": f"Path '{target}' is not a folder on disk."},
+        )
+    if not _local_path_allowed(target):
+        return JSONResponse(
+            status_code=403,
+            content={"status": "error", "message": f"Path '{target}' is outside ALLOWED_REPO_ROOTS."},
         )
     try:
-        indexer = ASTCodeIndexer(repo_path=target)
-        index = indexer.index()
+        index = index_cache.get_index(target, max_files=settings.max_repo_files)
         return JSONResponse(
             content={
                 "status": "ok",
@@ -141,14 +216,14 @@ async def inspect_repository(req: InspectRepoRequest):
 
 
 @app.get("/api/sample-repo-path")
-async def get_sample_repo_path():
+def get_sample_repo_path():
     """Returns the normalized absolute path to the built-in sample demo repository."""
     return JSONResponse(content={"path": str(SAMPLE_REPO_PATH).replace("\\", "/")})
 
 
 @app.get("/health")
 @app.get("/api/health")
-async def health_check():
+def health_check():
     """Returns active model settings, runtime metrics, and rate-limit cooldown state."""
     return JSONResponse(
         content={
@@ -157,13 +232,14 @@ async def health_check():
             "model_chain": settings.model_chain,
             "metrics": llm_client.get_metrics(),
             "rate_limits": llm_client.get_rate_limit_status(),
+            "indexed_repos_cached": index_cache.cached_repo_count(),
         }
     )
 
 
 @app.get("/v1/models")
 @app.get("/models")
-async def list_models():
+def list_models():
     """Returns active model list in standard OpenAI-compatible format to avoid 404 polling errors."""
     models_list = []
     seen = set()
@@ -176,14 +252,14 @@ async def list_models():
 
 
 @app.get("/api/agents")
-async def list_specialist_agents():
+def list_specialist_agents():
     """Returns the direct-interrogation agent catalog used by the UI chat chips."""
     from agents.conversation_session import ConversationalFollowupEngine
     return JSONResponse(content={"status": "ok", "agents": ConversationalFollowupEngine.get_direct_agent_catalog()})
 
 
 @app.get("/api/session/{session_id}")
-async def get_session_info(session_id: str):
+def get_session_info(session_id: str):
     """Returns conversation history and active entities for a session."""
     from agents.conversation_session import session_manager
     session = session_manager.get_session(session_id)
@@ -194,14 +270,17 @@ async def get_session_info(session_id: str):
 
 # --- Synopsis alignment layer (branch `muse`, Eval-1) ---
 @app.get("/api/graph")
-async def get_graph_spec():
+def get_graph_spec():
     from agents.graph import graph_spec
     return JSONResponse(content={"status": "ok", "graph": graph_spec()})
 
 
 @app.post("/api/graph/run")
-async def run_graph(req: QueryRequest):
+def run_graph(req: QueryRequest, request: Request):
     from agents.graph import run
+    denied = _check_repo_path(req.repo_path) or _rate_limited(request)
+    if denied:
+        return denied
     try:
         return JSONResponse(content=run(query=req.query, repo_path=req.repo_path, force_intent=req.force_intent))
     except Exception as err:
@@ -209,19 +288,19 @@ async def run_graph(req: QueryRequest):
 
 
 @app.get("/api/synopsis/agents")
-async def get_synopsis_agents():
+def get_synopsis_agents():
     from agents.synopsis_agents import get_canonical_catalog
     return JSONResponse(content={"status": "ok", "agents": get_canonical_catalog()})
 
 
 @app.get("/api/kb/lookup")
-async def kb_lookup(q: str, top_k: int = 3):
+def kb_lookup(q: str, top_k: int = 3):
     from indexer.knowledge_base import knowledge_base
     return JSONResponse(content={"status": "ok", "hits": [h.to_dict() for h in knowledge_base.lookup(q, top_k=top_k)]})
 
 
 @app.get("/api/session-store/{session_id}")
-async def get_stored_session(session_id: str):
+def get_stored_session(session_id: str):
     from agents import session_store
     data = session_store.load_session(session_id)
     if not data:
