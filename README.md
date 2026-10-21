@@ -11,9 +11,9 @@ Standard Large Language Models generate answers in a single step and lack access
 
 This project implements an **Agentic AI Co-Pilot** featuring a **Supervisory Multi-Agent Architecture** backed by an **AST-aware Retrieval-Augmented Generation (RAG)** pipeline and deterministic verification tooling.
 
-The system is balanced into two 50-50 first-class pillars:
-1. **Pillar 1: Codebase Diagnostic Co-Pilot:** Parses Python repositories into semantic Abstract Syntax Tree (AST) units, conducts hybrid lexical/dense retrieval, localizes fault locations with exact line numbers, and executes deterministic verification. Strictly operates in read-only mode to produce root-cause hypotheses and fix directions with human review (no automated or unsupervised code editing).
-2. **Pillar 2: Idea Validation Co-Pilot:** Decomposes raw ideas into structured problem briefs, target user personas, live competitor intelligence, adversarial devil's advocate stress tests, deterministic feasibility scoring, formal PRDs with Mermaid models, and 3-phase delivery roadmaps.
+The system is balanced into two 50-50 first-class pillars, shown in the app as **Startup Assistance** and **Codebase Evaluation**:
+1. **Pillar 1: Codebase Evaluation (Codebase Diagnostic Co-Pilot):** Parses Python repositories into semantic Abstract Syntax Tree (AST) units, conducts hybrid lexical/dense retrieval, localizes fault locations with exact line numbers, and executes deterministic verification. Strictly operates in read-only mode to produce root-cause hypotheses and fix directions with human review (no automated or unsupervised code editing).
+2. **Pillar 2: Startup Assistance (Idea Validation Co-Pilot):** Decomposes raw ideas into structured problem briefs, target user personas, live competitor intelligence, adversarial devil's advocate stress tests, deterministic feasibility scoring, formal PRDs with Mermaid models, and 3-phase delivery roadmaps.
 
 ---
 
@@ -58,9 +58,9 @@ The system is balanced into two 50-50 first-class pillars:
                         Critic Validator, Rubric Scorecard)
                                             │
                                             ▼
-                            [ Interactive Browser Dashboard ]
-                       (FastAPI + Tailwind CSS + Mermaid.js +
-                        Sequential Storyboard + SQLite Session Memory)
+                            [ Web Interface (React + Vite) ]
+                     (Live agent graph over Server-Sent Events,
+                      research papers, verdict screens, follow-ups)
 ```
 
 ---
@@ -80,7 +80,7 @@ Measured by `python evaluation/compare_baseline.py` on this repository: **91% of
 * BM25 with a code-aware tokenizer (`jwtAuthService` -> `jwt`, `auth`, `service`).
 * Dense vectors from `all-MiniLM-L6-v2` (loaded once per process), with a TF-IDF fallback for offline machines.
 * Exact symbol mentions are matched as whole identifiers, so short names like `get` or `id` do not match everything.
-* `python evaluation/retrieval_benchmark.py` scores BM25, vector and hybrid retrieval (Top-1, Top-3, MRR) on 18 plain-English questions about this codebase. Results depend on whether MiniLM is available on your machine; the script prints the backend it used.
+* `python evaluation/retrieval_benchmark.py` scores BM25, vector and hybrid retrieval (Top-1, Top-3, MRR) on 18 plain-English questions about this codebase. With MiniLM: BM25 MRR 0.640 (Top-3 72%), vectors 0.672 (78%), hybrid RRF 0.647 with the best Top-3 (83%). Hybrid wins on Top-3 but not on Top-1, and we report it that way.
 
 ### 3. Grounded Diagnosis with a Deterministic Critic
 "Agents reason, tools compute." The Diagnosis Agent receives line-numbered code plus static analysis (complexity via the built-in analyzer and `radon`, last commit via `git blame` when available). The Critic then checks, without an LLM:
@@ -167,18 +167,20 @@ Set your free Groq key in `.env` (`GROQ_API_KEY=...`). Optional: `TAVILY_API_KEY
 
 The app starts without a key: AST indexing, retrieval, the Critic, the scorecard and the deterministic follow-up routers work offline, and LLM-backed agents fall back to clearly labelled built-in output.
 
-### 3. Launch the Dashboard
+### 3. Launch the App
 ```bash
 python app.py
 ```
-Open **`http://127.0.0.1:8000`**. Before exposing the app to other people, set `ALLOWED_REPO_ROOTS` (which local folders may be indexed) and keep `RUNS_PER_MINUTE` low, since every visitor shares your Groq key.
+Open **`http://127.0.0.1:8000`**. The interface is prebuilt in `web/react-app/dist`, so Node is not needed to run it. To change the UI: `cd web/react-app && npm install && npm run build`.
+
+**What you see:** pick *Startup Assistance* or *Codebase Evaluation*, run the agents, and watch the agent graph light up live as each step really finishes (streamed from the server, nothing replayed). Each report opens on a short verdict screen; details sit in tabs (research papers, scorecard, market, risks, plan, findings, impact, and "How it ran" with every AI call's model, tokens and time). Before exposing the app to other people, set `ALLOWED_REPO_ROOTS` (which local folders may be indexed) and keep `RUNS_PER_MINUTE` low, since every visitor shares your Groq key.
 
 ---
 
 ## 🧪 Tests & Benchmarks
 
 ```bash
-pytest -q                                   # 99 tests; 3 live-Groq smoke tests skip without a key
+GROQ_API_KEY= pytest -q                     # 101 tests; 3 live smoke tests skip without a key
 python -m pytest tests/test_backend_fixes.py -v   # regression tests for the Phase 1 fixes
 
 python evaluation/compare_baseline.py       # naive vs AST chunking, computed on real files

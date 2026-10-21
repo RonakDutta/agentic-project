@@ -11,7 +11,7 @@ Guarantees:
 
 import time
 from dataclasses import dataclass, field, asdict
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 
 @dataclass
@@ -68,6 +68,8 @@ class AgentWorkflowState:
     execution_trace: List[TraceStep] = field(default_factory=list)
     total_latency_ms: int = 0
     start_time: float = field(default_factory=time.time)
+    # Called with each new trace step (as a dict); used to stream live progress (SSE).
+    listener: Optional[Callable[[Dict[str, Any]], None]] = field(default=None, repr=False, compare=False)
 
     def add_trace(
         self,
@@ -102,6 +104,11 @@ class AgentWorkflowState:
             citations=citations or [],
         )
         self.execution_trace.append(step)
+        if self.listener is not None:
+            try:
+                self.listener(step.to_dict())
+            except Exception:  # a broken listener must never break the pipeline
+                pass
 
     def finalize(self) -> None:
         self.total_latency_ms = int((time.time() - self.start_time) * 1000)

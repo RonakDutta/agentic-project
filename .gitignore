@@ -48,4 +48,5 @@ data/cache/
 
 # React app
 web/react-app/node_modules/
-web/react-app/dist/
+# web/react-app/dist/ is committed on purpose: python app.py serves it without Node.
+!web/react-app/dist/

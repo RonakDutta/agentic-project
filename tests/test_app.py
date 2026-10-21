@@ -19,7 +19,9 @@ def test_app_endpoints():
     print("[1/4] Testing GET / (HTML Dashboard)...")
     res = client.get("/")
     assert res.status_code == 200
-    assert "Agentic AI Co-Pilot" in res.text
+    # New UI (web/react-app/dist) when built, otherwise the legacy dashboard.
+    assert "Agentic Co-Pilot" in res.text or "Agentic AI Co-Pilot" in res.text
+    assert "Agentic AI Co-Pilot" in client.get("/legacy").text
     print("      Dashboard HTML served successfully.")
 
     print("[2/4] Testing GET /api/sample-repo-path...")

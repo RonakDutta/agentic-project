@@ -143,22 +143,25 @@ class OrchestratorAgent:
         query: str,
         repo_path: Optional[str] = None,
         force_intent: Optional[str] = None,
+        on_trace=None,
     ) -> AgentWorkflowState:
         """
         Executes the multi-agent workflow from start to finish.
         The same four steps are the nodes of the LangGraph graph (agents/graph.py).
+        `on_trace` receives every trace step as it happens (live progress stream).
         """
-        state = self.new_state(query, repo_path)
+        state = self.new_state(query, repo_path, on_trace=on_trace)
         self.classify(state, force_intent)
         self.execute_track(state)
         self.finalize(state)
         return state
 
-    def new_state(self, query: str, repo_path: Optional[str] = None) -> AgentWorkflowState:
+    def new_state(self, query: str, repo_path: Optional[str] = None, on_trace=None) -> AgentWorkflowState:
         state = AgentWorkflowState(
             session_id=str(uuid.uuid4())[:8],
             user_query=query,
             repo_path=repo_path,
+            listener=on_trace,
         )
         state.add_trace("Orchestrator", f"Session initialized. Received query: '{query[:80]}...'")
         return state
