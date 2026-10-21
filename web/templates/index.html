@@ -750,15 +750,16 @@
               <div class="h-2 rounded bg-zinc-800 overflow-hidden"><div id="paNoveltyBar" class="h-2 bg-blue-500" style="width:0%"></div></div>
               <p id="paBand" class="text-sm text-zinc-200 font-medium"></p>
               <p id="paConfidence" class="text-xs text-zinc-400"></p>
-              <p class="text-[11px] text-zinc-500 leading-relaxed">
-                Computed, not generated: 100 x (1 - (0.6 x closest similarity + 0.4 x mean of the top 3)),
-                using sentence embeddings of your idea and each paper's title and abstract.
-              </p>
+              <details class="text-[11px] text-zinc-500">
+                <summary class="cursor-pointer">How is this computed?</summary>
+                <p class="mt-1 leading-relaxed">Calculated in code, not written by the AI: 100 x (1 - (0.6 x closest similarity + 0.4 x average of the top 3)).
+                Similarity compares the meaning of your idea with each paper's title and abstract (MiniLM sentence embeddings).</p>
+              </details>
             </div>
             <div class="lg:col-span-3 subpanel p-4 space-y-2">
               <div class="flex items-baseline justify-between">
                 <span class="label">Similarity map</span>
-                <span class="text-[11px] text-zinc-500">2D projection (PCA) of the embeddings. Closer = more similar.</span>
+                <span class="text-[11px] text-zinc-500">Papers closer to your idea are more alike. Bigger dot = closer match.</span>
               </div>
               <div id="paMap" class="w-full"></div>
             </div>
@@ -784,7 +785,7 @@
 
           <div class="space-y-3">
             <div class="flex flex-wrap items-baseline justify-between gap-2">
-              <span class="label">Head-to-head: your idea vs each paper</span>
+              <span class="label">Your idea vs each paper</span>
               <span id="paVerification" class="text-[11px] text-zinc-400"></span>
             </div>
             <div id="paComparisons" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
@@ -2146,7 +2147,7 @@
 
       const v = pa.verification || {};
       document.getElementById('paVerification').innerText = papers.length
-        ? `Critic: ${v.comparisons_kept || 0}/${v.comparisons_returned || v.comparisons_kept || 0} comparisons cite a retrieved paper · ${v.citations_removed || 0} invalid citations removed · avg abstract support ${Math.round((v.avg_abstract_support || 0) * 100)}%`
+        ? `Checked: ${v.comparisons_kept || 0}/${v.comparisons_returned || v.comparisons_kept || 0} comparisons refer to a real paper we found · ${v.citations_removed || 0} wrong citations removed · ${Math.round((v.avg_abstract_support || 0) * 100)}% backed by the abstracts`
         : '';
 
       document.getElementById('paGapBlock').classList.toggle('hidden', !(pa.research_gap || pa.positioning));

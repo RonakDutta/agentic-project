@@ -82,6 +82,7 @@ python evaluation/free_tier_budget.py        # token plan vs Groq free-tier limi
 - **Completely new UI. Nothing from the current `index.html` look should survive** (layout, colours, cards, wording). Treat the legacy UI only as a reference for which API fields exist.
 - Pillar names: **Startup Assistance** and **Codebase Evaluation**.
 - **Much less text.** Last time the teacher did not read everything. Visual first: one verdict screen with the few numbers that matter, short one-line labels, details collapsed behind "show more". Cut long paragraphs, repeated explanations and per-step prose.
+- **Language level:** easy to read but not childish. Keep a few real technical terms where they earn their place (AST, embeddings, call graph, novelty index) and explain them in a few words; cut heavy jargon and buzzwords everywhere else. Put formulas and method details behind "How is this computed?" toggles instead of in the main text. Same rule for prompts (`PLAIN_LANGUAGE_RULES`), README and report text.
 - **Research papers stay and stay prominent**: closest paper with link/PDF, the list of matched papers with links, novelty index, similarity map, "where the paper is stronger" vs "what your idea adds". Everything else should be trimmed.
 - Show as much *evidence* as possible in small space: provenance badges (AI / fallback / deterministic), critic verification ticks, live call stats (model, tokens, latency), links.
 - Still honest: label fallbacks, never fake progress (stream real trace events over SSE instead of the 650ms replay).
