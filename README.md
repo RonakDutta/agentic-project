@@ -90,6 +90,8 @@ Measured by `python evaluation/compare_baseline.py` on this repository: **91% of
 * the quoted "current code" really exists in the file (if not, it is replaced by the real lines from disk and flagged);
 * the recommended fix compiles (`ast.parse`).
 
+Before the diagnosis, the call graph is computed for the primary suspect (blast radius: direct and indirect callers, affected entry points and tests, risk level; plus a static flow trace). The question is classified as a bug report, a change-impact question or a "where / how" question, and the diagnosis prompt gets the call-graph facts and the matching instructions, so "what breaks if I change `verify_token`?" ranks the dependent callers instead of inventing a bug.
+
 If verification fails, the Critic's flags and repair hints are sent back to the Diagnosis Agent for **one revision with a different prompt**, and the better-grounded answer is kept. The trace reports real counts (for example "3/3 quoted code blocks match the file").
 
 The system is read-only by design: it explains the root cause and shows a recommended pattern for human review; it never edits code. Without an LLM it ranks locations by retrieval and static analysis and says so, instead of inventing a fix.
@@ -105,16 +107,25 @@ A transparent 100-point rubric across 7 categories (Problem Validation 20, Marke
 * The verdict cannot contradict the Reconciler: a GO is capped at PIVOT when the Reconciler finds high rejection risk.
 * Every scorecard carries an **evidence confidence** (High / Medium / Low) that drops when fallbacks were used or no live search was reachable.
 
-### 6. PRD & Architecture Engine
+### 6. Research Prior-Art Check (Related Work, computed)
+Every idea is checked against published research, live:
+* **Search:** arXiv, Semantic Scholar and OpenAlex in parallel, deduplicated by title (`tools/paper_search.py`). No key is needed; results are cached for 7 days.
+* **Rerank:** `all-MiniLM-L6-v2` embeddings of the idea and each paper's title and abstract (TF-IDF fallback).
+* **Novelty index:** `100 x (1 - (0.6 x closest similarity + 0.4 x mean of the top 3))`, computed in code, with the similarity backend and evidence confidence shown. The scorecard's Defensibility category loses points when very close papers exist.
+* **Head-to-head comparison:** one LLM call reads only the abstracts and says, per paper, what it does, the overlap, **where the paper is stronger**, and what the idea adds, then writes a research gap, positioning and an IEEE-style Related Work paragraph.
+* **Critic:** comparisons that cite a paper that was not retrieved are dropped, out-of-range `[n]` citations are removed, and each claim's word overlap with the paper's own abstract is reported.
+* **Outputs:** linked paper list (paper page, PDF, DOI), closest-paper spotlight, 2D similarity map (PCA), IEEE references and a downloadable `.bib` file. If no source answers, the report says so and shows no novelty index; no paper is ever invented.
+
+### 7. PRD & Architecture Engine
 User stories, prioritized functional requirements, non-functional requirements, and three Mermaid diagrams generated from **this idea's** stack, persona and MVP features (labels are escaped so model text cannot break the diagram).
 
-### 7. Honest Provenance on Every Section
+### 8. Honest Provenance on Every Section
 Each agent output records `generation_source` (`llm` or `fallback`) and a reason. The final report includes a `provenance` map, `used_fallback`, the web search backend used and the number of live citations. Trace steps that used a fallback are marked `warning`. A step that crashes is re-run on its own built-in fallback, so one bad model reply never fails the whole run.
 
-### 8. Explicit LangGraph State Graph
+### 9. Explicit LangGraph State Graph
 `agents/graph.py` compiles a real LangGraph `StateGraph` whose nodes run the orchestrator's actual steps: `classify -> (codebase_pipeline | idea_pipeline) -> finalize`, with a conditional edge on the classified intent. `GET /api/graph` reports the active backend and `POST /api/graph/run` returns the nodes visited. Without `langgraph` installed, the same steps run in sequence.
 
-### 9. Persistent Conversational Follow-Ups
+### 10. Persistent Conversational Follow-Ups
 * Multi-turn sessions with anaphora resolution ("What calls that function?").
 * Sessions are saved to SQLite after every turn and restored after a server restart; memory is bounded (LRU + idle TTL).
 * Follow-ups on a GitHub repository use its local clone, so caller, impact and flow-trace routers work on remote repos too.
@@ -135,7 +146,7 @@ How the client stays inside them (`core/llm.py`):
 * **Caching:** identical prompts are free for 10 minutes in memory and for 7 days on disk (`.cache/llm_cache.sqlite`), so re-running a demo idea costs nothing.
 * **Wrong model ids** (`model_not_found`, `decommissioned`) are parked for an hour instead of retried.
 
-`python evaluation/free_tier_budget.py` measures the real prompts without spending quota. Current result: an idea run makes 6 calls and reserves about **12.8k tokens** (fits the pooled 24k tokens/min of three models), uses about 8.7k tokens in practice, which allows roughly **69 idea runs per day**. A code run makes 1-2 calls of about 4k tokens. `GET /api/health` shows live per-model usage and an estimate of idea runs left today.
+`python evaluation/free_tier_budget.py` measures the real prompts without spending quota. Current result: an idea run makes 7 calls (including the prior-art comparison) and reserves about **15.9k tokens** (fits the pooled 24k tokens/min of three models), uses about 11.2k tokens in practice, which allows roughly **53 idea runs per day**. A code run makes 1-2 calls of about 4k tokens. `GET /api/health` shows live per-model usage and an estimate of idea runs left today.
 
 ---
 
@@ -167,7 +178,7 @@ Open **`http://127.0.0.1:8000`**. Before exposing the app to other people, set `
 ## 🧪 Tests & Benchmarks
 
 ```bash
-pytest -q                                   # 88 tests; 3 live-Groq smoke tests skip without a key
+pytest -q                                   # 99 tests; 3 live-Groq smoke tests skip without a key
 python -m pytest tests/test_backend_fixes.py -v   # regression tests for the Phase 1 fixes
 
 python evaluation/compare_baseline.py       # naive vs AST chunking, computed on real files

@@ -148,6 +148,7 @@ class FeasibilityScorecardEngine:
         market: MarketAnalysis,
         kill_report: Optional[Any] = None,
         reconciler_result: Optional[Any] = None,
+        prior_art: Optional[Any] = None,
     ) -> FeasibilityScorecard:
         categories: List[CategoryScore] = []
 
@@ -283,6 +284,25 @@ class FeasibilityScorecardEngine:
         else:
             c_score += 5
             c_criteria.append("Standard competitive baseline without existential fatal flaws")
+
+        # Research prior art: retrieved papers that are very close to the idea weaken
+        # the novelty claim. Only applied when the paper evidence is not "Low".
+        if prior_art is not None and getattr(prior_art, "papers", None):
+            closest = prior_art.papers[0]
+            band = getattr(prior_art, "novelty_band", "")
+            if getattr(prior_art, "evidence_confidence", "Low") == "Low":
+                c_criteria.append(f"Prior-art check found few papers ({len(prior_art.papers)}); not scored")
+            elif band.startswith("Very close"):
+                c_score -= 2
+                c_gaps.append(f"Very close research exists: '{closest.title[:70]}' (similarity {closest.similarity:.2f})")
+            elif band.startswith("Closely related"):
+                c_score -= 1
+                c_gaps.append(f"Closely related research exists: '{closest.title[:70]}' (similarity {closest.similarity:.2f})")
+            else:
+                c_criteria.append(
+                    f"Novelty index {prior_art.novelty_index}/100 against {len(prior_art.papers)} retrieved papers"
+                )
+            c_score = max(0, c_score)
 
         categories.append(
             CategoryScore(

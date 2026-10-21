@@ -458,7 +458,7 @@
           </div>
 
           <div id="codeChips" class="hidden flex flex-wrap items-center gap-2">
-            <button onclick="setPrompt('orchestrator_flow')" class="chip">Orchestrator Intent Bug</button>
+            <button onclick="setPrompt('orchestrator_flow')" class="chip">Duplicate Orders Bug</button>
             <button onclick="setPrompt('token_err')" class="chip">Token Expired Bug</button>
             <button onclick="setPrompt('auth_flow')" class="chip">Order Auth Flow</button>
             <button onclick="setPrompt('blast')" class="chip">Blast Radius Check</button>
@@ -726,6 +726,98 @@
           </div>
         </div>
 
+        <!-- 5b. Research Prior Art (arXiv / Semantic Scholar / OpenAlex) -->
+        <div id="priorArtSection" class="panel p-8 sm:p-10 space-y-8 hidden">
+          <div class="flex flex-wrap items-start justify-between gap-4 border-b border-borderSubtle pb-4">
+            <div class="space-y-1">
+              <span class="label is-accent">Checked against published research</span>
+              <h3 class="text-xl font-bold text-white">Research Prior Art &amp; Novelty</h3>
+              <p id="paSubtitle" class="text-xs text-zinc-400"></p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <span id="paSourceTag" class="tag info"></span>
+              <span id="paProvenanceTag" class="tag"></span>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+            <div class="lg:col-span-2 subpanel p-6 space-y-4">
+              <span class="label">Novelty index</span>
+              <div class="flex items-baseline gap-2">
+                <span id="paNovelty" class="text-5xl font-semibold text-white tracking-tight">-</span>
+                <span class="text-sm text-zinc-500">/100</span>
+              </div>
+              <div class="h-2 rounded bg-zinc-800 overflow-hidden"><div id="paNoveltyBar" class="h-2 bg-blue-500" style="width:0%"></div></div>
+              <p id="paBand" class="text-sm text-zinc-200 font-medium"></p>
+              <p id="paConfidence" class="text-xs text-zinc-400"></p>
+              <p class="text-[11px] text-zinc-500 leading-relaxed">
+                Computed, not generated: 100 x (1 - (0.6 x closest similarity + 0.4 x mean of the top 3)),
+                using sentence embeddings of your idea and each paper's title and abstract.
+              </p>
+            </div>
+            <div class="lg:col-span-3 subpanel p-4 space-y-2">
+              <div class="flex items-baseline justify-between">
+                <span class="label">Similarity map</span>
+                <span class="text-[11px] text-zinc-500">2D projection (PCA) of the embeddings. Closer = more similar.</span>
+              </div>
+              <div id="paMap" class="w-full"></div>
+            </div>
+          </div>
+
+          <div id="paSpotlight" class="hidden rounded-lg border border-blue-900/60 bg-blue-950/20 p-6 space-y-3"></div>
+
+          <div class="space-y-3">
+            <span class="label">All papers we matched your idea against</span>
+            <div class="subpanel overflow-x-auto">
+              <table class="w-full text-xs">
+                <thead class="text-zinc-500 text-left">
+                  <tr class="border-b border-borderSubtle">
+                    <th class="p-3 font-medium">Ref</th><th class="p-3 font-medium">Paper</th>
+                    <th class="p-3 font-medium">Year</th><th class="p-3 font-medium">Source</th>
+                    <th class="p-3 font-medium min-w-[140px]">Similarity to your idea</th>
+                  </tr>
+                </thead>
+                <tbody id="paPapers" class="divide-y divide-borderSubtle"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="space-y-3">
+            <div class="flex flex-wrap items-baseline justify-between gap-2">
+              <span class="label">Head-to-head: your idea vs each paper</span>
+              <span id="paVerification" class="text-[11px] text-zinc-400"></span>
+            </div>
+            <div id="paComparisons" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+          </div>
+
+          <div id="paGapBlock" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="subpanel p-5 space-y-1">
+              <span class="label is-good">Research gap your project can fill</span>
+              <p id="paGap" class="text-sm text-zinc-200 leading-relaxed"></p>
+            </div>
+            <div class="subpanel p-5 space-y-1">
+              <span class="label is-accent">How to position it</span>
+              <p id="paPositioning" class="text-sm text-zinc-200 leading-relaxed"></p>
+            </div>
+          </div>
+
+          <div class="space-y-3">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <span class="label">Related Work (draft for your report, IEEE style)</span>
+              <div class="flex gap-2">
+                <button onclick="copyBibtex()" class="chip">Copy BibTeX</button>
+                <button onclick="downloadBibtex()" class="chip">Download .bib</button>
+              </div>
+            </div>
+            <div class="subpanel p-5 space-y-4">
+              <p id="paRelatedWork" class="text-sm text-zinc-200 leading-relaxed"></p>
+              <ol id="paReferences" class="space-y-1 text-[11px] text-zinc-400 font-mono break-words"></ol>
+            </div>
+          </div>
+
+          <ul id="paNotes" class="space-y-1 text-[11px] text-zinc-500"></ul>
+        </div>
+
         <!-- 6. Recommended Tech Stack -->
         <div class="space-y-4">
           <div class="border-b border-borderSubtle pb-3 flex items-baseline justify-between">
@@ -871,8 +963,9 @@
     const IDEA_AGENTS = [
       { id: 'node_0', name: 'Idea & Research Agent', role: 'Problem & Target Users', desc: 'Extracts problem, target users and assumptions' },
       { id: 'node_1', name: 'Market & Tech Analyst', role: 'Competitors & Tech Stack', desc: 'Researches existing solutions & technologies' },
-      { id: 'node_2', name: 'Roadmap & Risk Agent', role: 'Milestones & Mitigations', desc: 'Produces phased plan and assesses main risks' },
-      { id: 'node_3', name: 'Critic & Feasibility Agent', role: 'Grounding & Scorecard', desc: 'Checks evidence grounding and feasibility verdict' }
+      { id: 'node_2', name: 'Kill Agent (Devil\'s Advocate)', role: 'Fatal Flaws', desc: 'Attacks the idea to find how it could fail' },
+      { id: 'node_3', name: 'Prior-Art Researcher', role: 'Research Papers', desc: 'Checks the idea against arXiv, Semantic Scholar and OpenAlex papers' },
+      { id: 'node_4', name: 'Roadmap & Feasibility Agent', role: 'Milestones & Scorecard', desc: 'Phased plan, risks and the rubric verdict' }
     ];
 
     const CODE_AGENTS = [
@@ -907,7 +1000,7 @@
       container.innerHTML = '';
       const agents = mode === 'idea' ? IDEA_AGENTS : CODE_AGENTS;
       
-      container.className = 'grid grid-cols-2 md:grid-cols-4 gap-4';
+      container.className = agents.length > 4 ? 'grid grid-cols-2 md:grid-cols-5 gap-4' : 'grid grid-cols-2 md:grid-cols-4 gap-4';
 
       agents.forEach((ag, idx) => {
         const card = document.createElement('div');
@@ -1051,7 +1144,7 @@
       } else if (type === 'water') {
         input.value = "A smart ultrasonic water meter for residential buildings using LoRaWAN to detect pipe leakages in real time and estimate daily household consumption.";
       } else if (type === 'orchestrator_flow') {
-        input.value = "Where is intent classified in orchestrator and how are multi-agent execution steps planned?";
+        input.value = "Orders sometimes get processed twice when the user double clicks checkout. Where is the bug?";
       } else if (type === 'token_err') {
         input.value = "ValueError: Token expired when verify_token validates customer credentials during checkout in order processor.";
       } else if (type === 'auth_flow') {
@@ -1198,6 +1291,7 @@
     function getAgentActionDescription(agentName, idx) {
       if (agentName.includes('Decomposer') || idx === 0) return "Reading your input and setting the scope";
       if (agentName.includes('Market')) return "Looking up similar products and the technology to build it";
+      if (agentName.includes('Prior-Art')) return "Searching research papers and comparing them with your idea";
       if (agentName.includes('Kill') || agentName.includes('Advocate')) return "Looking for the weaknesses and the ways it could fail";
       if (agentName.includes('Scorecard') || agentName.includes('Roadmap') || idx === 3) return "Scoring the idea and planning the delivery steps";
       if (agentName.includes('AST') || agentName.includes('Indexer')) return "Reading the files and building a map of the code";
@@ -1313,7 +1407,7 @@
             loaderCard.className = 'subpanel p-4 space-y-1 border-l-2 border-l-blue-500';
             loaderCard.innerHTML = `
               <div class="space-y-0.5">
-                <div class="label is-accent" style="margin-bottom:0;">Step ${i + 1} of ${currentAgents.length}: ${escapeHtml(step.agent_name)} is working</div>
+                <div class="label is-accent" style="margin-bottom:0;">Step ${i + 1} of ${Math.max(agentSteps.length, currentAgents.length)}: ${escapeHtml(step.agent_name)} is working</div>
                 <div class="text-xs text-zinc-300">${getAgentActionDescription(step.agent_name, i)}</div>
               </div>
             `;
@@ -1774,6 +1868,9 @@
         personasContainer.appendChild(div);
       });
 
+      // 4b. Research prior art
+      renderPriorArt(out.prior_art);
+
       // 5. Competitors
       const compContainer = document.getElementById('competitorsContainer');
       compContainer.innerHTML = '';
@@ -1904,7 +2001,7 @@
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
               
               <!-- Current / Risky Implementation -->
-              <div class="rounded-lg border border-red-900/50 bg-red-950/15 p-4 space-y-2.5">
+              <div class="min-w-0 rounded-lg border border-red-900/50 bg-red-950/15 p-4 space-y-2.5">
                 <div class="flex items-center justify-between border-b border-red-900/40 pb-2">
                   <span class="label is-risk">The code as it is now</span>
                   <span class="text-[11px] text-red-300/80">Lines ${c.line_start}-${c.line_end}</span>
@@ -1917,7 +2014,7 @@
               </div>
 
               <!-- Correct / Recommended Pattern -->
-              <div class="rounded-lg border border-emerald-900/50 bg-emerald-950/15 p-4 space-y-2.5">
+              <div class="min-w-0 rounded-lg border border-emerald-900/50 bg-emerald-950/15 p-4 space-y-2.5">
                 <div class="flex items-center justify-between border-b border-emerald-900/40 pb-2">
                   <span class="label is-good">The code we suggest</span>
                   <span class="text-[11px] text-emerald-300/80">Suggested fix</span>
@@ -1950,6 +2047,152 @@
       el.focus();
       autoGrowFollowupInput();
       updateDirectAgentChipStyles();
+    }
+
+    // ---------- Research prior art (final_output.prior_art) ----------
+    let currentBibtex = '';
+
+    function safeUrl(url) {
+      return /^https?:\/\//i.test(url || '') ? escapeHtml(url) : '#';
+    }
+
+    function renderPriorArt(pa) {
+      const section = document.getElementById('priorArtSection');
+      if (!pa) { section.classList.add('hidden'); return; }
+      section.classList.remove('hidden');
+      currentBibtex = pa.bibtex || '';
+      const papers = pa.papers || [];
+      const sourceNames = {arxiv: 'arXiv', semantic_scholar: 'Semantic Scholar', openalex: 'OpenAlex'};
+      const backend = (pa.search_backend || 'unavailable').split(' + ').map(s => sourceNames[s] || s).join(' + ');
+
+      document.getElementById('paSubtitle').innerText = papers.length
+        ? `${papers.length} papers retrieved live for: ${(pa.queries || []).join(' | ')}`
+        : 'No papers could be retrieved for this idea right now.';
+      document.getElementById('paSourceTag').innerText = `Sources: ${backend}`;
+      const prov = document.getElementById('paProvenanceTag');
+      prov.innerText = pa.generation_source === 'llm' ? 'Comparison: AI, checked against abstracts' : 'Comparison: keyword overlap only (AI unavailable)';
+      prov.className = pa.generation_source === 'llm' ? 'tag' : 'tag warn';
+
+      const nov = pa.novelty_index;
+      document.getElementById('paNovelty').innerText = nov === null || nov === undefined ? 'n/a' : nov;
+      const bar = document.getElementById('paNoveltyBar');
+      bar.style.width = `${nov || 0}%`;
+      bar.className = 'h-2 ' + (nov >= 50 ? 'bg-emerald-500' : nov >= 35 ? 'bg-amber-500' : 'bg-rose-500');
+      document.getElementById('paBand').innerText = pa.novelty_band || '';
+      document.getElementById('paConfidence').innerText =
+        `Evidence confidence: ${pa.evidence_confidence || 'Low'}. Closest similarity ${Number(pa.closest_similarity || 0).toFixed(2)} (${pa.similarity_backend || 'n/a'}).`;
+
+      renderSimilarityMap(pa.similarity_map || [], papers);
+
+      document.getElementById('paPapers').innerHTML = papers.map(p => {
+        const pct = Math.max(0, Math.min(100, Math.round((p.similarity || 0) * 100)));
+        const src = [p.source, ...(p.also_found_in || [])].map(s => sourceNames[s] || s).join(', ');
+        const cites = p.citation_count !== null && p.citation_count !== undefined ? ` · ${p.citation_count} citations` : '';
+        return `<tr class="align-top hover:bg-surface/40">
+          <td class="p-3 font-mono text-blue-300">${escapeHtml(p.ref_id)}</td>
+          <td class="p-3"><a href="${safeUrl(p.url)}" target="_blank" rel="noopener noreferrer" class="text-zinc-100 hover:text-blue-300 underline decoration-zinc-700 underline-offset-2">${escapeHtml(p.title)}</a>
+            <div class="text-[11px] text-zinc-500 mt-0.5">${escapeHtml((p.authors || []).slice(0, 3).join(', '))}${(p.authors || []).length > 3 ? ' et al.' : ''}${p.venue ? ' · ' + escapeHtml(p.venue) : ''}${cites}</div>
+            <div class="flex flex-wrap gap-3 mt-1 text-[11px]">
+              <a href="${safeUrl(p.url)}" target="_blank" rel="noopener noreferrer" class="text-blue-300 hover:underline">Open paper</a>
+              ${p.pdf_url ? `<a href="${safeUrl(p.pdf_url)}" target="_blank" rel="noopener noreferrer" class="text-blue-300 hover:underline">PDF</a>` : ''}
+              ${p.doi ? `<a href="https://doi.org/${encodeURI(p.doi)}" target="_blank" rel="noopener noreferrer" class="text-blue-300 hover:underline">DOI</a>` : ''}
+            </div>
+            ${p.abstract ? `<details class="mt-1"><summary class="text-[11px] text-zinc-400 cursor-pointer">Abstract</summary><p class="text-[11px] text-zinc-400 leading-relaxed mt-1">${escapeHtml(p.abstract)}</p></details>` : ''}</td>
+          <td class="p-3 text-zinc-400">${escapeHtml(String(p.year || 'n.d.'))}</td>
+          <td class="p-3 text-zinc-400">${escapeHtml(src)}</td>
+          <td class="p-3"><div class="flex items-center gap-2"><div class="flex-1 h-1.5 bg-zinc-800 rounded"><div class="h-1.5 rounded bg-blue-500" style="width:${pct}%"></div></div><span class="font-mono text-zinc-300">${(p.similarity || 0).toFixed(2)}</span></div></td>
+        </tr>`;
+      }).join('');
+
+      const spot = document.getElementById('paSpotlight');
+      if (papers.length) {
+        const p = papers[0];
+        const cmp = (pa.comparisons || []).find(c => c.ref === p.ref_id) || {};
+        spot.classList.remove('hidden');
+        spot.innerHTML = `
+          <div class="flex flex-wrap items-baseline justify-between gap-2">
+            <span class="label is-accent">Closest research paper to your idea</span>
+            <span class="font-mono text-xs text-blue-200">similarity ${(p.similarity || 0).toFixed(2)}</span>
+          </div>
+          <a href="${safeUrl(p.url)}" target="_blank" rel="noopener noreferrer" class="block text-lg font-semibold text-white hover:text-blue-300">${escapeHtml(p.title)}</a>
+          <p class="text-xs text-zinc-400">${escapeHtml((p.authors || []).slice(0, 6).join(', '))}${(p.authors || []).length > 6 ? ' et al.' : ''} · ${escapeHtml(p.venue || p.source)} · ${escapeHtml(String(p.year || 'n.d.'))}</p>
+          ${p.abstract ? `<p class="text-sm text-zinc-300 leading-relaxed">${escapeHtml(p.abstract.length > 700 ? p.abstract.slice(0, 700) + '...' : p.abstract)}</p>` : ''}
+          ${cmp.paper_is_stronger_at ? `<div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+            <p class="text-amber-200/90"><span class="label is-inline is-warn" style="margin:0;">Where it is stronger:</span> ${escapeHtml(cmp.paper_is_stronger_at)}</p>
+            <p class="text-emerald-200/90"><span class="label is-inline is-good" style="margin:0;">What your idea adds:</span> ${escapeHtml(cmp.idea_adds)}</p></div>` : ''}
+          <div class="flex flex-wrap gap-2 pt-1">
+            <a href="${safeUrl(p.url)}" target="_blank" rel="noopener noreferrer" class="chip">Open paper</a>
+            ${p.pdf_url ? `<a href="${safeUrl(p.pdf_url)}" target="_blank" rel="noopener noreferrer" class="chip">Read PDF</a>` : ''}
+            ${p.doi ? `<a href="https://doi.org/${encodeURI(p.doi)}" target="_blank" rel="noopener noreferrer" class="chip">DOI ${escapeHtml(p.doi)}</a>` : ''}
+          </div>`;
+      } else {
+        spot.classList.add('hidden');
+      }
+
+      const levelClass = {high: 'tag risk', medium: 'tag warn', low: 'tag'};
+      document.getElementById('paComparisons').innerHTML = (pa.comparisons || []).map(c => `
+        <div class="subpanel p-5 space-y-3">
+          <div class="flex items-start justify-between gap-2">
+            <div><span class="font-mono text-blue-300 text-xs">${escapeHtml(c.ref)}</span>
+              <a href="${safeUrl((papers.find(p => p.ref_id === c.ref) || {}).url)}" target="_blank" rel="noopener noreferrer" class="block text-sm font-semibold text-white leading-snug hover:text-blue-300">${escapeHtml(c.title)}</a></div>
+            <span class="${levelClass[c.overlap_level] || 'tag'} shrink-0">${escapeHtml(c.overlap_level)} overlap</span>
+          </div>
+          <p class="text-xs text-zinc-300"><span class="label is-inline" style="margin:0;">What it does:</span> ${escapeHtml(c.what_it_does)}</p>
+          <p class="text-xs text-zinc-300"><span class="label is-inline" style="margin:0;">Overlap:</span> ${escapeHtml(c.overlap)}</p>
+          <p class="text-xs text-amber-200/90"><span class="label is-inline is-warn" style="margin:0;">Where the paper is stronger:</span> ${escapeHtml(c.paper_is_stronger_at)}</p>
+          <p class="text-xs text-emerald-200/90"><span class="label is-inline is-good" style="margin:0;">What your idea adds:</span> ${escapeHtml(c.idea_adds)}</p>
+          <p class="text-[11px] text-zinc-500">${Math.round((c.abstract_support || 0) * 100)}% of the summary's key words appear in the paper's abstract</p>
+        </div>`).join('');
+
+      const v = pa.verification || {};
+      document.getElementById('paVerification').innerText = papers.length
+        ? `Critic: ${v.comparisons_kept || 0}/${v.comparisons_returned || v.comparisons_kept || 0} comparisons cite a retrieved paper · ${v.citations_removed || 0} invalid citations removed · avg abstract support ${Math.round((v.avg_abstract_support || 0) * 100)}%`
+        : '';
+
+      document.getElementById('paGapBlock').classList.toggle('hidden', !(pa.research_gap || pa.positioning));
+      document.getElementById('paGap').innerText = pa.research_gap || '';
+      document.getElementById('paPositioning').innerText = pa.positioning || '';
+      document.getElementById('paRelatedWork').innerText = pa.related_work || 'No Related Work draft (AI comparison unavailable). The references below are still real and can be cited.';
+      document.getElementById('paReferences').innerHTML = (pa.ieee_references || []).map(r => `<li>${escapeHtml(r)}</li>`).join('');
+      document.getElementById('paNotes').innerHTML = (pa.notes || []).map(n => `<li>Note: ${escapeHtml(n)}</li>`).join('');
+    }
+
+    function renderSimilarityMap(points, papers) {
+      const el = document.getElementById('paMap');
+      if (!points.length) { el.innerHTML = '<p class="text-xs text-zinc-500 p-6">Not enough papers for a map.</p>'; return; }
+      const W = 520, H = 260, pad = 28;
+      const byRef = {}; papers.forEach(p => byRef[p.ref_id] = p);
+      const idea = points.find(p => p.is_idea);
+      const px = p => pad + p.x * (W - 2 * pad), py = p => pad + (1 - p.y) * (H - 2 * pad);
+      let svg = `<svg viewBox="0 0 ${W} ${H}" class="w-full h-auto" role="img" aria-label="Similarity map of your idea and retrieved papers">`;
+      points.filter(p => !p.is_idea).forEach(p => {
+        svg += `<line x1="${px(idea)}" y1="${py(idea)}" x2="${px(p)}" y2="${py(p)}" stroke="#3f3f46" stroke-width="${0.5 + 2.5 * Math.max(0, p.similarity)}" stroke-opacity="0.6"/>`;
+      });
+      points.filter(p => !p.is_idea).forEach(p => {
+        const r = 5 + 9 * Math.max(0, p.similarity);
+        const title = byRef[p.label] ? byRef[p.label].title : p.label;
+        svg += `<g><title>${escapeHtml(p.label + ': ' + title + ' (similarity ' + p.similarity.toFixed(2) + ')')}</title>
+          <circle cx="${px(p)}" cy="${py(p)}" r="${r}" fill="#3b82f6" fill-opacity="${0.25 + 0.6 * Math.max(0, p.similarity)}" stroke="#60a5fa"/>
+          <text x="${px(p)}" y="${py(p) - r - 4}" text-anchor="middle" font-size="11" fill="#d4d4d8" font-family="monospace">${escapeHtml(p.label)}</text></g>`;
+      });
+      svg += `<g><circle cx="${px(idea)}" cy="${py(idea)}" r="9" fill="#10b981" stroke="#ecfdf5" stroke-width="2"/>
+        <text x="${px(idea)}" y="${py(idea) + 24}" text-anchor="middle" font-size="12" font-weight="600" fill="#6ee7b7">Your idea</text></g></svg>`;
+      el.innerHTML = svg;
+    }
+
+    function copyBibtex() {
+      if (!currentBibtex) return;
+      navigator.clipboard.writeText(currentBibtex).catch(() => {});
+    }
+
+    function downloadBibtex() {
+      if (!currentBibtex) return;
+      const blob = new Blob([currentBibtex], {type: 'application/x-bibtex'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'related_work.bib';
+      a.click();
+      URL.revokeObjectURL(a.href);
     }
 
     function escapeHtml(str) {

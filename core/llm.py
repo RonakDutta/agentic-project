@@ -59,6 +59,7 @@ AGENT_MAX_TOKENS = {
     "prd": 1500,
     "roadmap": 1400,
     "diagnosis": 1800,
+    "prior_art": 1300,
     "followup": 900,
 }
 

@@ -23,6 +23,8 @@ from agents.roadmap_agent import RoadmapRiskAgent
 from agents.kill_agent import kill_agent, reconciler_agent
 from agents.feasibility_scorecard import scorecard_engine
 from agents.prd_agent import prd_agent
+from agents.prior_art_agent import prior_art_agent
+from core.config import settings
 from agents.workflow_state import AgentWorkflowState
 from agents.conversation_session import session_manager, followup_engine
 
@@ -91,6 +93,24 @@ def _classify_intent_deterministically(query: str, repo_path: Optional[str]) -> 
     return None
 
 
+# What kind of code question was asked. Bug reports get a fault diagnosis;
+# impact and "where/how" questions get the same pipeline plus call-graph facts.
+_IMPACT_Q = re.compile(r"blast radius|impact|what (?:breaks|would break|could break)|if i (?:change|modify|remove|rename)|who calls|callers? of|depends on", re.IGNORECASE)
+_EXPLAIN_Q = re.compile(r"^\s*(?:where|how|which|what does|explain|trace|show)\b|\bflow\b", re.IGNORECASE)
+_BUG_Q = re.compile(r"error|exception|traceback|crash|bug|fail|wrong|broken|twice|duplicate|leak|hang|slow|raises?|none ?type|keyerror|valueerror|typeerror", re.IGNORECASE)
+
+
+def classify_code_question(query: str) -> str:
+    """'impact', 'explain' or 'bug' (deterministic, no LLM)."""
+    if _IMPACT_Q.search(query or ""):
+        return "impact"
+    if _BUG_Q.search(query or ""):
+        return "bug"
+    if _EXPLAIN_Q.search(query or ""):
+        return "explain"
+    return "bug"
+
+
 def _phase_weeks(duration: Any) -> int:
     """
     Length of one roadmap phase in weeks.
@@ -116,6 +136,7 @@ class OrchestratorAgent:
         self.reconciler_agent = reconciler_agent
         self.scorecard_engine = scorecard_engine
         self.prd_agent = prd_agent
+        self.prior_art_agent = prior_art_agent
 
     def process(
         self,
@@ -338,6 +359,17 @@ class OrchestratorAgent:
         nav_result = nav_agent.navigate(query, top_k=4)
         vector_backend = getattr(retriever.vector_index, "backend", "unknown")
 
+        # Call-graph facts for the primary suspect (deterministic, zero LLM quota):
+        # blast radius of a change and the static call flow through it.
+        question_mode = classify_code_question(query)
+        structure = self._structural_analysis(codebase_index, nav_result)
+        impact = structure.get("impact") or {}
+        impact_line = (
+            f"Blast radius of '{impact.get('target_symbol')}': {impact.get('direct_callers_count', 0)} direct and "
+            f"{impact.get('indirect_callers_count', 0)} indirect callers, {impact.get('risk_level', '?')} risk"
+            if impact else "Call graph: no resolvable target symbol"
+        )
+
         state.add_trace(
             "Code Navigation Agent",
             f"Searched symbols and ranked code units for query: '{query[:60]}...'",
@@ -349,6 +381,7 @@ class OrchestratorAgent:
                     f"Narrowed repository down to {len(nav_result.candidate_chunks)} candidate code blocks",
                     f"Explicit symbols in query: {', '.join(nav_result.identified_symbols) or 'none'}",
                     f"Identified primary suspect: {nav_result.candidate_chunks[0].id if nav_result.candidate_chunks else 'None'}",
+                    impact_line,
                 ],
                 "handoff": "Passed candidate code blocks to Diagnosis Agent.",
             },
@@ -360,7 +393,10 @@ class OrchestratorAgent:
         # Step 3: Fault Diagnosis
         diag_result = self._run_step(
             state, "Root Cause Diagnosis Agent",
-            lambda: self.diag_agent.diagnose(nav_result, feedback={"static_notes": static_notes}),
+            lambda: self.diag_agent.diagnose(
+                nav_result,
+                feedback={"static_notes": static_notes, "question_mode": question_mode, "call_graph": structure.get("prompt_facts", "")},
+            ),
         )
 
         state.add_trace(
@@ -405,6 +441,8 @@ class OrchestratorAgent:
                 nav_result,
                 feedback={
                     "static_notes": static_notes,
+                    "question_mode": question_mode,
+                    "call_graph": structure.get("prompt_facts", ""),
                     "flags": critic_report.flags,
                     "repair_hints": critic_report.repair_hints,
                 },
@@ -445,9 +483,58 @@ class OrchestratorAgent:
             "local_repo_path": target_path,
             "retrieval_backend": vector_backend,
             "static_analysis": static_notes,
-            "provenance": {"diagnosis": diag_result.generation_source, "critic": "deterministic"},
+            "question_mode": question_mode,
+            # Call-graph facts computed from the AST (no LLM): blast radius and call flow.
+            "impact": structure.get("impact"),
+            "flow": structure.get("flow"),
+            # What retrieval found, shown when the diagnosis cites no location.
+            "retrieved_locations": [
+                {"file_path": c.file_path, "symbol_name": c.name, "line_start": c.start_line, "line_end": c.end_line}
+                for c in nav_result.candidate_chunks
+            ],
+            "provenance": {
+                "diagnosis": diag_result.generation_source, "critic": "deterministic",
+                "impact": "deterministic", "flow": "deterministic",
+            },
             "used_fallback": diag_result.generation_source == "fallback",
         }
+
+    @staticmethod
+    def _structural_analysis(codebase_index: CodebaseIndex, nav_result: Any) -> Dict[str, Any]:
+        """Blast radius + call flow for the primary suspect symbol, from the AST call graph."""
+        from agents.change_impact_agent import ChangeImpactAgent
+        from agents.flow_trace_agent import FlowTraceAgent
+
+        target = None
+        for sym in nav_result.identified_symbols or []:
+            if codebase_index.lookup_symbol(sym.split(".")[-1]):
+                target = sym.split(".")[-1]
+                break
+        if target is None and nav_result.candidate_chunks:
+            top = nav_result.candidate_chunks[0]
+            target = top.name.split(".")[-1]
+        if not target:
+            return {}
+        out: Dict[str, Any] = {}
+        try:
+            impact = ChangeImpactAgent(codebase_index=codebase_index).analyze_impact(target_symbol=target)
+            out["impact"] = impact.to_dict()
+        except Exception as err:
+            logger.debug(f"[Orchestrator] impact analysis skipped: {err}")
+        try:
+            flow = FlowTraceAgent(codebase_index=codebase_index).trace_flow(query=nav_result.query, starting_symbol=target)
+            out["flow"] = flow.to_dict()
+        except Exception as err:
+            logger.debug(f"[Orchestrator] flow trace skipped: {err}")
+        impact = out.get("impact") or {}
+        callers = [f"{c['symbol_name']} ({c['file_path']}:{c['line']})" for c in impact.get("direct_callers", [])[:6]]
+        out["prompt_facts"] = (
+            f"Call graph for {target}: risk {impact.get('risk_level', '?')}, "
+            f"direct callers: {', '.join(callers) or 'none found'}; "
+            f"entry points affected: {', '.join(impact.get('affected_entrypoints', [])[:4]) or 'none'}; "
+            f"tests affected: {', '.join(impact.get('affected_tests', [])[:4]) or 'none'}."
+        ) if impact else ""
+        return out
 
     @staticmethod
     def _static_notes(codebase_index: CodebaseIndex, chunks: List[Any]) -> Dict[str, str]:
@@ -548,6 +635,17 @@ class OrchestratorAgent:
             },
         )
 
+        # Prior-art research only needs the brief: it searches arXiv, Semantic Scholar
+        # and OpenAlex on its own thread while the market and debate steps run.
+        prior_art_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="prior_art")
+        prior_art_future = (
+            prior_art_executor.submit(
+                self._run_step, state, "Prior-Art Researcher",
+                lambda: self.prior_art_agent.research(decomposed),
+            )
+            if settings.prior_art_enabled else None
+        )
+
         # Step 2: Market & Tech Stack
         market = self._run_step(state, "Market & Competitor Researcher", lambda: self.market_agent.analyze(decomposed))
         live_urls = [c.get("url", "") for c in market.citations if c.get("is_live") and c.get("url")]
@@ -624,8 +722,13 @@ class OrchestratorAgent:
                 details=self._source_note(reconciler_result),
             )
 
+            # Research prior art (started after step 1) joins here, before the scorecard uses it.
+            prior_art = self._collect_prior_art(state, prior_art_future)
+
             # Step 5: Feasibility Scorecard Engine (Task 9.5) - deterministic, no LLM.
-            scorecard = self.scorecard_engine.evaluate(decomposed, market, kill_report, reconciler_result)
+            scorecard = self.scorecard_engine.evaluate(
+                decomposed, market, kill_report, reconciler_result, prior_art=prior_art
+            )
             state.add_trace(
                 agent_name="Feasibility Scorecard Engine",
                 action=f"Evaluated 7-category rubric: Score {scorecard.total_score}/100 ({scorecard.verdict})",
@@ -668,6 +771,7 @@ class OrchestratorAgent:
             roadmap = roadmap_future.result()
         finally:
             executor.shutdown(wait=True)
+            prior_art_executor.shutdown(wait=True)
 
         first_phase = roadmap.phases[0] if roadmap.phases else None
         state.add_trace(
@@ -701,6 +805,12 @@ class OrchestratorAgent:
             prd=prd,
             roadmap=roadmap,
         )
+        if prior_art is not None:
+            sections_13.append({
+                "section_number": 14,
+                "title": "Research Prior Art & Novelty (Related Work)",
+                "content": prior_art.to_markdown(),
+            })
         full_report_md = self._render_markdown_report(sections_13, decomposed.project_title)
 
         provenance = {
@@ -712,6 +822,8 @@ class OrchestratorAgent:
             "prd": prd.generation_source,
             "roadmap": roadmap.generation_source,
         }
+        if prior_art is not None:
+            provenance["prior_art"] = prior_art.generation_source
 
         state.final_output = {
             "type": "idea_validation",
@@ -744,10 +856,62 @@ class OrchestratorAgent:
             # Which sections the LLM wrote and which used built-in fallbacks.
             "provenance": provenance,
             "used_fallback": any(v == "fallback" for v in provenance.values()),
-            # Structured 13-Section Report
+            # Research papers retrieved for this idea, novelty index, comparison, references.
+            "prior_art": prior_art.to_dict() if prior_art is not None else None,
+            # Structured report: 13 sections, plus section 14 (prior art) when it ran.
             "sections_13": sections_13,
             "full_report_markdown": full_report_md,
         }
+
+    def _collect_prior_art(self, state: AgentWorkflowState, future) -> Any:
+        """Waits for the prior-art thread and records its trace step."""
+        if future is None:
+            return None
+        try:
+            report = future.result(timeout=90)
+        except Exception as err:
+            state.add_trace("Prior-Art Researcher", f"Prior-art research skipped ({err}).", status="warning")
+            return None
+        verification = report.verification
+        state.add_trace(
+            agent_name="Prior-Art Researcher",
+            action=(
+                f"Compared the idea with {len(report.papers)} research papers "
+                f"(novelty index {report.novelty_index if report.novelty_index is not None else 'n/a'}/100)"
+            ),
+            status="completed" if report.generation_source == "llm" else "warning",
+            agent_role="Research Literature Analyst",
+            input_summary=f"Search queries: {'; '.join(report.queries)}",
+            output_summary=f"{len(report.papers)} papers from {report.search_backend}; {report.novelty_band}",
+            evidence_count=len(report.papers),
+            citations=[p.url for p in report.papers[:3] if p.url],
+            details={
+                # The legacy UI shows this as the 5th storyboard card (IDEA_AGENTS node_3).
+                "thinking": (
+                    "Searched arXiv, Semantic Scholar and OpenAlex for papers on this idea, ranked them by "
+                    "embedding similarity, and compared the closest ones using only their abstracts."
+                ),
+                "findings": (
+                    [f"{p.ref_id}: {p.title} ({p.year or 'n.d.'}), similarity {p.similarity:.2f}" for p in report.papers[:3]]
+                    + [
+                        f"Novelty index: {report.novelty_index}/100 ({report.novelty_band})"
+                        if report.novelty_index is not None else "Novelty index: not computed (no papers retrieved)",
+                        f"Critic: {verification.get('comparisons_kept', 0)}/{verification.get('comparisons_returned', 0)} "
+                        f"comparisons cite a retrieved paper, {verification.get('citations_removed', 0)} bad citations removed",
+                    ]
+                ),
+                "handoff": "Passed the novelty evidence to the Feasibility Scorecard (Defensibility category).",
+                "tool": f"Paper search: {report.search_backend}; similarity: {report.similarity_backend}",
+                "papers": [f"{p.ref_id} ({p.similarity:.2f}) {p.title}" for p in report.papers[:5]],
+                "notes": report.notes + [
+                    f"{verification.get('comparisons_kept', 0)}/{verification.get('comparisons_returned', 0)} "
+                    "LLM comparisons cite a retrieved paper",
+                    f"Average abstract support: {verification.get('avg_abstract_support', 0)}",
+                ],
+                **self._source_note(report),
+            },
+        )
+        return report
 
     def _compile_13_sections(
         self,
