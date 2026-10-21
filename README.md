@@ -11,9 +11,9 @@ Standard Large Language Models generate answers in a single step and lack access
 
 This project implements an **Agentic AI Co-Pilot** featuring a **Supervisory Multi-Agent Architecture** backed by an **AST-aware Retrieval-Augmented Generation (RAG)** pipeline and deterministic verification tooling.
 
-The system is balanced into two 50-50 first-class pillars:
-1. **Pillar 1: Codebase Diagnostic Co-Pilot:** Parses Python repositories into semantic Abstract Syntax Tree (AST) units, conducts hybrid lexical/dense retrieval, localizes fault locations with exact line numbers, and executes deterministic verification. Strictly operates in read-only mode to produce root-cause hypotheses and fix directions with human review (no automated or unsupervised code editing).
-2. **Pillar 2: Idea Validation Co-Pilot:** Decomposes raw ideas into structured problem briefs, target user personas, live competitor intelligence, adversarial devil's advocate stress tests, deterministic feasibility scoring, formal PRDs with Mermaid models, and 3-phase delivery roadmaps.
+The system is balanced into two 50-50 first-class pillars, shown in the app as **Startup Assistance** and **Codebase Evaluation**:
+1. **Pillar 1: Codebase Evaluation (Codebase Diagnostic Co-Pilot):** Parses Python repositories into semantic Abstract Syntax Tree (AST) units, conducts hybrid lexical/dense retrieval, localizes fault locations with exact line numbers, and executes deterministic verification. Strictly operates in read-only mode to produce root-cause hypotheses and fix directions with human review (no automated or unsupervised code editing).
+2. **Pillar 2: Startup Assistance (Idea Validation Co-Pilot):** Decomposes raw ideas into structured problem briefs, target user personas, live competitor intelligence, adversarial devil's advocate stress tests, deterministic feasibility scoring, formal PRDs with Mermaid models, and 3-phase delivery roadmaps.
 
 ---
 
@@ -58,9 +58,9 @@ The system is balanced into two 50-50 first-class pillars:
                         Critic Validator, Rubric Scorecard)
                                             │
                                             ▼
-                            [ Interactive Browser Dashboard ]
-                       (FastAPI + Tailwind CSS + Mermaid.js +
-                        Sequential Storyboard + SQLite Session Memory)
+                            [ Web Interface (React + Vite) ]
+                     (Live agent graph over Server-Sent Events,
+                      research papers, verdict screens, follow-ups)
 ```
 
 ---
@@ -80,7 +80,7 @@ Measured by `python evaluation/compare_baseline.py` on this repository: **91% of
 * BM25 with a code-aware tokenizer (`jwtAuthService` -> `jwt`, `auth`, `service`).
 * Dense vectors from `all-MiniLM-L6-v2` (loaded once per process), with a TF-IDF fallback for offline machines.
 * Exact symbol mentions are matched as whole identifiers, so short names like `get` or `id` do not match everything.
-* `python evaluation/retrieval_benchmark.py` scores BM25, vector and hybrid retrieval (Top-1, Top-3, MRR) on 18 plain-English questions about this codebase. Results depend on whether MiniLM is available on your machine; the script prints the backend it used.
+* `python evaluation/retrieval_benchmark.py` scores BM25, vector and hybrid retrieval (Top-1, Top-3, MRR) on 18 plain-English questions about this codebase. With MiniLM: BM25 MRR 0.640 (Top-3 72%), vectors 0.672 (78%), hybrid RRF 0.647 with the best Top-3 (83%). Hybrid wins on Top-3 but not on Top-1, and we report it that way.
 
 ### 3. Grounded Diagnosis with a Deterministic Critic
 "Agents reason, tools compute." The Diagnosis Agent receives line-numbered code plus static analysis (complexity via the built-in analyzer and `radon`, last commit via `git blame` when available). The Critic then checks, without an LLM:
@@ -89,6 +89,8 @@ Measured by `python evaluation/compare_baseline.py` on this repository: **91% of
 * the citation was in the evidence actually retrieved for this query;
 * the quoted "current code" really exists in the file (if not, it is replaced by the real lines from disk and flagged);
 * the recommended fix compiles (`ast.parse`).
+
+Before the diagnosis, the call graph is computed for the primary suspect (blast radius: direct and indirect callers, affected entry points and tests, risk level; plus a static flow trace). The question is classified as a bug report, a change-impact question or a "where / how" question, and the diagnosis prompt gets the call-graph facts and the matching instructions, so "what breaks if I change `verify_token`?" ranks the dependent callers instead of inventing a bug.
 
 If verification fails, the Critic's flags and repair hints are sent back to the Diagnosis Agent for **one revision with a different prompt**, and the better-grounded answer is kept. The trace reports real counts (for example "3/3 quoted code blocks match the file").
 
@@ -105,16 +107,25 @@ A transparent 100-point rubric across 7 categories (Problem Validation 20, Marke
 * The verdict cannot contradict the Reconciler: a GO is capped at PIVOT when the Reconciler finds high rejection risk.
 * Every scorecard carries an **evidence confidence** (High / Medium / Low) that drops when fallbacks were used or no live search was reachable.
 
-### 6. PRD & Architecture Engine
+### 6. Research Prior-Art Check (Related Work, computed)
+Every idea is checked against published research, live:
+* **Search:** arXiv, Semantic Scholar and OpenAlex in parallel, deduplicated by title (`tools/paper_search.py`). No key is needed; results are cached for 7 days.
+* **Rerank:** `all-MiniLM-L6-v2` embeddings of the idea and each paper's title and abstract (TF-IDF fallback).
+* **Novelty index:** `100 x (1 - (0.6 x closest similarity + 0.4 x mean of the top 3))`, computed in code, with the similarity backend and evidence confidence shown. The scorecard's Defensibility category loses points when very close papers exist.
+* **Head-to-head comparison:** one LLM call reads only the abstracts and says, per paper, what it does, the overlap, **where the paper is stronger**, and what the idea adds, then writes a research gap, positioning and an IEEE-style Related Work paragraph.
+* **Critic:** comparisons that cite a paper that was not retrieved are dropped, out-of-range `[n]` citations are removed, and each claim's word overlap with the paper's own abstract is reported.
+* **Outputs:** linked paper list (paper page, PDF, DOI), closest-paper spotlight, 2D similarity map (PCA), IEEE references and a downloadable `.bib` file. If no source answers, the report says so and shows no novelty index; no paper is ever invented.
+
+### 7. PRD & Architecture Engine
 User stories, prioritized functional requirements, non-functional requirements, and three Mermaid diagrams generated from **this idea's** stack, persona and MVP features (labels are escaped so model text cannot break the diagram).
 
-### 7. Honest Provenance on Every Section
+### 8. Honest Provenance on Every Section
 Each agent output records `generation_source` (`llm` or `fallback`) and a reason. The final report includes a `provenance` map, `used_fallback`, the web search backend used and the number of live citations. Trace steps that used a fallback are marked `warning`. A step that crashes is re-run on its own built-in fallback, so one bad model reply never fails the whole run.
 
-### 8. Explicit LangGraph State Graph
+### 9. Explicit LangGraph State Graph
 `agents/graph.py` compiles a real LangGraph `StateGraph` whose nodes run the orchestrator's actual steps: `classify -> (codebase_pipeline | idea_pipeline) -> finalize`, with a conditional edge on the classified intent. `GET /api/graph` reports the active backend and `POST /api/graph/run` returns the nodes visited. Without `langgraph` installed, the same steps run in sequence.
 
-### 9. Persistent Conversational Follow-Ups
+### 10. Persistent Conversational Follow-Ups
 * Multi-turn sessions with anaphora resolution ("What calls that function?").
 * Sessions are saved to SQLite after every turn and restored after a server restart; memory is bounded (LRU + idle TTL).
 * Follow-ups on a GitHub repository use its local clone, so caller, impact and flow-trace routers work on remote repos too.
@@ -135,7 +146,7 @@ How the client stays inside them (`core/llm.py`):
 * **Caching:** identical prompts are free for 10 minutes in memory and for 7 days on disk (`.cache/llm_cache.sqlite`), so re-running a demo idea costs nothing.
 * **Wrong model ids** (`model_not_found`, `decommissioned`) are parked for an hour instead of retried.
 
-`python evaluation/free_tier_budget.py` measures the real prompts without spending quota. Current result: an idea run makes 6 calls and reserves about **12.8k tokens** (fits the pooled 24k tokens/min of three models), uses about 8.7k tokens in practice, which allows roughly **69 idea runs per day**. A code run makes 1-2 calls of about 4k tokens. `GET /api/health` shows live per-model usage and an estimate of idea runs left today.
+`python evaluation/free_tier_budget.py` measures the real prompts without spending quota. Current result: an idea run makes 7 calls (including the prior-art comparison) and reserves about **15.9k tokens** (fits the pooled 24k tokens/min of three models), uses about 11.2k tokens in practice, which allows roughly **53 idea runs per day**. A code run makes 1-2 calls of about 4k tokens. `GET /api/health` shows live per-model usage and an estimate of idea runs left today.
 
 ---
 
@@ -156,18 +167,20 @@ Set your free Groq key in `.env` (`GROQ_API_KEY=...`). Optional: `TAVILY_API_KEY
 
 The app starts without a key: AST indexing, retrieval, the Critic, the scorecard and the deterministic follow-up routers work offline, and LLM-backed agents fall back to clearly labelled built-in output.
 
-### 3. Launch the Dashboard
+### 3. Launch the App
 ```bash
 python app.py
 ```
-Open **`http://127.0.0.1:8000`**. Before exposing the app to other people, set `ALLOWED_REPO_ROOTS` (which local folders may be indexed) and keep `RUNS_PER_MINUTE` low, since every visitor shares your Groq key.
+Open **`http://127.0.0.1:8000`**. The interface is prebuilt in `web/react-app/dist`, so Node is not needed to run it. To change the UI: `cd web/react-app && npm install && npm run build`.
+
+**What you see:** pick *Startup Assistance* or *Codebase Evaluation*, run the agents, and watch the agent graph light up live as each step really finishes (streamed from the server, nothing replayed). Each report opens on a short verdict screen; details sit in tabs (research papers, scorecard, market, risks, plan, findings, impact, and "How it ran" with every AI call's model, tokens and time). Before exposing the app to other people, set `ALLOWED_REPO_ROOTS` (which local folders may be indexed) and keep `RUNS_PER_MINUTE` low, since every visitor shares your Groq key.
 
 ---
 
 ## 🧪 Tests & Benchmarks
 
 ```bash
-pytest -q                                   # 88 tests; 3 live-Groq smoke tests skip without a key
+GROQ_API_KEY= pytest -q                     # 101 tests; 3 live smoke tests skip without a key
 python -m pytest tests/test_backend_fixes.py -v   # regression tests for the Phase 1 fixes
 
 python evaluation/compare_baseline.py       # naive vs AST chunking, computed on real files

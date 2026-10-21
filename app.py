@@ -8,13 +8,16 @@ pipeline is blocking (Groq calls, git clone, AST parsing), and FastAPI runs
 event loop, so /api/health and every other request froze during a run.
 """
 
+import json
 import os
+import queue
 import threading
 import time
 from collections import defaultdict, deque
 from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import Optional
 import uvicorn
@@ -32,6 +35,9 @@ app = FastAPI(
 
 ROOT_DIR = Path(__file__).resolve().parent
 HTML_PATH = ROOT_DIR / "web" / "templates" / "index.html"
+# The new UI (web/react-app, built with `npm run build`). Served at / when built;
+# UI=legacy in the environment keeps the old single-file dashboard at /.
+UI_DIST = ROOT_DIR / "web" / "react-app" / "dist"
 SAMPLE_REPO_PATH = ROOT_DIR / "sample_repo"
 
 
@@ -109,9 +115,25 @@ class FollowupRequest(BaseModel):
     repo_path: Optional[str] = None
 
 
+if (UI_DIST / "assets").is_dir():
+    app.mount("/assets", StaticFiles(directory=str(UI_DIST / "assets")), name="ui-assets")
+
+
+def _new_ui_enabled() -> bool:
+    return (UI_DIST / "index.html").exists() and os.getenv("UI", "").lower() != "legacy"
+
+
 @app.get("/", response_class=HTMLResponse)
 def serve_dashboard():
-    """Serves the main interactive dashboard."""
+    """Serves the new UI when it is built, otherwise the legacy dashboard."""
+    if _new_ui_enabled():
+        return HTMLResponse(content=(UI_DIST / "index.html").read_text(encoding="utf-8"))
+    return serve_legacy_dashboard()
+
+
+@app.get("/legacy", response_class=HTMLResponse)
+def serve_legacy_dashboard():
+    """Serves the original single-file dashboard."""
     if not HTML_PATH.exists():
         raise HTTPException(status_code=404, detail="Dashboard template not found.")
     with open(HTML_PATH, "r", encoding="utf-8") as f:
@@ -137,6 +159,70 @@ def execute_query(req: QueryRequest, request: Request):
             status_code=500,
             content={"error": str(err), "status": "failed"},
         )
+
+
+def _sse(event: str, data: dict) -> str:
+    return f"event: {event}\ndata: {json.dumps(data, default=str)}\n\n"
+
+
+@app.post("/api/run/stream")
+def stream_query(req: QueryRequest, request: Request):
+    """
+    Runs the pipeline and streams real progress as Server-Sent Events:
+    `trace` for every agent step as it is recorded, `llm` for every Groq call
+    (model, tokens, latency, cache hit) made since the run started, then
+    `result` with the full state, or `error`. Nothing is replayed or simulated.
+    LLM call events come from the shared client, so two runs at the same time
+    would see each other's calls.
+    """
+    denied = _check_repo_path(req.repo_path) or _rate_limited(request)
+    if denied:
+        return denied
+
+    events: "queue.Queue" = queue.Queue()
+    started = time.time()
+
+    def worker() -> None:
+        try:
+            state = orchestrator.process(
+                query=req.query,
+                repo_path=req.repo_path,
+                force_intent=req.force_intent,
+                on_trace=lambda step: events.put(("trace", step)),
+            )
+            events.put(("result", state.to_dict()))
+        except Exception as err:  # pragma: no cover - surfaced to the client
+            events.put(("error", {"error": str(err), "status": "failed"}))
+
+    def stream():
+        threading.Thread(target=worker, daemon=True, name="run-stream").start()
+        seen_calls = set()
+        last_beat = time.time()
+        yield _sse("start", {"started_at": started})
+        while True:
+            try:
+                kind, payload = events.get(timeout=0.4)
+            except queue.Empty:
+                kind, payload = None, None
+            for call in list(llm_client.recent_calls):
+                key = (call.get("at"), call.get("model"), call.get("tokens"))
+                if call.get("at", 0) >= started and key not in seen_calls:
+                    seen_calls.add(key)
+                    yield _sse("llm", {**call, "elapsed_ms": int((call.get("at", started) - started) * 1000)})
+            if kind is None:
+                if time.time() - last_beat > 5:
+                    last_beat = time.time()
+                    yield _sse("heartbeat", {"elapsed_ms": int((time.time() - started) * 1000)})
+                continue
+            yield _sse(kind, payload)
+            if kind in ("result", "error"):
+                break
+
+    return StreamingResponse(
+        stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @app.post("/api/followup")

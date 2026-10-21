@@ -116,6 +116,14 @@ class Settings:
     # Web search: TAVILY_API_KEY (free tier) is used first when set.
     tavily_api_key: str = os.getenv("TAVILY_API_KEY", "")
 
+    # Prior-art (research paper) search: arXiv, Semantic Scholar and OpenAlex all
+    # work without keys; keys only raise the shared per-IP rate limits.
+    prior_art_enabled: bool = _flag("PRIOR_ART_ENABLED")
+    semantic_scholar_api_key: str = os.getenv("SEMANTIC_SCHOLAR_API_KEY", "")
+    openalex_api_key: str = os.getenv("OPENALEX_API_KEY", "")
+    openalex_email: str = os.getenv("OPENALEX_EMAIL", "")
+    paper_cache_enabled: bool = _flag("PAPER_CACHE")
+
     # Repository ingestion limits. ALLOWED_REPO_ROOTS (os.pathsep-separated)
     # restricts which local folders /api/inspect-repo may index; empty = any
     # (fine for a local demo, set it before hosting the app anywhere).

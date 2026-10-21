@@ -242,6 +242,22 @@ class DiagnosisAgent:
             f"and provide the educational comparison (why_problematic, recommended_pattern, explanation_of_change) in JSON format. "
             f"Ensure recommended_pattern is the actual corrected code and is NOT identical to wrong_code. Use clear English."
         )
+        call_graph = (feedback or {}).get("call_graph")
+        if call_graph:
+            user_prompt += f"\n\nCall-graph facts (computed from the AST, trust these): {call_graph}"
+        mode = (feedback or {}).get("question_mode", "bug")
+        if mode == "impact":
+            user_prompt += (
+                "\n\nThis is a change-impact question, not a bug report. Rank the locations that would break or need "
+                "updating if the target changes. Use root_cause_hypothesis for why that location depends on it, "
+                "wrong_code for the dependent lines, and recommended_pattern for a safer way to make the change."
+            )
+        elif mode == "explain":
+            user_prompt += (
+                "\n\nThis is a 'where / how' question, not a bug report. Rank the locations that answer it. Use "
+                "root_cause_hypothesis to explain what that code does, wrong_code for the relevant lines, and "
+                "recommended_pattern for a more robust version of those lines (or the same logic with clearer checks)."
+            )
         if feedback and (feedback.get("flags") or feedback.get("repair_hints")):
             user_prompt += (
                 "\n\nYOUR PREVIOUS ANSWER FAILED VERIFICATION. Fix these problems:\n"

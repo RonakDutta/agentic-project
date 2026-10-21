@@ -213,7 +213,7 @@ def test_13_section_idea_report_compilation():
     assert out.get("type") == "idea_validation"
     assert "sections_13" in out
     sections = out["sections_13"]
-    assert len(sections) == 13, f"Expected 13 sections, got {len(sections)}"
+    assert len(sections) in (13, 14), f"Expected 13 sections (+ prior art), got {len(sections)}"
 
     print("Verified 13 distinct report sections:")
     for s in sections:
