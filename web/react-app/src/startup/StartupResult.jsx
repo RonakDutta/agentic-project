@@ -44,7 +44,7 @@ function Overview({ out, goTo }) {
       </div>
 
       <div className="grid g3">
-        <button className="card pad stack" style={{ textAlign: 'left', cursor: 'pointer', gap: 8 }} onClick={() => goTo('papers')}>
+        <button type="button" className="card pad stack" style={{ textAlign: 'left', cursor: 'pointer', gap: 8 }} onClick={() => goTo('papers')}>
           <div className="eyebrow accent">Novelty vs research</div>
           <div className="display" style={{ fontSize: 40, lineHeight: 1 }}>{pa?.novelty_index ?? 'n/a'}<span className="muted" style={{ fontSize: 15, fontWeight: 500 }}> / 100</span></div>
           <div className="small">{pa?.novelty_band || 'Research check not run'}</div>
@@ -83,7 +83,7 @@ function Overview({ out, goTo }) {
       )}
 
       <div className="card pad stack">
-        <div className="row between"><h3>Score breakdown</h3><button className="chip" onClick={() => goTo('score')}>Details</button></div>
+        <div className="row between"><h3>Score breakdown</h3><button type="button" className="chip" onClick={() => goTo('score')}>Details</button></div>
         <div className="grid g2" style={{ columnGap: 28 }}>
           {(sc.categories || []).map((c) => (
             <div key={c.category_name} className="stack" style={{ gap: 5 }}>
@@ -282,7 +282,7 @@ export default function StartupResult({ run }) {
     { id: 'plan', label: 'Plan' },
     { id: 'trace', label: 'How it ran' },
   ]
-  const go = (id) => { setTab(id); window.scrollTo({ top: 0, behavior: 'smooth' }) }
+  const go = (id) => { setTab(id) }
   return (
     <div className="stack-lg fade-in">
       <div className="row between">

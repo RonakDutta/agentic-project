@@ -150,7 +150,7 @@ function Overview({ out, state, goTo }) {
         </div>
       </div>
       <div className="grid g3">
-        <button className="card pad stack" style={{ textAlign: 'left', cursor: 'pointer', gap: 6 }} onClick={() => goTo('findings')}>
+        <button type="button" className="card pad stack" style={{ textAlign: 'left', cursor: 'pointer', gap: 6 }} onClick={() => goTo('findings')}>
           <div className="eyebrow accent">Top location</div>
           {top ? (
             <>
@@ -160,7 +160,7 @@ function Overview({ out, state, goTo }) {
             </>
           ) : <div className="small muted">No location named. See retrieved code below.</div>}
         </button>
-        <button className="card pad stack" style={{ textAlign: 'left', cursor: 'pointer', gap: 6 }} onClick={() => goTo('impact')}>
+        <button type="button" className="card pad stack" style={{ textAlign: 'left', cursor: 'pointer', gap: 6 }} onClick={() => goTo('impact')}>
           <div className="eyebrow" style={{ color: 'var(--risk)' }}>Blast radius</div>
           {im ? (
             <>
@@ -207,7 +207,7 @@ export default function CodeResult({ run, repoPath }) {
     { id: 'impact', label: 'Impact' },
     { id: 'trace', label: 'How it ran' },
   ]
-  const go = (id) => { setTab(id); window.scrollTo({ top: 0, behavior: 'smooth' }) }
+  const go = (id) => { setTab(id) }
   return (
     <div className="stack-lg fade-in">
       <div className="eyebrow">Report · session {state.session_id}</div>

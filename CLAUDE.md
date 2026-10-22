@@ -147,7 +147,8 @@ Grounded prompts, deterministic critic with quote-vs-disk and compile checks, ho
 - Code: verdict screen (grounding score, question mode, checks passed, top location, blast radius, repo size, critic bars), Findings (verification checks + before/after code with real line numbers), Impact (callers, flow, impact graph), How it ran.
 - Follow-up chat on both. Light/dark theme. Works at 390px width (graph scrolls inside its box).
 - DOMPurify + Mermaid strict mode (closes the old XSS gap). No CDN dependency in the new UI.
-- Tests: `tests/test_run_stream.py`; total 101 pass.
+- Stable tab switching in Startup Assistance and Codebase Evaluation: removed `window.scrollTo({ top: 0 })` on tab changes so switching tabs (e.g. Overview to Research papers) updates content in place without jumping to the top of the page.
+- Tests: `tests/test_run_stream.py`; total 104 pass.
 
 ### Measured numbers (real runs, keep updated)
 - Retrieval benchmark, 18 questions, MiniLM available: BM25 MRR 0.640 (Top-1 50%, Top-3 72%); vector 0.672 (56%, 78%); hybrid RRF 0.647 (44%, **83% Top-3**). Hybrid is best at Top-3, not at Top-1/MRR; say so if asked.
