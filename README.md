@@ -119,13 +119,16 @@ Every idea is checked against published research, live:
 ### 7. PRD & Architecture Engine
 User stories, prioritized functional requirements, non-functional requirements, and three Mermaid diagrams generated from **this idea's** stack, persona and MVP features (labels are escaped so model text cannot break the diagram).
 
-### 8. Honest Provenance on Every Section
+### 8. Prototype Builder (codes, tests, runs and monitors the idea)
+From the PRD's top requirements, one AI call writes a tiny FastAPI app with one web page and its tests. Code then checks it before anything runs (import allowlist, no `eval`/`exec`/`open`, no outside scripts), compiles it, runs `pytest`, lets the AI fix it once using the real error output, starts it on `127.0.0.1` and calls every GET endpoint. The Prototype tab shows a live preview and a monitor (requests, errors, response time) read from the app's own log. It never writes into your projects; prototypes live in `.prototypes/` and stop by themselves after 20 minutes. If the AI cannot produce safe, compiling code, a labelled built-in prototype is used instead.
+
+### 9. Honest Provenance on Every Section
 Each agent output records `generation_source` (`llm` or `fallback`) and a reason. The final report includes a `provenance` map, `used_fallback`, the web search backend used and the number of live citations. Trace steps that used a fallback are marked `warning`. A step that crashes is re-run on its own built-in fallback, so one bad model reply never fails the whole run.
 
-### 9. Explicit LangGraph State Graph
+### 10. Explicit LangGraph State Graph
 `agents/graph.py` compiles a real LangGraph `StateGraph` whose nodes run the orchestrator's actual steps: `classify -> (codebase_pipeline | idea_pipeline) -> finalize`, with a conditional edge on the classified intent. `GET /api/graph` reports the active backend and `POST /api/graph/run` returns the nodes visited. Without `langgraph` installed, the same steps run in sequence.
 
-### 10. Persistent Conversational Follow-Ups
+### 11. Persistent Conversational Follow-Ups
 * Multi-turn sessions with anaphora resolution ("What calls that function?").
 * Sessions are saved to SQLite after every turn and restored after a server restart; memory is bounded (LRU + idle TTL).
 * Follow-ups on a GitHub repository use its local clone, so caller, impact and flow-trace routers work on remote repos too.

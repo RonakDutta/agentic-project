@@ -16,6 +16,7 @@ import threading
 import time
 import uuid
 from collections import defaultdict, deque
+from contextlib import asynccontextmanager
 from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, Response, StreamingResponse
@@ -31,10 +32,18 @@ from agents.orchestrator import orchestrator
 from agents.workflow_state import AgentWorkflowState, RunCancelled
 from tools import prototype_sandbox
 
+@asynccontextmanager
+async def _lifespan(_app):
+    yield
+    # Generated prototypes run as child processes; never leave them behind.
+    prototype_sandbox.processes.stop_all()
+
+
 app = FastAPI(
     title="Agentic AI Co-Pilot API",
     description="Multi-Agent RAG System for Idea Validation and Codebase Analysis",
     version="1.0.0",
+    lifespan=_lifespan,
 )
 
 ROOT_DIR = Path(__file__).resolve().parent

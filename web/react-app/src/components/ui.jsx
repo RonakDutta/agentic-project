@@ -147,7 +147,7 @@ export function modelName(id) {
 /** Backend step text mentions the hosting service and keys; the UI keeps it generic. */
 export function plainText(text) {
   return String(text || '')
-    .replace(/GROQ_API_KEY is not configured[^.]*\.?/gi, 'AI engine is offline.')
+    .replace(/GROQ_API_KEY is not configured[^.]*\.?(\s*Add it in Settings[^.]*\.)?/gi, 'AI engine is offline.')
     .replace(/All configured Groq models are rate-limited\.?/gi, 'All AI models are busy.')
     .replace(/Groq LLM/g, 'AI model')
     .replace(/Groq API/g, 'AI engine')

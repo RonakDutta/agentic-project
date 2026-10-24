@@ -29,6 +29,20 @@ export const CODE_PIPELINE = {
   ],
 }
 
+export const PROTOTYPE_PIPELINE = {
+  rows: 2,
+  nodes: [
+    { id: 'spec', label: 'Pick features', sub: 'From the PRD', agents: ['Spec Planner'], col: 0, row: 0, deps: [] },
+    { id: 'write', label: 'Write code', sub: 'AI, 1 call', agents: ['Code Writer'], col: 1, row: 0, deps: ['spec'] },
+    { id: 'safety', label: 'Safety check', sub: 'Code, no AI', agents: ['Safety Check'], col: 2, row: 0, deps: ['write'], star: true, warn: 'problem found' },
+    { id: 'compile', label: 'Compile', sub: 'Code, no AI', agents: ['Compiler'], col: 3, row: 0, deps: ['safety'], warn: 'problem found' },
+    { id: 'tests', label: 'Run tests', sub: 'pytest', agents: ['Test Runner'], col: 4, row: 0, deps: ['compile'], warn: 'problem found' },
+    { id: 'fix', label: 'Fix once', sub: 'AI, only if needed', agents: ['Code Fixer'], col: 4, row: 1, deps: ['tests'] },
+    { id: 'run', label: 'Start app', sub: 'Local only', agents: ['App Runner'], col: 5, row: 0, deps: ['tests'], warn: 'problem found' },
+    { id: 'probe', label: 'Check endpoints', sub: 'HTTP calls', agents: ['Endpoint Checker'], col: 6, row: 0, deps: ['run'], warn: 'problem found' },
+  ],
+}
+
 /** Returns {nodeId: {state, ms, step}} from the trace events of a run. */
 export function nodeStates(pipeline, events, phase) {
   const out = {}
@@ -37,7 +51,7 @@ export function nodeStates(pipeline, events, phase) {
     const steps = events.filter((e) => node.agents.includes(e.agent_name))
     const last = steps[steps.length - 1]
     if (last && last.status !== 'running') {
-      const state = last.status === 'warning' ? 'fallback' : 'done'
+      const state = last.details?.skipped ? 'skipped' : last.status === 'warning' ? 'fallback' : 'done'
       out[node.id] = { state, ms: last.duration_ms, step: last }
     }
   }
@@ -45,7 +59,7 @@ export function nodeStates(pipeline, events, phase) {
   for (const node of pipeline.nodes) {
     if (out[node.id]) continue
     const ready = node.deps.every((d) => out[d])
-    out[node.id] = { state: phase === 'running' && ready ? 'running' : 'waiting' }
+    out[node.id] = { state: phase === 'running' && ready ? 'running' : phase === 'done' ? 'notrun' : 'waiting' }
   }
   return out
 }
