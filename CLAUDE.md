@@ -167,14 +167,14 @@ Grounded prompts, deterministic critic with quote-vs-disk and compile checks, ho
 - Stable tab switching in Startup Assistance and Codebase Evaluation: removed `window.scrollTo({ top: 0 })` on tab changes so switching tabs (e.g. Overview to Research papers) updates content in place without jumping to the top of the page.
 - Tests: `tests/test_run_stream.py`; total 104 pass.
 
-### Phase 3b: fixes from the "must fix" list (done, branch `claude/lucid-newton-y54tpw`)
+### Phase 3b: fixes from the "must fix" list (done, branch `claude/lucid-newton-y54tpw`, PR #4 open)
 - Roadmap records its own trace step from its worker thread with its real duration (`_roadmap_worker`), so the live graph shows it done while the debate runs. The join is a new `Report Compiler` step (mapped in `pipelines.js` and `graph.py`). `add_trace` now holds a lock (worker threads record steps).
 - Stop really stops: `/api/run/cancel` + cancel on stream close; the pipeline raises `RunCancelled` before the next agent step and the UI says "Run stopped. No further agent steps will run."
 - Provider name removed from `/docs` text, `/v1/models` and the two legacy UI messages.
 - Dark mode checked with screenshots (overview, research papers, scorecard, plan): readable, tags and bars have enough contrast.
 - Tests: 104 pass (roadmap step order, unique step ids, cancel mid-run, cancel 404).
 
-### Phase 4: Prototype Builder + UI pass (done, branch `claude/lucid-newton-y54tpw`)
+### Phase 4: Prototype Builder + UI pass (done, branch `claude/lucid-newton-y54tpw`, PR #4 open)
 - Answer to the open question in old section 9: built, small (FastAPI + one HTML page, 3-5 endpoints, 3-6 tests). See section 4.
 - UI: Prototype tab; calmer grey/blue palette, solid header with a plain "AC" mark, "Why not just ask a chatbot?" cards on both landing pages (answers the viva question), footer names the project; nodes that never ran show "not run".
 - Verified in Chromium: offline fallback path (6/6 tests, 4/4 endpoints, preview, monitor, typing in the preview), the AI path with a stubbed model (3/3 tests, "Code written by AI", "Fix once: not needed"), review hand-off, light, dark and 390px.
@@ -192,6 +192,7 @@ Grounded prompts, deterministic critic with quote-vs-disk and compile checks, ho
 ## 8. What is left and what needs improvement (start here next session)
 
 **Must fix / verify next**
+- Merge PR #4 (if not merged yet), then on the user's laptop with the real key: run the three demo ideas and build a prototype for each. Check the generated page looks right, tests pass, and the monitor counts clicks in the preview. Record the results under "Measured numbers".
 - Market search sometimes falls back (seen once with the user's 10s timeout). Find the exact cause in the log (`logging.basicConfig(level=logging.INFO)`), then either raise the default timeout or shrink the market prompt.
 - Follow-up chat in the new UI was not tested against a live answer yet; check Markdown rendering, `@agent` routing and the error state.
 - Honesty gap seen offline: when the paper comparison falls back ("Not assessed"), the header still says "5/5 refer to a paper we found, 100% backed by abstracts". Show "not checked" when `prior_art.generation_source == "fallback"`.
