@@ -1356,7 +1356,7 @@
 
       const abortController = new AbortController();
       const timeoutId = setTimeout(() => {
-        abortController.abort(new Error("Request timed out after 150 seconds. The free-tier engine may be rate-limited; please retry."));
+        abortController.abort(new Error("Request timed out after 150 seconds. The engine may be busy; please retry."));
       }, 150000);
 
       try {
@@ -2605,7 +2605,7 @@
         chip.classList.remove('hidden');
         const rl = data.rate_limits || {};
         if (rl.all_rate_limited) {
-          text.innerText = 'AI engine resting (free tier limit reached)';
+          text.innerText = 'Engine busy, please wait a minute';
           chip.className = 'hidden sm:flex items-center text-xs text-rose-300';
         } else if (Object.keys(rl.cooldowns || {}).length > 0) {
           text.innerText = 'One model is resting, another is answering';

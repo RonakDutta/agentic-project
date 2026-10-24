@@ -13,6 +13,7 @@ import os
 import queue
 import threading
 import time
+import uuid
 from collections import defaultdict, deque
 from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request
@@ -26,6 +27,7 @@ from core.config import settings
 from core.llm import llm_client
 from indexer import index_cache
 from agents.orchestrator import orchestrator
+from agents.workflow_state import RunCancelled
 
 app = FastAPI(
     title="Agentic AI Co-Pilot API",
@@ -161,6 +163,14 @@ def execute_query(req: QueryRequest, request: Request):
         )
 
 
+# run_id -> cancel flag for runs that are streaming right now (POST /api/run/cancel).
+_ACTIVE_RUNS: dict = {}
+
+
+class CancelRequest(BaseModel):
+    run_id: str
+
+
 def _sse(event: str, data: dict) -> str:
     return f"event: {event}\ndata: {json.dumps(data, default=str)}\n\n"
 
@@ -169,7 +179,7 @@ def _sse(event: str, data: dict) -> str:
 def stream_query(req: QueryRequest, request: Request):
     """
     Runs the pipeline and streams real progress as Server-Sent Events:
-    `trace` for every agent step as it is recorded, `llm` for every Groq call
+    `trace` for every agent step as it is recorded, `llm` for every AI model call
     (model, tokens, latency, cache hit) made since the run started, then
     `result` with the full state, or `error`. Nothing is replayed or simulated.
     LLM call events come from the shared client, so two runs at the same time
@@ -181,6 +191,8 @@ def stream_query(req: QueryRequest, request: Request):
 
     events: "queue.Queue" = queue.Queue()
     started = time.time()
+    run_id = uuid.uuid4().hex[:12]
+    cancel = threading.Event()
 
     def worker() -> None:
         try:
@@ -189,40 +201,64 @@ def stream_query(req: QueryRequest, request: Request):
                 repo_path=req.repo_path,
                 force_intent=req.force_intent,
                 on_trace=lambda step: events.put(("trace", step)),
+                cancel_event=cancel,
             )
             events.put(("result", state.to_dict()))
+        except RunCancelled:
+            events.put(("error", {"error": "Run stopped. No further agent steps were run.", "status": "cancelled"}))
         except Exception as err:  # pragma: no cover - surfaced to the client
             events.put(("error", {"error": str(err), "status": "failed"}))
 
     def stream():
+        _ACTIVE_RUNS[run_id] = cancel
         threading.Thread(target=worker, daemon=True, name="run-stream").start()
-        seen_calls = set()
-        last_beat = time.time()
-        yield _sse("start", {"started_at": started})
-        while True:
-            try:
-                kind, payload = events.get(timeout=0.4)
-            except queue.Empty:
-                kind, payload = None, None
-            for call in list(llm_client.recent_calls):
-                key = (call.get("at"), call.get("model"), call.get("tokens"))
-                if call.get("at", 0) >= started and key not in seen_calls:
-                    seen_calls.add(key)
-                    yield _sse("llm", {**call, "elapsed_ms": int((call.get("at", started) - started) * 1000)})
-            if kind is None:
-                if time.time() - last_beat > 5:
-                    last_beat = time.time()
-                    yield _sse("heartbeat", {"elapsed_ms": int((time.time() - started) * 1000)})
-                continue
-            yield _sse(kind, payload)
-            if kind in ("result", "error"):
-                break
+        try:
+            yield from _stream_events(events, started, run_id)
+        finally:
+            # Also reached when the client disconnects: stop the pipeline instead of
+            # letting it spend model calls nobody is watching.
+            cancel.set()
+            _ACTIVE_RUNS.pop(run_id, None)
 
     return StreamingResponse(
         stream(),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+@app.post("/api/run/cancel")
+def cancel_run(req: CancelRequest):
+    """Stops a streaming run before its next agent step (the step already running finishes)."""
+    cancel = _ACTIVE_RUNS.get(req.run_id)
+    if cancel is None:
+        return JSONResponse(status_code=404, content={"error": "No running run with that id.", "status": "not_found"})
+    cancel.set()
+    return {"status": "cancelling", "run_id": req.run_id}
+
+
+def _stream_events(events: "queue.Queue", started: float, run_id: str):
+    seen_calls = set()
+    last_beat = time.time()
+    yield _sse("start", {"started_at": started, "run_id": run_id})
+    while True:
+        try:
+            kind, payload = events.get(timeout=0.4)
+        except queue.Empty:
+            kind, payload = None, None
+        for call in list(llm_client.recent_calls):
+            key = (call.get("at"), call.get("model"), call.get("tokens"))
+            if call.get("at", 0) >= started and key not in seen_calls:
+                seen_calls.add(key)
+                yield _sse("llm", {**call, "elapsed_ms": int((call.get("at", started) - started) * 1000)})
+        if kind is None:
+            if time.time() - last_beat > 5:
+                last_beat = time.time()
+                yield _sse("heartbeat", {"elapsed_ms": int((time.time() - started) * 1000)})
+            continue
+        yield _sse(kind, payload)
+        if kind in ("result", "error"):
+            break
 
 
 @app.post("/api/followup")
@@ -332,7 +368,7 @@ def list_models():
     for m in [settings.primary_model] + (settings.model_chain or []):
         if m and m not in seen:
             seen.add(m)
-            models_list.append({"id": m, "object": "model", "owned_by": "groq", "permission": []})
+            models_list.append({"id": m, "object": "model", "owned_by": "copilot", "permission": []})
     return JSONResponse(content={"object": "list", "data": models_list})
 
 

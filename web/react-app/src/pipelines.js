@@ -13,7 +13,7 @@ export const STARTUP_PIPELINE = {
     { id: 'judge', label: 'Judge', sub: 'AI', agents: ['Evidence Reconciler'], col: 3, row: 0, deps: ['kill'] },
     { id: 'score', label: 'Scorecard', sub: 'Code, no AI', agents: ['Feasibility Scorecard Engine'], col: 4, row: 1, deps: ['judge', 'papers'] },
     { id: 'prd', label: 'PRD + diagrams', sub: 'AI', agents: ['PRD & Architecture Specialist'], col: 5, row: 1, deps: ['score'] },
-    { id: 'report', label: 'Report', sub: '14 sections', agents: [], col: 6, row: 1, deps: ['prd', 'roadmap'], final: true },
+    { id: 'report', label: 'Report', sub: '14 sections', agents: ['Report Compiler'], col: 6, row: 1, deps: ['prd', 'roadmap'], final: true },
   ],
 }
 

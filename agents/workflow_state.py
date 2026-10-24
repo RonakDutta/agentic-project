@@ -9,9 +9,14 @@ Guarantees:
 - Full backwards-compatibility with existing add_trace calls.
 """
 
+import threading
 import time
 from dataclasses import dataclass, field, asdict
 from typing import Any, Callable, Dict, List, Optional
+
+
+class RunCancelled(Exception):
+    """Raised between agent steps once the user has stopped the run."""
 
 
 @dataclass
@@ -70,6 +75,10 @@ class AgentWorkflowState:
     start_time: float = field(default_factory=time.time)
     # Called with each new trace step (as a dict); used to stream live progress (SSE).
     listener: Optional[Callable[[Dict[str, Any]], None]] = field(default=None, repr=False, compare=False)
+    # Worker threads (prior art, roadmap) record steps too; this keeps step ids unique.
+    _trace_lock: Any = field(default_factory=threading.Lock, repr=False, compare=False)
+    # Set by the stream endpoint when the user presses Stop; checked before each agent step.
+    cancel_event: Any = field(default_factory=threading.Event, repr=False, compare=False)
 
     def add_trace(
         self,
@@ -88,22 +97,23 @@ class AgentWorkflowState:
         Records a standardized execution trace step for an agent action.
         Maintains complete backward compatibility with older positional callers.
         """
-        elapsed = int((time.time() - self.start_time) * 1000)
-        step = TraceStep(
-            step_id=len(self.execution_trace) + 1,
-            agent_name=agent_name,
-            action=action,
-            status=status,
-            elapsed_ms=elapsed,
-            details=details or {},
-            agent_role=agent_role or agent_name,
-            duration_ms=duration_ms or (elapsed if not self.execution_trace else elapsed - self.execution_trace[-1].elapsed_ms),
-            input_summary=input_summary,
-            output_summary=output_summary,
-            evidence_count=evidence_count,
-            citations=citations or [],
-        )
-        self.execution_trace.append(step)
+        with self._trace_lock:
+            elapsed = int((time.time() - self.start_time) * 1000)
+            step = TraceStep(
+                step_id=len(self.execution_trace) + 1,
+                agent_name=agent_name,
+                action=action,
+                status=status,
+                elapsed_ms=elapsed,
+                details=details or {},
+                agent_role=agent_role or agent_name,
+                duration_ms=duration_ms or (elapsed if not self.execution_trace else elapsed - self.execution_trace[-1].elapsed_ms),
+                input_summary=input_summary,
+                output_summary=output_summary,
+                evidence_count=evidence_count,
+                citations=citations or [],
+            )
+            self.execution_trace.append(step)
         if self.listener is not None:
             try:
                 self.listener(step.to_dict())

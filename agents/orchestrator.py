@@ -7,6 +7,7 @@ manages deterministic verification loops, and records complete execution traces 
 import logging
 import os
 import re
+import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Dict, List, Optional
@@ -25,7 +26,7 @@ from agents.feasibility_scorecard import scorecard_engine
 from agents.prd_agent import prd_agent
 from agents.prior_art_agent import prior_art_agent
 from core.config import settings
-from agents.workflow_state import AgentWorkflowState
+from agents.workflow_state import AgentWorkflowState, RunCancelled
 from agents.conversation_session import session_manager, followup_engine
 
 
@@ -144,15 +145,24 @@ class OrchestratorAgent:
         repo_path: Optional[str] = None,
         force_intent: Optional[str] = None,
         on_trace=None,
+        cancel_event=None,
     ) -> AgentWorkflowState:
         """
         Executes the multi-agent workflow from start to finish.
         The same four steps are the nodes of the LangGraph graph (agents/graph.py).
         `on_trace` receives every trace step as it happens (live progress stream).
+        `cancel_event` (threading.Event) stops the run before the next agent step.
         """
         state = self.new_state(query, repo_path, on_trace=on_trace)
-        self.classify(state, force_intent)
-        self.execute_track(state)
+        if cancel_event is not None:
+            state.cancel_event = cancel_event
+        try:
+            self.classify(state, force_intent)
+            self.execute_track(state)
+        except RunCancelled:
+            state.finalize()
+            state.add_trace("Orchestrator", f"Run stopped by the user after {state.total_latency_ms}ms.", status="warning")
+            raise
         self.finalize(state)
         return state
 
@@ -575,6 +585,8 @@ class OrchestratorAgent:
         step can never fail the whole run. On a crash the step is re-run with
         the LLM switched off, which makes it use its own built-in fallback.
         """
+        if state.cancel_event.is_set():
+            raise RunCancelled(step_name)
         try:
             return fn()
         except Exception as err:
@@ -680,10 +692,7 @@ class OrchestratorAgent:
 
         # Step 7 starts now on a worker thread: it only needs the brief and the stack.
         executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="roadmap")
-        roadmap_future = executor.submit(
-            self._run_step, state, "Roadmap & Risk Assessor",
-            lambda: self.roadmap_agent.generate(decomposed, market),
-        )
+        roadmap_future = executor.submit(self._roadmap_worker, state, decomposed, market)
 
         try:
             # Step 3: Adversarial Kill Agent (Task 9.3)
@@ -773,28 +782,31 @@ class OrchestratorAgent:
             # Step 7: Roadmap & Risk Assessor (ran in parallel since step 2)
             roadmap = roadmap_future.result()
         finally:
-            executor.shutdown(wait=True)
-            prior_art_executor.shutdown(wait=True)
+            # After Stop, do not wait for the parallel threads; they make no further calls.
+            wait = not state.cancel_event.is_set()
+            executor.shutdown(wait=wait)
+            prior_art_executor.shutdown(wait=wait)
 
+        # The roadmap recorded its own step when its thread finished; this step
+        # marks the join, where all deliverables are compiled into the report.
         first_phase = roadmap.phases[0] if roadmap.phases else None
         state.add_trace(
-            agent_name="Roadmap & Risk Assessor",
-            action=f"Formulated {len(roadmap.phases)}-phase delivery roadmap and {len(roadmap.risks)}-item risk matrix",
-            status=self._source_status(roadmap),
-            agent_role="Milestone Planner & Risk Assessor",
-            input_summary="Architecture, MVP features, and delivery constraints",
-            output_summary=f"{len(roadmap.phases)} phases, {len(roadmap.risks)} risks mapped",
+            agent_name="Report Compiler",
+            action=f"Compiled the report: {len(roadmap.phases)}-phase roadmap, {len(roadmap.risks)}-item risk matrix, scorecard and PRD",
+            status="completed",
+            agent_role="Report Compiler",
+            input_summary="All agent outputs",
+            output_summary=f"Score {scorecard.total_score}/100, {len(roadmap.phases)} phases, {len(roadmap.risks)} risks",
             evidence_count=len(roadmap.phases) + len(roadmap.risks),
             details={
-                "thinking": "Formulated delivery milestones and a risk matrix (ran in parallel with the debate steps).",
-                "tool": "Groq LLM (structured JSON)" if roadmap.generation_source == "llm" else "Built-in fallback roadmap",
+                "thinking": "Joined the parallel roadmap thread with the debate and scorecard results and compiled the report.",
+                "tool": "Report template (no LLM)",
                 "findings": [
                     f"Phase 1 MVP: {first_phase.phase_name} ({first_phase.duration_weeks})" if first_phase else "No phases produced",
                     f"Cataloged {len(roadmap.risks)} operational risks",
                     f"Feasibility Score: {scorecard.total_score}/100 ({scorecard.verdict}) based on project rubric",
                 ],
                 "handoff": "Compiled complete deliverables and registered persistent session memory.",
-                **self._source_note(roadmap),
             },
         )
 
@@ -865,6 +877,31 @@ class OrchestratorAgent:
             "sections_13": sections_13,
             "full_report_markdown": full_report_md,
         }
+
+    def _roadmap_worker(self, state: AgentWorkflowState, decomposed: Any, market: Any) -> Any:
+        """Runs on the roadmap thread and records its step as soon as it finishes,
+        so the live graph shows the roadmap done while the debate is still going."""
+        started = time.time()
+        roadmap = self._run_step(state, "Roadmap & Risk Assessor", lambda: self.roadmap_agent.generate(decomposed, market))
+        state.add_trace(
+            agent_name="Roadmap & Risk Assessor",
+            action=f"Formulated {len(roadmap.phases)}-phase delivery roadmap and {len(roadmap.risks)}-item risk matrix",
+            status=self._source_status(roadmap),
+            agent_role="Milestone Planner & Risk Assessor",
+            input_summary="Project brief, MVP features and tech stack",
+            output_summary=f"{len(roadmap.phases)} phases, {len(roadmap.risks)} risks mapped",
+            evidence_count=len(roadmap.phases) + len(roadmap.risks),
+            duration_ms=max(1, int((time.time() - started) * 1000)),
+            details={
+                # No "thinking"/"findings" here: the legacy storyboard shows the
+                # Report Compiler step for this stage instead.
+                "tool": "Groq LLM (structured JSON)" if roadmap.generation_source == "llm" else "Built-in fallback roadmap",
+                "phases": [f"{p.phase_name} ({p.duration_weeks})" for p in roadmap.phases] or ["No phases produced"],
+                "parallel": True,
+                **self._source_note(roadmap),
+            },
+        )
+        return roadmap
 
     def _collect_prior_art(self, state: AgentWorkflowState, future) -> Any:
         """Waits for the prior-art thread and records its trace step."""

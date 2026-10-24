@@ -38,7 +38,7 @@ NODE_AGENTS = {
     "codebase_pipeline": ["Code Structure Indexer", "Code Navigation Agent", "Diagnosis Agent", "Deterministic Critic"],
     "idea_pipeline": [
         "Idea Decomposer", "Market & Competitor Researcher", "Adversarial Kill Agent", "Evidence Reconciler",
-        "Feasibility Scorecard Engine", "PRD & Architecture Specialist", "Roadmap & Risk Assessor",
+        "Feasibility Scorecard Engine", "PRD & Architecture Specialist", "Roadmap & Risk Assessor", "Report Compiler",
     ],
     "finalize": ["Orchestrator Agent"],
 }

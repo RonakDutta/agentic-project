@@ -42,7 +42,7 @@ The user's goal: **impress teachers in a viva**. That only works if everything s
 ```bash
 pip install -r requirements.txt
 python app.py                                   # http://127.0.0.1:8000  (new UI at /, old UI at /legacy)
-GROQ_API_KEY= pytest -q                         # 101 pass, 3 live smoke tests skip without a key
+GROQ_API_KEY= pytest -q                         # 104 pass, 3 live smoke tests skip without a key
 python evaluation/compare_baseline.py           # naive vs AST chunking (computed)
 python evaluation/retrieval_benchmark.py        # BM25 / vector / hybrid Top-1, Top-3, MRR
 python evaluation/free_tier_budget.py           # token plan vs the model limits (no quota used)
@@ -79,6 +79,7 @@ Idea brief ─┬─ Market search (web) ── Devil's advocate ── Judge �
 | Endpoint | Purpose |
 |---|---|
 | `POST /api/run/stream` | **Used by the new UI.** Runs a pipeline and streams SSE events: `start`, `trace` (each agent step as it is recorded), `llm` (each model call: model, tokens, latency, cached), `heartbeat`, then `result` (full state) or `error`. |
+| `POST /api/run/cancel` | `{run_id}` (from the `start` event): stops a streaming run before its next agent step. Closing the stream does the same. |
 | `POST /api/query` | Same run, single JSON response (legacy UI, scripts). |
 | `POST /api/followup` | Follow-up questions on a session (`@idea`, `@market`, `@roadmap`, `@critic`, `@planner`, `@navigate`, `@diagnose`). |
 | `POST /api/inspect-repo` | Index a local folder or clone a GitHub URL; returns file/function counts. |
@@ -98,7 +99,7 @@ Idea brief ─┬─ Market search (web) ── Devil's advocate ── Judge �
 - `app.py`: endpoints above; serves `web/react-app/dist` at `/` (assets at `/assets`), legacy at `/legacy`; per-client `RUNS_PER_MINUTE`; `ALLOWED_REPO_ROOTS`.
 - `core/config.py`: every setting (env vars). Default models in `DEFAULT_*_MODEL`; limits `FREE_TIER_RPM/RPD/TPM/TPD`; prior-art keys `SEMANTIC_SCHOLAR_API_KEY`, `OPENALEX_API_KEY`, `OPENALEX_EMAIL`, `PRIOR_ART_ENABLED`, `PAPER_CACHE`.
 - `core/llm.py`: model client. Model-chain rotation, header-aware budgets, local `_UsageLedger`, reasoning kwargs per family, `<think>` stripping, memory + SQLite cache, `force_offline()` (**thread-local**: it does not reach worker threads), `AGENT_MAX_TOKENS`, `recent_calls` (feeds the SSE `llm` events).
-- `agents/workflow_state.py`: `AgentWorkflowState.add_trace()` calls `listener` (set via `orchestrator.process(on_trace=...)`) for live streaming.
+- `agents/workflow_state.py`: `AgentWorkflowState.add_trace()` (thread-safe) calls `listener` (set via `orchestrator.process(on_trace=...)`) for live streaming; `cancel_event` + `RunCancelled` implement Stop (checked in `_run_step`).
 - `agents/orchestrator.py`: `process()` = `new_state → classify → execute_track → finalize` (also the LangGraph nodes in `agents/graph.py`). `_run_step` re-runs a crashed step offline. `classify_code_question()`, `_structural_analysis()`, `_collect_prior_art()`, `_compile_13_sections()`.
 - `agents/prior_art_agent.py` + `tools/paper_search.py`: queries from the idea (no LLM) → parallel search (arXiv relaxed AND → pair-OR variants; S2; OpenAlex) → title dedupe → 7-day cache `.cache/papers.sqlite` → MiniLM rerank (TF-IDF fallback) → novelty `100 x (1 - (0.6 x closest + 0.4 x mean top-3))` → PCA map → ONE LLM comparison over the top 5 abstracts → deterministic citation critic → IEEE refs + BibTeX. Never invents papers.
 - `agents/feasibility_scorecard.py`: 7-category rubric, live citations only, evidence confidence, verdict reconciled with the Judge, prior-art penalty (-2 very close / -1 closely related, skipped when paper evidence is Low).
@@ -150,6 +151,13 @@ Grounded prompts, deterministic critic with quote-vs-disk and compile checks, ho
 - Stable tab switching in Startup Assistance and Codebase Evaluation: removed `window.scrollTo({ top: 0 })` on tab changes so switching tabs (e.g. Overview to Research papers) updates content in place without jumping to the top of the page.
 - Tests: `tests/test_run_stream.py`; total 104 pass.
 
+### Phase 3b: fixes from the "must fix" list (done, branch `claude/lucid-newton-y54tpw`)
+- Roadmap records its own trace step from its worker thread with its real duration (`_roadmap_worker`), so the live graph shows it done while the debate runs. The join is a new `Report Compiler` step (mapped in `pipelines.js` and `graph.py`). `add_trace` now holds a lock (worker threads record steps).
+- Stop really stops: `/api/run/cancel` + cancel on stream close; the pipeline raises `RunCancelled` before the next agent step and the UI says "Run stopped. No further agent steps will run."
+- Provider name removed from `/docs` text, `/v1/models` and the two legacy UI messages.
+- Dark mode checked with screenshots (overview, research papers, scorecard, plan): readable, tags and bars have enough contrast.
+- Tests: 104 pass (roadmap step order, unique step ids, cancel mid-run, cancel 404).
+
 ### Measured numbers (real runs, keep updated)
 - Retrieval benchmark, 18 questions, MiniLM available: BM25 MRR 0.640 (Top-1 50%, Top-3 72%); vector 0.672 (56%, 78%); hybrid RRF 0.647 (44%, **83% Top-3**). Hybrid is best at Top-3, not at Top-1/MRR; say so if asked.
 - AST vs naive chunking: 91% of 500-char chunks cut through a function; 100% of AST chunks parse.
@@ -161,12 +169,12 @@ Grounded prompts, deterministic critic with quote-vs-disk and compile checks, ho
 ## 8. What is left and what needs improvement (start here next session)
 
 **Must fix / verify next**
-- Roadmap node in the live graph shows "working" until the very end: it really runs in parallel, but its trace step is only recorded after the PRD step. Record a trace step from the roadmap worker thread when it finishes (keep the final summary step too), then check `pipelines.js` still maps it.
 - Market search sometimes falls back (seen once with the user's 10s timeout). Find the exact cause in the log (`logging.basicConfig(level=logging.INFO)`), then either raise the default timeout or shrink the market prompt.
 - Follow-up chat in the new UI was not tested against a live answer yet; check Markdown rendering, `@agent` routing and the error state.
-- Dark mode was built but not visually checked with screenshots; check contrast of tags, bars and the Mermaid "dark" theme.
-- "Stop" only stops watching; the server keeps running the pipeline. Either say so in the UI or add a cancel flag the pipeline checks between steps.
-- The legacy dashboard (`/legacy`) and FastAPI `/docs` still mention the API provider. They are no longer linked from the new UI; delete or clean them before the viva if the teacher might open them.
+- Honesty gap seen offline: when the paper comparison falls back ("Not assessed"), the header still says "5/5 refer to a paper we found, 100% backed by abstracts". Show "not checked" when `prior_art.generation_source == "fallback"`.
+- Fallback idea brief title is the first words of the prompt ("A Mobile App That"); build a better title in code (for example the noun phrase after "app that").
+- Mermaid "dark" theme not yet checked with a live (non-fallback) PRD.
+- Code comments and module docstrings in `app.py` still name the provider (not user-facing).
 
 **UI polish (keep the flat, plain style)**
 - Similarity map: labels overlap when papers cluster (P5/P7). Nudge labels apart or list close points beside the map.
