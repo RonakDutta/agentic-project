@@ -61,6 +61,9 @@ AGENT_MAX_TOKENS = {
     "diagnosis": 1800,
     "prior_art": 1300,
     "followup": 900,
+    # Prototype builder: three small files in one answer, then at most one fix.
+    "prototype": 3800,
+    "prototype_fix": 3000,
 }
 
 # Rate-limit headers come back like "5m45.6s" or "622ms".
@@ -788,8 +791,16 @@ class LLMClient:
         temperature: Optional[float] = None,
         json_mode: bool = False,
         max_tokens: Optional[int] = None,
+        timeout: Optional[float] = None,
+        max_wait: Optional[float] = None,
     ) -> str:
-        """Executes a completion call with caching, fallback and retry logic."""
+        """
+        Executes a completion call with caching, fallback and retry logic.
+        `timeout` and `max_wait` override REQUEST_TIMEOUT_SECONDS and MAX_WAIT_SECONDS
+        for one long call (the prototype builder writes code and can wait for a window).
+        """
+        request_timeout = timeout or settings.request_timeout_seconds
+        wait_limit = settings.max_wait_seconds if max_wait is None else max_wait
         if getattr(self._local, "offline", False):
             raise RuntimeError("LLM disabled for this step (offline fallback forced).")
         if self.client is None:
@@ -831,7 +842,7 @@ class LLMClient:
                 # refills soon (MAX_WAIT_SECONDS in total per call); long cooldowns
                 # such as a daily limit go straight to the agent's fallback.
                 wait_s = self._seconds_until_replenish(model, prompt_tokens + settings.min_tokens_floor)
-                if wait_s is not None and wait_cycles < 3 and waited + wait_s <= settings.max_wait_seconds:
+                if wait_s is not None and wait_cycles < 3 and waited + wait_s <= wait_limit:
                     wait_cycles += 1
                     logger.info(
                         f"[LLMClient] Every model is out of budget. Waiting {wait_s:.1f}s for a window to refill."
@@ -868,7 +879,7 @@ class LLMClient:
                     temperature=temp,
                     max_tokens=max_tok,
                     response_format=response_format,
-                    timeout=settings.request_timeout_seconds,
+                    timeout=request_timeout,
                     **extra,
                 )
                 response = raw.parse()
@@ -927,7 +938,7 @@ class LLMClient:
                 last_error = e
                 logger.warning(
                     f"[LLMClient] Request timed out on {current_model} after "
-                    f"{settings.request_timeout_seconds}s (slow model, quota untouched). "
+                    f"{request_timeout}s (slow model, quota untouched). "
                     f"Skipping it for {int(settings.slow_model_cooldown_seconds)}s."
                 )
                 self._mark_rate_limited(
