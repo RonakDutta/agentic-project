@@ -7,7 +7,7 @@ const COL = 178
 const ROW = 80
 const PAD = 14
 
-const STATE_TEXT = { waiting: 'waiting', running: 'working now', done: 'done', fallback: 'fallback used' }
+const STATE_TEXT = { waiting: 'waiting', running: 'working now', done: 'done', fallback: 'fallback used', skipped: 'not needed', notrun: 'not run' }
 
 export default function PipelineGraph({ pipeline, events, phase, hidden = [] }) {
   const nodes = pipeline.nodes.filter((n) => !hidden.includes(n.id))
@@ -39,7 +39,7 @@ export default function PipelineGraph({ pipeline, events, phase, hidden = [] }) 
         {nodes.map((n) => {
           const st = states[n.id] || { state: 'waiting' }
           const { x, y } = pos[n.id]
-          const sub = st.state === 'done' && st.step ? `finished at ${seconds(st.step.elapsed_ms)}` : st.state === 'waiting' ? n.sub : STATE_TEXT[st.state]
+          const sub = st.state === 'done' && st.step ? `finished at ${seconds(st.step.elapsed_ms)}` : st.state === 'waiting' ? n.sub : st.state === 'fallback' && n.warn ? n.warn : STATE_TEXT[st.state]
           return (
             <g key={n.id} className={`gnode ${st.state} ${n.star ? 'star' : ''}`} transform={`translate(${x},${y})`}>
               <title>{`${n.label}: ${STATE_TEXT[st.state]}`}</title>

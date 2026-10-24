@@ -2,7 +2,7 @@
 
 async function readError(res) {
   const data = await res.json().catch(() => ({}))
-  return new Error(data.error || data.message || `Server error ${res.status}`)
+  return new Error(data.error || data.message || data.detail || `Server error ${res.status}`)
 }
 
 export async function getJSON(url) {
@@ -22,11 +22,11 @@ export async function postJSON(url, body) {
 }
 
 /**
- * POST /api/run/stream and call onEvent(type, data) for each Server-Sent Event:
- * start, trace, llm, heartbeat, result, error.
+ * POST to a streaming endpoint (/api/run/stream by default) and call onEvent(type, data)
+ * for each Server-Sent Event: start, trace, llm, heartbeat, result, error.
  */
-export async function streamRun(body, onEvent, signal) {
-  const res = await fetch('/api/run/stream', {
+export async function streamRun(body, onEvent, signal, url = '/api/run/stream') {
+  const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),

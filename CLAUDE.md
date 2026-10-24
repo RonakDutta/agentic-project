@@ -10,7 +10,7 @@ Guide for Claude (and other coding agents) working on this repo. Read it fully b
 
 | Pillar (UI name) | API intent | What it does |
 |---|---|---|
-| **Startup Assistance** | `idea_validation` | Checks an idea against the web, **real research papers**, and a devil's advocate; scores it with a fixed rubric; writes a PRD, diagrams and a roadmap. |
+| **Startup Assistance** | `idea_validation` | Checks an idea against the web, **real research papers**, and a devil's advocate; scores it with a fixed rubric; writes a PRD, diagrams and a roadmap. The **Prototype Builder** (Prototype tab) then codes a tiny FastAPI + HTML app from the PRD, tests it, runs it and monitors it. |
 | **Codebase Evaluation** | `codebase_analysis` | Reads a Python repo (local path or GitHub URL), finds the code behind a bug or question, shows what a change would break, and has a critic verify every answer against the real files. Read-only. |
 
 The user's goal: **impress teachers in a viva**. That only works if everything shown is real and checkable, so honesty is a hard rule (section 2).
@@ -42,7 +42,7 @@ The user's goal: **impress teachers in a viva**. That only works if everything s
 ```bash
 pip install -r requirements.txt
 python app.py                                   # http://127.0.0.1:8000  (new UI at /, old UI at /legacy)
-GROQ_API_KEY= pytest -q                         # 101 pass, 3 live smoke tests skip without a key
+GROQ_API_KEY= pytest -q                         # 112 pass, 3 live smoke tests skip without a key
 python evaluation/compare_baseline.py           # naive vs AST chunking (computed)
 python evaluation/retrieval_benchmark.py        # BM25 / vector / hybrid Top-1, Top-3, MRR
 python evaluation/free_tier_budget.py           # token plan vs the model limits (no quota used)
@@ -75,10 +75,25 @@ Idea brief ─┬─ Market search (web) ── Devil's advocate ── Judge �
   → Critic (no AI: file, symbol, lines, retrieved, quote-vs-disk, fix compiles) → at most one revision
 ```
 
+### Prototype Builder (`agents/prototype_agent.py` + `tools/prototype_sandbox.py`)
+```
+PRD (session) → Spec Planner (top 3 requirements, code) → Code Writer (1 AI call: features.py, static/index.html, test_features.py)
+  → Safety Check (AST import allowlist, no eval/exec/open/dunders, no outside scripts) → Compiler → Test Runner (pytest subprocess)
+  → Code Fixer (0-1 AI call with the real error output) → App Runner (uvicorn on 127.0.0.1) → Endpoint Checker (every GET from /openapi.json)
+```
+- `main.py` (server + request log for the monitor) and `static/base.css` are fixed templates (`agents/prototype_templates.py`); the AI only writes the three idea-specific files.
+- Unsafe or non-compiling code after one fix → labelled built-in "MVP planner" prototype (`generation_source: "fallback"`). Failing tests after the fix are shown as they are (the app still runs).
+- Sandbox: `.prototypes/<id>/` (gitignored, `PROTOTYPE_DIR`), minimal env (no API key, no proxy), CSP on the page, one prototype running at a time, auto-stop after `PROTOTYPE_TTL_SECONDS` (20 min), stopped on server shutdown (FastAPI lifespan; `atexit` does not run on SIGTERM).
+- Monitor = the prototype's own `requests.log`; requests from the builder's checks carry `X-Prototype-Check` and are counted apart from people.
+- Budget: 1 call reserves ~4.6k tokens (`prototype` 3800 max), the fix ~5k (`prototype_fix` 3000); both fit one model's 8k/minute. The call uses `timeout=90` and may wait up to 65 s for a window (`generate(timeout=, max_wait=)`).
+
 ### API (FastAPI, `app.py`)
 | Endpoint | Purpose |
 |---|---|
 | `POST /api/run/stream` | **Used by the new UI.** Runs a pipeline and streams SSE events: `start`, `trace` (each agent step as it is recorded), `llm` (each model call: model, tokens, latency, cached), `heartbeat`, then `result` (full state) or `error`. |
+| `POST /api/run/cancel` | `{run_id}` (from the `start` event): stops a streaming run before its next agent step. Closing the stream does the same. |
+| `POST /api/prototype/build/stream` | `{session_id}` of a finished idea run: builds the prototype, same SSE events; `result.final_output` = the build. |
+| `GET /api/prototype/{id}` · `/status` · `POST /start` · `/stop` · `GET /download` | Saved build + live monitor; start/stop the app; source as zip. |
 | `POST /api/query` | Same run, single JSON response (legacy UI, scripts). |
 | `POST /api/followup` | Follow-up questions on a session (`@idea`, `@market`, `@roadmap`, `@critic`, `@planner`, `@navigate`, `@diagnose`). |
 | `POST /api/inspect-repo` | Index a local folder or clone a GitHub URL; returns file/function counts. |
@@ -88,6 +103,7 @@ Idea brief ─┬─ Market search (web) ── Devil's advocate ── Judge �
 ### `final_output` data contract (what the UI reads)
 - **Idea:** `project_title`, `problem_statement`, `core_value_prop`, `target_personas`, `mvp_features`, `competitors[]`, `tech_stack{layer: {choice, rationale, tradeoffs}}`, `citations[] (is_live)`, `scorecard{total_score, verdict, verdict_summary, categories[], evidence_confidence, ...}`, `kill_report{fatal_flaws[], bear_case_summary, ...}`, `reconciliation{verdict, must_have_mitigations, key_tradeoffs}`, `prd{product_vision, user_stories, functional_requirements, *_diagram_mermaid}`, `phases[]`, `risks[]`, **`prior_art`** (below), `provenance{section: llm|fallback|deterministic}`, `sections_13` (14 entries when prior art ran), `full_report_markdown`.
 - **`prior_art`:** `papers[]{ref_id, title, authors, year, venue, abstract, url, pdf_url, doi, source, also_found_in, citation_count, similarity}`, `novelty_index`, `novelty_band`, `closest_similarity`, `evidence_confidence`, `similarity_backend`, `search_backend`, `queries`, `comparisons[]{ref, what_it_does, overlap, paper_is_stronger_at, idea_adds, overlap_level, abstract_support}`, `research_gap`, `positioning`, `related_work`, `ieee_references[]`, `bibtex`, `similarity_map[]{label, x, y, is_idea, similarity}`, `verification{comparisons_kept, invalid_refs_dropped, citations_removed, avg_abstract_support}`, `notes[]`, `generation_source`.
+- **Prototype build:** `id`, `title`, `path`, `generation_source`, `fallback_reason`, `repaired`, `spec{requirements[]}`, `files[]{path, lines, written_by: ai|fallback|template, content}`, `checks{safety_ok, compile_ok, tests{ok, passed, failed, errors, total, output, duration_ms}, server{ok, url, port, ms, error}, endpoints[]{method, path, status|null, ms}}`. Monitor status: `state (running|crashed|stopped)`, `url`, `uptime_s`, `auto_stop_in_s`, `requests_visitors`, `requests_checks`, `server_errors`, `client_errors`, `avg_ms`, `recent[]`, `recent_errors[]`, `server_log[]`.
 - **Code:** `summary`, `question_mode`, `candidates[]{rank, file_path, symbol_name, line_start, line_end, confidence, why_problematic, wrong_code, recommended_pattern, explanation_of_change, generated_by, verification{file_exists, symbol_exists, lines_in_bounds, in_retrieved_evidence, quote_matches_disk, fix_compiles}}`, `critic{grounding_score, is_valid, total_checked, total_verified, code_quote_matches, fixes_compiling, fixes_checked, flags}`, `impact{target_symbol, risk_level, blast_radius_score, direct_callers[], indirect_callers[], affected_tests, affected_entrypoints, mermaid_diagram, recommendations}`, `flow{hops[]}`, `retrieved_locations[]`, `indexed_summary`, `retrieval_backend`, `local_repo_path`.
 
 ---
@@ -98,24 +114,25 @@ Idea brief ─┬─ Market search (web) ── Devil's advocate ── Judge �
 - `app.py`: endpoints above; serves `web/react-app/dist` at `/` (assets at `/assets`), legacy at `/legacy`; per-client `RUNS_PER_MINUTE`; `ALLOWED_REPO_ROOTS`.
 - `core/config.py`: every setting (env vars). Default models in `DEFAULT_*_MODEL`; limits `FREE_TIER_RPM/RPD/TPM/TPD`; prior-art keys `SEMANTIC_SCHOLAR_API_KEY`, `OPENALEX_API_KEY`, `OPENALEX_EMAIL`, `PRIOR_ART_ENABLED`, `PAPER_CACHE`.
 - `core/llm.py`: model client. Model-chain rotation, header-aware budgets, local `_UsageLedger`, reasoning kwargs per family, `<think>` stripping, memory + SQLite cache, `force_offline()` (**thread-local**: it does not reach worker threads), `AGENT_MAX_TOKENS`, `recent_calls` (feeds the SSE `llm` events).
-- `agents/workflow_state.py`: `AgentWorkflowState.add_trace()` calls `listener` (set via `orchestrator.process(on_trace=...)`) for live streaming.
+- `agents/workflow_state.py`: `AgentWorkflowState.add_trace()` (thread-safe) calls `listener` (set via `orchestrator.process(on_trace=...)`) for live streaming; `cancel_event` + `RunCancelled` implement Stop (checked in `_run_step`).
 - `agents/orchestrator.py`: `process()` = `new_state → classify → execute_track → finalize` (also the LangGraph nodes in `agents/graph.py`). `_run_step` re-runs a crashed step offline. `classify_code_question()`, `_structural_analysis()`, `_collect_prior_art()`, `_compile_13_sections()`.
 - `agents/prior_art_agent.py` + `tools/paper_search.py`: queries from the idea (no LLM) → parallel search (arXiv relaxed AND → pair-OR variants; S2; OpenAlex) → title dedupe → 7-day cache `.cache/papers.sqlite` → MiniLM rerank (TF-IDF fallback) → novelty `100 x (1 - (0.6 x closest + 0.4 x mean top-3))` → PCA map → ONE LLM comparison over the top 5 abstracts → deterministic citation critic → IEEE refs + BibTeX. Never invents papers.
 - `agents/feasibility_scorecard.py`: 7-category rubric, live citations only, evidence confidence, verdict reconciled with the Judge, prior-art penalty (-2 very close / -1 closely related, skipped when paper evidence is Low).
 - `agents/diagnosis_agent.py`, `agents/critic_agent.py`, `agents/change_impact_agent.py`, `agents/flow_trace_agent.py`, `agents/code_nav_agent.py`: code track.
 - `agents/idea_agent.py`, `market_agent.py`, `kill_agent.py` (+ reconciler), `prd_agent.py`, `roadmap_agent.py`: idea track. Every result has `generation_source` + `fallback_reason`.
 - `agents/conversation_session.py`: follow-up engine, `SessionManager` (LRU + TTL + SQLite).
+- `agents/prototype_agent.py` (builder + prompts), `agents/prototype_templates.py` (main.py, base.css, fallback app), `tools/prototype_sandbox.py` (safety check, compile, pytest, process manager, monitor, zip).
 - `indexer/`: `ast_parser.py`, `bm25_search.py`, `vector_search.py` (MiniLM once per process), `hybrid_retriever.py`, `index_cache.py`, `github_ingest.py`.
 - `tools/search_tool.py`: Tavily → `ddgs` → DDG Instant Answer → labelled offline references.
 
 **New UI (`web/react-app/src`, React 18 + Vite, no Tailwind, fonts bundled via @fontsource)**
-- `App.jsx`: header (pillar switch, engine status, theme toggle), `StartupPage`, `CodePage`, `useRun()` (SSE run state). Both pages stay mounted so a run survives switching.
+- `App.jsx`: header (pillar switch, engine status, theme toggle), `StartupPage`, `CodePage`, "Why not just ask a chatbot?" cards. Both pages stay mounted so a run survives switching. `useRun.js`: SSE run state (`useRun(url)`, also used for prototype builds).
 - `api.js`: `streamRun()` (fetch + SSE parser), `getJSON`, `postJSON`.
 - `pipelines.js`: graph definitions matched to trace `agent_name`s; `nodeStates()` derives done / working / fallback from real events and the dependency graph.
 - `components/`: `PipelineGraph` (SVG agent graph), `RunPanel` (live graph + step log + AI calls), `TraceView` ("How it ran" tab), `FollowUp`, `ui.jsx` (Tag, Source, Bar, Score, More, Markdown via marked + DOMPurify, Mermaid lazy-loaded with `securityLevel: 'strict'`, `modelName`, `plainText`).
-- `startup/StartupResult.jsx` (tabs: Overview, Research papers, Scorecard, Market, Risks, Plan, How it ran), `startup/Papers.jsx` (spotlight, novelty, similarity map, paper list, comparisons, gap/positioning, Related Work, BibTeX).
+- `startup/StartupResult.jsx` (tabs: Overview, Research papers, Scorecard, Market, Risks, Plan, Prototype, How it ran), `startup/Prototype.jsx` (live build graph, stats, live preview iframe, monitor polled every 2 s, checks, code viewer, zip, "Review with Codebase Evaluation" via a `copilot:review` window event), `startup/Papers.jsx` (spotlight, novelty, similarity map, paper list, comparisons, gap/positioning, Related Work, BibTeX).
 - `code/CodeResult.jsx` (tabs: Overview, Findings with verification checks and before/after code, Impact, How it ran).
-- `styles.css`: design tokens (light default, dark via `data-theme`), flat components.
+- `styles.css`: design tokens (light default, dark via `data-theme`), flat components. Palette: grey background, blue accent (changed from beige/orange so it reads less like an AI product).
 - Legacy UI: `web/templates/index.html` (kept at `/legacy`, not developed further).
 
 ---
@@ -150,6 +167,20 @@ Grounded prompts, deterministic critic with quote-vs-disk and compile checks, ho
 - Stable tab switching in Startup Assistance and Codebase Evaluation: removed `window.scrollTo({ top: 0 })` on tab changes so switching tabs (e.g. Overview to Research papers) updates content in place without jumping to the top of the page.
 - Tests: `tests/test_run_stream.py`; total 104 pass.
 
+### Phase 3b: fixes from the "must fix" list (done, branch `claude/lucid-newton-y54tpw`)
+- Roadmap records its own trace step from its worker thread with its real duration (`_roadmap_worker`), so the live graph shows it done while the debate runs. The join is a new `Report Compiler` step (mapped in `pipelines.js` and `graph.py`). `add_trace` now holds a lock (worker threads record steps).
+- Stop really stops: `/api/run/cancel` + cancel on stream close; the pipeline raises `RunCancelled` before the next agent step and the UI says "Run stopped. No further agent steps will run."
+- Provider name removed from `/docs` text, `/v1/models` and the two legacy UI messages.
+- Dark mode checked with screenshots (overview, research papers, scorecard, plan): readable, tags and bars have enough contrast.
+- Tests: 104 pass (roadmap step order, unique step ids, cancel mid-run, cancel 404).
+
+### Phase 4: Prototype Builder + UI pass (done, branch `claude/lucid-newton-y54tpw`)
+- Answer to the open question in old section 9: built, small (FastAPI + one HTML page, 3-5 endpoints, 3-6 tests). See section 4.
+- UI: Prototype tab; calmer grey/blue palette, solid header with a plain "AC" mark, "Why not just ask a chatbot?" cards on both landing pages (answers the viva question), footer names the project; nodes that never ran show "not run".
+- Verified in Chromium: offline fallback path (6/6 tests, 4/4 endpoints, preview, monitor, typing in the preview), the AI path with a stubbed model (3/3 tests, "Code written by AI", "Fix once: not needed"), review hand-off, light, dark and 390px.
+- **Not yet verified with a real AI model** (no key in the cloud sandbox). First thing to check on the user's laptop: build a prototype for the three demo ideas and look at the generated page.
+- Tests: 112 pass (`tests/test_prototype.py`: safety gate, spec, parsing, AI path, one repair with the real error, unsafe code falls back, API stream/monitor/stop/zip).
+
 ### Measured numbers (real runs, keep updated)
 - Retrieval benchmark, 18 questions, MiniLM available: BM25 MRR 0.640 (Top-1 50%, Top-3 72%); vector 0.672 (56%, 78%); hybrid RRF 0.647 (44%, **83% Top-3**). Hybrid is best at Top-3, not at Top-1/MRR; say so if asked.
 - AST vs naive chunking: 91% of 500-char chunks cut through a function; 100% of AST chunks parse.
@@ -161,12 +192,12 @@ Grounded prompts, deterministic critic with quote-vs-disk and compile checks, ho
 ## 8. What is left and what needs improvement (start here next session)
 
 **Must fix / verify next**
-- Roadmap node in the live graph shows "working" until the very end: it really runs in parallel, but its trace step is only recorded after the PRD step. Record a trace step from the roadmap worker thread when it finishes (keep the final summary step too), then check `pipelines.js` still maps it.
 - Market search sometimes falls back (seen once with the user's 10s timeout). Find the exact cause in the log (`logging.basicConfig(level=logging.INFO)`), then either raise the default timeout or shrink the market prompt.
 - Follow-up chat in the new UI was not tested against a live answer yet; check Markdown rendering, `@agent` routing and the error state.
-- Dark mode was built but not visually checked with screenshots; check contrast of tags, bars and the Mermaid "dark" theme.
-- "Stop" only stops watching; the server keeps running the pipeline. Either say so in the UI or add a cancel flag the pipeline checks between steps.
-- The legacy dashboard (`/legacy`) and FastAPI `/docs` still mention the API provider. They are no longer linked from the new UI; delete or clean them before the viva if the teacher might open them.
+- Honesty gap seen offline: when the paper comparison falls back ("Not assessed"), the header still says "5/5 refer to a paper we found, 100% backed by abstracts". Show "not checked" when `prior_art.generation_source == "fallback"`.
+- Fallback idea brief title is the first words of the prompt ("A Mobile App That"); build a better title in code (for example the noun phrase after "app that").
+- Mermaid "dark" theme not yet checked with a live (non-fallback) PRD.
+- Code comments and module docstrings in `app.py` still name the provider (not user-facing).
 
 **UI polish (keep the flat, plain style)**
 - Similarity map: labels overlap when papers cluster (P5/P7). Nudge labels apart or list close points beside the map.
@@ -181,17 +212,12 @@ Grounded prompts, deterministic critic with quote-vs-disk and compile checks, ho
 - `sections_13` holds 14 sections; rename only together with the legacy UI and tests.
 - Retrieval: hybrid RRF is best at Top-3 but not Top-1 on the benchmark; try weighting BM25 vs vectors or a cross-encoder rerank, and report the numbers honestly.
 
-## 9. Open question from the user (do NOT build yet, discuss first)
+## 9. Prototype Builder: next steps
 
-> Can we add a new agent that **codes the idea** as well? It does not need to be good: a very small, basic version is enough. The same agent (or a sibling) would also **build and monitor the product**.
-
-Notes for whoever picks this up (thinking only, nothing decided):
-- Scope that would fit: from the PRD's top 2-3 "Must Have" requirements, generate a tiny runnable skeleton (for example a FastAPI app with one or two endpoints and a stub UI page), write it to a sandbox folder, never into the user's repos.
-- "Build" could mean: generate files, run `python -m py_compile` / `pytest` on them, start the app in a subprocess and hit its health endpoint. "Monitor" could mean: show live status (running / crashed), request count and the last errors from its log in the UI.
-- Reuse what exists: the Critic's compile checks, the Codebase Evaluation pipeline to review the generated code, the SSE stream to show build progress.
-- Honesty rules still apply: label it as a generated prototype, show real build/test output, never claim it works if the checks failed.
-- Risks to settle first: running generated code safely (subprocess, temp dir, time limit, no network), token budget (a code-writing call is large; check `free_tier_budget.py`), and whether the read-only promise of the project still holds (it would stay read-only for the user's code; only the sandbox is written).
-- Ask the user before building: how small is "small", which stack, and whether the demo should run the prototype live.
+- Live check with a real key (see Phase 4). If the model often fails the tests, tighten `SYSTEM_PROMPT` (shorter files, fewer endpoints) before adding retries; keep it to at most 2 AI calls.
+- "Build again" within 10 minutes returns the cached code (same prompt). Add a "fresh build" option (cache bypass) if the user wants a different version.
+- The safety gate is an allowlist plus a subprocess with a time limit, not a container. Say exactly that if asked; do not call it fully sandboxed.
+- Ideas: show a line diff when the Code Fixer changed a file; let the user pick which requirements to build; run the Codebase Evaluation review automatically after a build (costs 1 more call).
 
 ## 10. Backlog (pick from here; keep everything computed and real)
 
@@ -220,3 +246,5 @@ Ideas (Claude):
 - Mermaid adds ~2 MB of lazy chunks to `dist/`; they load only when a diagram is shown.
 - Unused modules: `indexer/repo_map.py`, `indexer/chroma_store.py`, the ruff wrapper in `tools/lint_metrics.py`.
 - `sections_13` keeps its name for compatibility even though it holds 14 sections when prior art ran.
+- Prototype preview is an iframe to `http://127.0.0.1:<port>`; it works when the UI is opened on the same machine (the demo laptop). The generated page's CSP allows framing only from localhost / 127.0.0.1.
+- `pytest` from the repo root never collects `.prototypes/` (dot folders are skipped); each prototype has its own `pytest.ini` so its tests never see the project's conftest.

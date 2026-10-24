@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import Papers from './Papers.jsx'
+import Prototype from './Prototype.jsx'
+import { useRun } from '../useRun.js'
 import TraceView from '../components/TraceView.jsx'
 import FollowUp from '../components/FollowUp.jsx'
 import { Bar, Mermaid, More, SafeLink, Score, Source, Tabs, Tag, downloadText, toneFor } from '../components/ui.jsx'
@@ -272,6 +274,8 @@ export default function StartupResult({ run }) {
   const state = run.result
   const out = state.final_output || {}
   const [tab, setTab] = useState('overview')
+  // Kept here so a build keeps going when you switch tabs.
+  const protoRun = useRun('/api/prototype/build/stream')
   const pa = out.prior_art
   const tabs = [
     { id: 'overview', label: 'Overview' },
@@ -280,6 +284,7 @@ export default function StartupResult({ run }) {
     { id: 'market', label: 'Market' },
     { id: 'risks', label: 'Risks' },
     { id: 'plan', label: 'Plan' },
+    { id: 'prototype', label: 'Prototype' },
     { id: 'trace', label: 'How it ran' },
   ]
   const go = (id) => { setTab(id) }
@@ -298,6 +303,7 @@ export default function StartupResult({ run }) {
       {tab === 'market' && <Market out={out} />}
       {tab === 'risks' && <Risks out={out} />}
       {tab === 'plan' && <Plan out={out} />}
+      {tab === 'prototype' && <Prototype out={out} sessionId={state.session_id} protoRun={protoRun} />}
       {tab === 'trace' && <TraceView state={state} calls={run.calls} />}
       <FollowUp pillar="startup" sessionId={state.session_id} finalOutput={out} />
     </div>

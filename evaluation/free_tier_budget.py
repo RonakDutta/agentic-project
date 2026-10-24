@@ -41,7 +41,7 @@ BUG = "ValueError: Token expired when verify_token validates customer credential
 def measure(run) -> list:
     calls = []
 
-    def spy(messages, model=None, temperature=None, json_mode=False, max_tokens=None):
+    def spy(messages, model=None, temperature=None, json_mode=False, max_tokens=None, **_):
         styled = llm_client._with_style_rules(messages)
         system = next((m["content"] for m in styled if m["role"] == "system"), "")
         calls.append({
@@ -91,6 +91,14 @@ def main() -> None:
     code_calls = measure(lambda: orchestrator.process(
         BUG, repo_path=str(ROOT_DIR / "sample_repo"), force_intent="codebase_analysis"))
     report("Code analysis run (sample_repo, no revision)", code_calls, chain)
+
+    # Prototype Builder: one code-writing call (a fix call only when checks fail).
+    from agents.prototype_agent import build_spec, prototype_builder
+    sample = {"project_title": "Smart Water Meter", "problem_statement": IDEA, "prd": {"functional_requirements": [
+        {"req_id": f"FR-0{i}", "title": t, "description": t, "priority": "Must Have"}
+        for i, t in enumerate(["Live leak alerts", "Daily usage chart", "Flat-wise billing"], 1)]}}
+    proto_calls = measure(lambda: prototype_builder._write_code(build_spec(sample)))
+    report("Prototype build (code-writing call, before any fix)", proto_calls, chain)
     print("\nToken counts are estimates (~4 characters per token). Limits come from secondary")
     print("sources; confirm yours at console.groq.com/settings/limits and set FREE_TIER_* if different.")
 

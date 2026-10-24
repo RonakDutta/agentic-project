@@ -50,3 +50,6 @@ data/cache/
 web/react-app/node_modules/
 # web/react-app/dist/ is committed on purpose: python app.py serves it without Node.
 !web/react-app/dist/
+
+# Generated prototypes (Prototype Builder sandbox)
+.prototypes/

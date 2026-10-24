@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
-import { getJSON, postJSON, streamRun } from './api.js'
+import { useEffect, useState } from 'react'
+import { getJSON, postJSON } from './api.js'
+import { useRun } from './useRun.js'
 import { CODE_PIPELINE, STARTUP_PIPELINE } from './pipelines.js'
 import PipelineGraph from './components/PipelineGraph.jsx'
 import RunPanel from './components/RunPanel.jsx'
@@ -12,6 +13,35 @@ const IDEA_EXAMPLES = [
   ['AI code reviewer', 'An automated AI peer review platform for engineering students that checks their lab code submissions for code quality, linting and AST-based standards.'],
   ['Energy spike monitor', 'A low-cost IoT energy auditing system for residential societies that detects abnormal power spikes using ESP32 with CT current sensors and alerts residents.'],
 ]
+// Short answers to "a chatbot can do this too, what is different?"
+const STARTUP_WHY = [
+  ['Real papers, real links', 'Papers come live from arXiv, Semantic Scholar and OpenAlex. Every link opens the actual paper.'],
+  ['Scores computed in code', 'The rubric and the novelty index are formulas. Same idea, same score, every time.'],
+  ['Checked before it is shown', 'Invented citations are removed. The prototype is tested and started before you see it.'],
+]
+const CODE_WHY = [
+  ['Reads the whole project', 'It parses every file (AST) and builds a call graph, instead of looking at one pasted snippet.'],
+  ['Every answer checked on disk', 'File, function, line numbers and quoted code are compared with the real files.'],
+  ['Read-only', 'Nothing in your project is changed. Suggested fixes are compiled, not applied.'],
+]
+
+function Why({ items }) {
+  return (
+    <div className="stack" style={{ gap: 10 }}>
+      <h3>Why not just ask a chatbot?</h3>
+      <div className="why grid g3">
+        {items.map(([title, text], i) => (
+          <div key={title} className="card">
+            <span className="num">0{i + 1}</span>
+            <strong style={{ fontWeight: 650 }}>{title}</strong>
+            <p>{text}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 const CODE_EXAMPLES = [
   ['Duplicate orders bug', 'Orders sometimes get processed twice when the user double clicks checkout. Where is the bug?'],
   ['Expired token crash', 'ValueError: Token expired when verify_token validates customer credentials during checkout.'],
@@ -44,6 +74,7 @@ function Header({ pillar, setPillar, theme, setTheme }) {
     <header className="topbar">
       <div className="topbar-inner">
         <div className="brand">
+          <div className="brand-mark" aria-hidden="true">AC</div>
           <div>
             <div className="brand-name">Agentic Co-Pilot</div>
             <div className="brand-sub">Multi-agent AI · GGSIPU USAR minor project</div>
@@ -60,38 +91,6 @@ function Header({ pillar, setPillar, theme, setTheme }) {
       </div>
     </header>
   )
-}
-
-function useRun() {
-  const [run, setRun] = useState(null)
-  const abortRef = useRef(null)
-
-  async function start(body) {
-    abortRef.current?.abort()
-    const controller = new AbortController()
-    abortRef.current = controller
-    setRun({ phase: 'running', events: [], calls: [], result: null, error: '', startedAt: Date.now(), endedAt: null, body })
-    try {
-      await streamRun(body, (type, data) => {
-        setRun((r) => {
-          if (!r) return r
-          if (type === 'trace') return { ...r, events: [...r.events, data] }
-          if (type === 'llm') return { ...r, calls: [...r.calls, data] }
-          if (type === 'result') return { ...r, phase: 'done', result: data, endedAt: Date.now() }
-          if (type === 'error') return { ...r, phase: 'error', error: data.error, endedAt: Date.now() }
-          return r
-        })
-      }, controller.signal)
-      setRun((r) => (r && r.phase === 'running' ? { ...r, phase: 'error', error: 'The connection closed before the run finished.', endedAt: Date.now() } : r))
-    } catch (err) {
-      if (err.name === 'AbortError') {
-        setRun((r) => (r ? { ...r, phase: 'error', error: 'Stopped watching this run.', endedAt: Date.now() } : r))
-      } else {
-        setRun((r) => (r ? { ...r, phase: 'error', error: err.message, endedAt: Date.now() } : r))
-      }
-    }
-  }
-  return { run, start, stop: () => abortRef.current?.abort(), reset: () => setRun(null) }
 }
 
 function RunButton({ running, onRun, onStop, disabled }) {
@@ -111,7 +110,7 @@ function StartupPage() {
         <div className="hero">
           <div className="eyebrow accent">Startup Assistance</div>
           <h1 className="display">Is your idea worth building?</h1>
-          <p>Seven agents check it against the market, real research papers and a devil's advocate, then score it with a fixed rubric.</p>
+          <p>Seven agents check it against the market, real research papers and a devil's advocate, score it with a fixed rubric, and can then build a small working prototype.</p>
         </div>
       )}
       <div className="card composer" style={{ marginTop: run ? 24 : 0 }}>
@@ -129,6 +128,7 @@ function StartupPage() {
           <PipelineGraph pipeline={STARTUP_PIPELINE} events={[]} phase="idle" />
         </div>
       )}
+      {!run && <Why items={STARTUP_WHY} />}
       {run && <RunPanel run={run} pipeline={STARTUP_PIPELINE} />}
       {run?.phase === 'error' && <div className="card pad small" style={{ color: 'var(--risk)' }}>{run.error}</div>}
       {run?.result && <StartupResult run={run} />}
@@ -160,6 +160,13 @@ function CodePage() {
     }
   }
   const go = () => repo.trim() && question.trim() && start({ query: question.trim(), repo_path: repo.trim(), force_intent: 'codebase_analysis' })
+
+  // "Review with Codebase Evaluation" on a generated prototype fills in this page.
+  useEffect(() => {
+    const onReview = (e) => { setRepo(e.detail.path); setQuestion(e.detail.question); inspect(e.detail.path) }
+    window.addEventListener('copilot:review', onReview)
+    return () => window.removeEventListener('copilot:review', onReview)
+  })
 
   return (
     <div className="stack-lg">
@@ -195,6 +202,7 @@ function CodePage() {
           <PipelineGraph pipeline={CODE_PIPELINE} events={[]} phase="idle" />
         </div>
       )}
+      {!run && <Why items={CODE_WHY} />}
       {run && <RunPanel run={run} pipeline={CODE_PIPELINE} />}
       {run?.phase === 'error' && <div className="card pad small" style={{ color: 'var(--risk)' }}>{run.error}</div>}
       {run?.result && <CodeResult run={run} repoPath={repo} />}
@@ -205,6 +213,11 @@ function CodePage() {
 export default function App() {
   const [pillar, setPillar] = useState('startup')
   const [theme, setTheme] = useState(readTheme)
+  useEffect(() => {
+    const toCode = () => { setPillar('code'); window.scrollTo({ top: 0 }) }
+    window.addEventListener('copilot:review', toCode)
+    return () => window.removeEventListener('copilot:review', toCode)
+  }, [])
   useEffect(() => {
     document.documentElement.dataset.theme = theme
     try { localStorage.setItem('copilot-theme', theme) } catch { /* private mode */ }
@@ -217,8 +230,8 @@ export default function App() {
         <div hidden={pillar !== 'startup'}><StartupPage /></div>
         <div hidden={pillar !== 'code'}><CodePage /></div>
         <footer className="foot">
-          <span>Read-only. Every score is computed in code; AI text is labelled, and so are fallbacks.</span>
-          <span>Startup Assistance · Codebase Evaluation</span>
+          <span>Every score is computed in code. AI text is labelled, and so are fallbacks.</span>
+          <span>Agentic Co-Pilot · B.Tech minor project, GGSIPU USAR</span>
         </footer>
       </main>
     </>

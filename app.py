@@ -9,14 +9,17 @@ event loop, so /api/health and every other request froze during a run.
 """
 
 import json
+import logging
 import os
 import queue
 import threading
 import time
+import uuid
 from collections import defaultdict, deque
+from contextlib import asynccontextmanager
 from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import Optional
@@ -26,11 +29,21 @@ from core.config import settings
 from core.llm import llm_client
 from indexer import index_cache
 from agents.orchestrator import orchestrator
+from agents.workflow_state import AgentWorkflowState, RunCancelled
+from tools import prototype_sandbox
+
+@asynccontextmanager
+async def _lifespan(_app):
+    yield
+    # Generated prototypes run as child processes; never leave them behind.
+    prototype_sandbox.processes.stop_all()
+
 
 app = FastAPI(
     title="Agentic AI Co-Pilot API",
     description="Multi-Agent RAG System for Idea Validation and Codebase Analysis",
     version="1.0.0",
+    lifespan=_lifespan,
 )
 
 ROOT_DIR = Path(__file__).resolve().parent
@@ -77,7 +90,9 @@ def _local_path_allowed(path: str) -> bool:
     if not roots:
         return True
     target = os.path.realpath(path)
-    allowed = [os.path.realpath(r) for r in roots] + [os.path.realpath(SAMPLE_REPO_PATH)]
+    allowed = [os.path.realpath(r) for r in roots] + [
+        os.path.realpath(SAMPLE_REPO_PATH), os.path.realpath(prototype_sandbox.PROTOTYPE_DIR),
+    ]
     return any(target == root or target.startswith(root + os.sep) for root in allowed)
 
 
@@ -102,6 +117,10 @@ class QueryRequest(BaseModel):
     query: str
     repo_path: Optional[str] = None
     force_intent: Optional[str] = None
+
+
+class PrototypeRequest(BaseModel):
+    session_id: str
 
 
 class InspectRepoRequest(BaseModel):
@@ -161,6 +180,14 @@ def execute_query(req: QueryRequest, request: Request):
         )
 
 
+# run_id -> cancel flag for runs that are streaming right now (POST /api/run/cancel).
+_ACTIVE_RUNS: dict = {}
+
+
+class CancelRequest(BaseModel):
+    run_id: str
+
+
 def _sse(event: str, data: dict) -> str:
     return f"event: {event}\ndata: {json.dumps(data, default=str)}\n\n"
 
@@ -169,7 +196,7 @@ def _sse(event: str, data: dict) -> str:
 def stream_query(req: QueryRequest, request: Request):
     """
     Runs the pipeline and streams real progress as Server-Sent Events:
-    `trace` for every agent step as it is recorded, `llm` for every Groq call
+    `trace` for every agent step as it is recorded, `llm` for every AI model call
     (model, tokens, latency, cache hit) made since the run started, then
     `result` with the full state, or `error`. Nothing is replayed or simulated.
     LLM call events come from the shared client, so two runs at the same time
@@ -179,49 +206,154 @@ def stream_query(req: QueryRequest, request: Request):
     if denied:
         return denied
 
+    return _stream_work(lambda on_trace, cancel: orchestrator.process(
+        query=req.query,
+        repo_path=req.repo_path,
+        force_intent=req.force_intent,
+        on_trace=on_trace,
+        cancel_event=cancel,
+    ).to_dict())
+
+
+def _stream_work(work) -> StreamingResponse:
+    """Runs work(on_trace, cancel_event) -> result dict on a thread and streams it as SSE."""
     events: "queue.Queue" = queue.Queue()
     started = time.time()
+    run_id = uuid.uuid4().hex[:12]
+    cancel = threading.Event()
 
     def worker() -> None:
         try:
-            state = orchestrator.process(
-                query=req.query,
-                repo_path=req.repo_path,
-                force_intent=req.force_intent,
-                on_trace=lambda step: events.put(("trace", step)),
-            )
-            events.put(("result", state.to_dict()))
+            events.put(("result", work(lambda step: events.put(("trace", step)), cancel)))
+        except RunCancelled:
+            events.put(("error", {"error": "Run stopped. No further agent steps were run.", "status": "cancelled"}))
         except Exception as err:  # pragma: no cover - surfaced to the client
+            logging.getLogger(__name__).exception("Streamed run failed")
             events.put(("error", {"error": str(err), "status": "failed"}))
 
     def stream():
+        _ACTIVE_RUNS[run_id] = cancel
         threading.Thread(target=worker, daemon=True, name="run-stream").start()
-        seen_calls = set()
-        last_beat = time.time()
-        yield _sse("start", {"started_at": started})
-        while True:
-            try:
-                kind, payload = events.get(timeout=0.4)
-            except queue.Empty:
-                kind, payload = None, None
-            for call in list(llm_client.recent_calls):
-                key = (call.get("at"), call.get("model"), call.get("tokens"))
-                if call.get("at", 0) >= started and key not in seen_calls:
-                    seen_calls.add(key)
-                    yield _sse("llm", {**call, "elapsed_ms": int((call.get("at", started) - started) * 1000)})
-            if kind is None:
-                if time.time() - last_beat > 5:
-                    last_beat = time.time()
-                    yield _sse("heartbeat", {"elapsed_ms": int((time.time() - started) * 1000)})
-                continue
-            yield _sse(kind, payload)
-            if kind in ("result", "error"):
-                break
+        try:
+            yield from _stream_events(events, started, run_id)
+        finally:
+            # Also reached when the client disconnects: stop the pipeline instead of
+            # letting it spend model calls nobody is watching.
+            cancel.set()
+            _ACTIVE_RUNS.pop(run_id, None)
 
     return StreamingResponse(
         stream(),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+@app.post("/api/run/cancel")
+def cancel_run(req: CancelRequest):
+    """Stops a streaming run before its next agent step (the step already running finishes)."""
+    cancel = _ACTIVE_RUNS.get(req.run_id)
+    if cancel is None:
+        return JSONResponse(status_code=404, content={"error": "No running run with that id.", "status": "not_found"})
+    cancel.set()
+    return {"status": "cancelling", "run_id": req.run_id}
+
+
+def _stream_events(events: "queue.Queue", started: float, run_id: str):
+    seen_calls = set()
+    last_beat = time.time()
+    yield _sse("start", {"started_at": started, "run_id": run_id})
+    while True:
+        try:
+            kind, payload = events.get(timeout=0.4)
+        except queue.Empty:
+            kind, payload = None, None
+        for call in list(llm_client.recent_calls):
+            key = (call.get("at"), call.get("model"), call.get("tokens"))
+            if call.get("at", 0) >= started and key not in seen_calls:
+                seen_calls.add(key)
+                yield _sse("llm", {**call, "elapsed_ms": int((call.get("at", started) - started) * 1000)})
+        if kind is None:
+            if time.time() - last_beat > 5:
+                last_beat = time.time()
+                yield _sse("heartbeat", {"elapsed_ms": int((time.time() - started) * 1000)})
+            continue
+        yield _sse(kind, payload)
+        if kind in ("result", "error"):
+            break
+
+
+@app.post("/api/prototype/build/stream")
+def build_prototype(req: PrototypeRequest, request: Request):
+    """
+    Prototype Builder: turns the idea of a finished Startup Assistance run into a
+    tiny FastAPI + HTML app in a sandbox folder, then checks, tests, starts and
+    probes it. Streams the same SSE events as /api/run/stream; `result` holds
+    the state with `final_output` = the build (files, checks, endpoints).
+    """
+    from agents.conversation_session import session_manager
+    from agents.prototype_agent import prototype_builder
+
+    session = session_manager.get_session(req.session_id)
+    idea = (session.active_entities.get("final_output") if session else None) or {}
+    if idea.get("type") != "idea_validation":
+        return JSONResponse(status_code=404, content={
+            "status": "failed", "error": "No idea result found for this session. Run Startup Assistance first.",
+        })
+    denied = _rate_limited(request)
+    if denied:
+        return denied
+
+    def work(on_trace, cancel):
+        state = AgentWorkflowState(session_id=req.session_id, user_query=idea.get("project_title", ""),
+                                   intent="prototype", listener=on_trace)
+        state.final_output = prototype_builder.build(idea, state)
+        state.finalize()
+        return state.to_dict()
+
+    return _stream_work(work)
+
+
+def _prototype_or_404(proto_id: str):
+    if not prototype_sandbox.valid_id(proto_id) or not prototype_sandbox.proto_path(proto_id).is_dir():
+        raise HTTPException(status_code=404, detail="Prototype not found.")
+
+
+@app.get("/api/prototype/{proto_id}")
+def get_prototype(proto_id: str):
+    """The saved build (files, checks) plus the live monitor status."""
+    _prototype_or_404(proto_id)
+    return {"build": prototype_sandbox.load_build(proto_id), "status": prototype_sandbox.processes.status(proto_id)}
+
+
+@app.get("/api/prototype/{proto_id}/status")
+def prototype_status(proto_id: str):
+    """Monitor: process state, uptime, request counts, errors and recent requests."""
+    _prototype_or_404(proto_id)
+    return prototype_sandbox.processes.status(proto_id)
+
+
+@app.post("/api/prototype/{proto_id}/start")
+def start_prototype(proto_id: str):
+    _prototype_or_404(proto_id)
+    result = prototype_sandbox.processes.start(proto_id)
+    return {**result, "status": prototype_sandbox.processes.status(proto_id)}
+
+
+@app.post("/api/prototype/{proto_id}/stop")
+def stop_prototype(proto_id: str):
+    _prototype_or_404(proto_id)
+    prototype_sandbox.processes.stop(proto_id)
+    return prototype_sandbox.processes.status(proto_id)
+
+
+@app.get("/api/prototype/{proto_id}/download")
+def download_prototype(proto_id: str):
+    _prototype_or_404(proto_id)
+    return Response(
+        content=prototype_sandbox.zip_bytes(proto_id),
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="prototype-{proto_id}.zip"'},
     )
 
 
@@ -332,7 +464,7 @@ def list_models():
     for m in [settings.primary_model] + (settings.model_chain or []):
         if m and m not in seen:
             seen.add(m)
-            models_list.append({"id": m, "object": "model", "owned_by": "groq", "permission": []})
+            models_list.append({"id": m, "object": "model", "owned_by": "copilot", "permission": []})
     return JSONResponse(content={"object": "list", "data": models_list})
 
 
