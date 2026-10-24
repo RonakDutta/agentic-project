@@ -167,14 +167,14 @@ Grounded prompts, deterministic critic with quote-vs-disk and compile checks, ho
 - Stable tab switching in Startup Assistance and Codebase Evaluation: removed `window.scrollTo({ top: 0 })` on tab changes so switching tabs (e.g. Overview to Research papers) updates content in place without jumping to the top of the page.
 - Tests: `tests/test_run_stream.py`; total 104 pass.
 
-### Phase 3b: fixes from the "must fix" list (done, branch `claude/lucid-newton-y54tpw`, PR #4 open)
+### Phase 3b: fixes from the "must fix" list (done, merged in PR #4)
 - Roadmap records its own trace step from its worker thread with its real duration (`_roadmap_worker`), so the live graph shows it done while the debate runs. The join is a new `Report Compiler` step (mapped in `pipelines.js` and `graph.py`). `add_trace` now holds a lock (worker threads record steps).
 - Stop really stops: `/api/run/cancel` + cancel on stream close; the pipeline raises `RunCancelled` before the next agent step and the UI says "Run stopped. No further agent steps will run."
 - Provider name removed from `/docs` text, `/v1/models` and the two legacy UI messages.
 - Dark mode checked with screenshots (overview, research papers, scorecard, plan): readable, tags and bars have enough contrast.
 - Tests: 104 pass (roadmap step order, unique step ids, cancel mid-run, cancel 404).
 
-### Phase 4: Prototype Builder + UI pass (done, branch `claude/lucid-newton-y54tpw`, PR #4 open)
+### Phase 4: Prototype Builder + UI pass (done, merged in PR #4)
 - Answer to the open question in old section 9: built, small (FastAPI + one HTML page, 3-5 endpoints, 3-6 tests). See section 4.
 - UI: Prototype tab; calmer grey/blue palette, solid header with a plain "AC" mark, "Why not just ask a chatbot?" cards on both landing pages (answers the viva question), footer names the project; nodes that never ran show "not run".
 - Verified in Chromium: offline fallback path (6/6 tests, 4/4 endpoints, preview, monitor, typing in the preview), the AI path with a stubbed model (3/3 tests, "Code written by AI", "Fix once: not needed"), review hand-off, light, dark and 390px.
@@ -191,14 +191,24 @@ Grounded prompts, deterministic critic with quote-vs-disk and compile checks, ho
 
 ## 8. What is left and what needs improvement (start here next session)
 
-**Must fix / verify next**
-- Merge PR #4 (if not merged yet), then on the user's laptop with the real key: run the three demo ideas and build a prototype for each. Check the generated page looks right, tests pass, and the monitor counts clicks in the preview. Record the results under "Measured numbers".
+**Must fix / verify next (in this order)**
+- **Prototype safety gap (small, fix first):** `safety_check` allows anything under `fastapi`, so AI code could `from fastapi.responses import FileResponse` (or use `StaticFiles`, `getattr(fastapi, ...)`) and serve any file on the laptop over localhost. Verified: both return no issues today. Fix in `tools/prototype_sandbox.py`: block the names `FileResponse`, `StaticFiles`, `getattr`, `setattr`, `delattr` and imports of `fastapi.staticfiles`, `fastapi.responses.FileResponse`, `starlette` in AI files (main.py is ours and may keep them); add a test next to `test_safety_check_blocks_unsafe_code`.
+- **First live check with the real key** (never done; the cloud session had no key): run the three demo ideas, then build a prototype for each. Check the generated page looks right, tests pass, the Code Fixer works when needed, and the monitor counts clicks in the preview. Record pass rate, tokens and build time under "Measured numbers" (real numbers only).
 - Market search sometimes falls back (seen once with the user's 10s timeout). Find the exact cause in the log (`logging.basicConfig(level=logging.INFO)`), then either raise the default timeout or shrink the market prompt.
 - Follow-up chat in the new UI was not tested against a live answer yet; check Markdown rendering, `@agent` routing and the error state.
 - Honesty gap seen offline: when the paper comparison falls back ("Not assessed"), the header still says "5/5 refer to a paper we found, 100% backed by abstracts". Show "not checked" when `prior_art.generation_source == "fallback"`.
 - Fallback idea brief title is the first words of the prompt ("A Mobile App That"); build a better title in code (for example the noun phrase after "app that").
 - Mermaid "dark" theme not yet checked with a live (non-fallback) PRD.
 - Code comments and module docstrings in `app.py` still name the provider (not user-facing).
+
+**Prototype Builder gaps (known, not fixed)**
+- No Stop for a build: the prototype stream ignores `cancel_event` and the tab has no Stop button. A build is short (about 30-60 s), but wire `cancel_event` checks between its steps if the user asks.
+- Old builds are never deleted: `.prototypes/<id>/` folders and their `requests.log` / `server.log` grow on disk. Add a cleanup (for example keep the last 10 builds) before a long demo day.
+- Processes: they stop on Ctrl+C, SIGTERM (FastAPI lifespan) and after 20 minutes, but not if the server is killed hard (SIGKILL, Task Manager, closing the console window on Windows). Then a `python -m uvicorn main:app` child can stay alive until reboot.
+- The endpoint checker only calls GET routes without path parameters; POST/PATCH routes are "covered by the tests" (shown as such, not as checked).
+- Loading the preview counts as "requests from people" (that is honest: a person is viewing it), so the count is never 0 after a build with the preview open.
+- Builds share the `RUNS_PER_MINUTE` limit with agent runs.
+- Stop in Codebase Evaluation only takes effect before the diagnosis step (the code track has a single `_run_step`); the code run is short anyway.
 
 **UI polish (keep the flat, plain style)**
 - Similarity map: labels overlap when papers cluster (P5/P7). Nudge labels apart or list close points beside the map.
@@ -224,6 +234,18 @@ Grounded prompts, deterministic critic with quote-vs-disk and compile checks, ho
 
 From the user:
 - Keep extending the research-paper check (it is the wow factor).
+- **Do not run or add benchmark tests** unless asked (user, Oct 2026). They want novel, visible features that make it a good college project, not more measurements.
+- **Keep it modest:** "it should look like college students made this, not too crazy". No flashy redesigns; small, clear, flat screens.
+- They will be asked in the viva "ChatGPT or Claude can do this too, what is different?". Keep the "Why not just ask a chatbot?" cards (in `App.jsx`) true: if a feature changes, update the card text.
+
+Suggestions already given to the user (ranked; **ask before building any of them**):
+1. ~~Prototype Builder~~ (built, Phase 4).
+2. **"Plain chatbot vs our pipeline" screen:** send the same idea to one bare prompt, extract the papers and competitors it names, check each live against arXiv / the web, mark invented ones "not found". A live demo, not a benchmark. Answers the viva question on screen.
+3. **Prove the bug is real:** for a code finding, generate a failing test in a temp copy, apply the suggested fix, run again and show it passes. Can reuse `tools/prototype_sandbox.py` (subprocess, time limit, minimal env).
+4. **Patent check next to papers:** closest patent from a free patent API (for example PatentsView) beside the closest paper.
+5. **Is the field growing?** Papers per year for the matched topic plus the closest paper's citation count.
+6. **Claim map:** each key assumption linked to the source that supports or contradicts it; unsupported ones flagged.
+7. **Run receipt:** save input, sources, model, time and a hash of each run so a saved run can be reopened and shown to be real.
 
 Ideas (Claude):
 1. **Prior art+:** Semantic Scholar citation graph of the closest paper; "papers per year" chart (is the field growing?); let the Devil's advocate and Judge cite papers; pre-warm the paper cache for the 3 demo ideas; free S2/OpenAlex keys on the demo laptop.
@@ -249,3 +271,7 @@ Ideas (Claude):
 - `sections_13` keeps its name for compatibility even though it holds 14 sections when prior art ran.
 - Prototype preview is an iframe to `http://127.0.0.1:<port>`; it works when the UI is opened on the same machine (the demo laptop). The generated page's CSP allows framing only from localhost / 127.0.0.1.
 - `pytest` from the repo root never collects `.prototypes/` (dot folders are skipped); each prototype has its own `pytest.ini` so its tests never see the project's conftest.
+- Prototype subprocesses get a minimal environment (`_sandbox_env`): no API key and no proxy variables. HTTP calls from the builder to the prototype use an opener with no proxy (`_LOCAL`), because a system proxy would otherwise catch `127.0.0.1` requests.
+- Two "Code Writer" trace steps on a fallback build (the failed AI attempt, then "using the built-in prototype") are intended; the graph shows the last one.
+- Cloud sessions: there is no `GROQ_API_KEY`, so every AI step falls back. Installing `sentence-transformers` is slow and big; without it retrieval and paper similarity use TF-IDF, so numbers differ from the user's laptop (MiniLM). Install with `grep -v -E "sentence-transformers|chromadb" requirements.txt` for quick test runs; `npm install` in `web/react-app` before `npm run build`.
+- When testing the app in a cloud shell, do not use `pkill -f "python app.py"`: the pattern matches the shell running it and kills the command. Save the PID (`echo $! > file`) and `kill -INT` it.
