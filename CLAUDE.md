@@ -26,7 +26,7 @@ The user's goal: **impress teachers in a viva**. That only works if everything s
 **The research-paper check is the headline feature.** Keep it prominent in every UI: closest paper with links (page / PDF / DOI), every matched paper with links, novelty index, similarity map, "where the paper is stronger" vs "what your idea adds", Related Work + BibTeX.
 
 **UI style (the user rejects "AI-looking" design)**
-- No pill shapes, no status dots, no pulsing or animated effects, no gradients, no uppercase letter-spaced labels, no fancy or serif display fonts, no arrows in buttons, no glow/shadows. Flat, square-ish corners (4-6px), one plain sans-serif (Inter) plus a mono font for code only.
+- No pill shapes, no status dots, no pulsing or animated effects, no gradients, no uppercase letter-spaced labels, no fancy or serif display fonts, no arrows in buttons, no glow/shadows. Flat, square-ish corners (4-6px). Fonts: the computer's own system font (Segoe UI / San Francisco / Roboto) and system mono (Consolas / Menlo) for code only. The user rejected Inter and the bundled web fonts as "Claude-style"; do not add web fonts back.
 - **Less text.** The teacher did not read long pages last time. Numbers and short labels first; details behind "Show more" / "How is this computed?".
 - **Language:** easy to read but not childish. Keep a few real terms (AST, embeddings, call graph, novelty index) with a short explanation; no heavy jargon or buzzwords; no em dashes in user-facing text.
 - **Do not show that the app uses an external API.** No "Groq", "free tier", "free tokens", "API key" or rate-limit wording in the new UI. Use neutral wording ("Engine ready", "AI model", "Engine busy"). Model ids are shown without the provider prefix (`modelName()` in `ui.jsx`); backend step text goes through `plainText()`.
@@ -126,7 +126,8 @@ PRD (session) → Spec Planner (top 3 requirements, code) → Code Writer (1 AI 
 - `indexer/`: `ast_parser.py`, `bm25_search.py`, `vector_search.py` (MiniLM once per process), `hybrid_retriever.py`, `index_cache.py`, `github_ingest.py`.
 - `tools/search_tool.py`: Tavily → `ddgs` → DDG Instant Answer → labelled offline references.
 
-**New UI (`web/react-app/src`, React 18 + Vite, no Tailwind, fonts bundled via @fontsource)**
+**New UI (`web/react-app/src`, React 18 + Vite, no Tailwind, system fonts, no web fonts)**
+- `Landing.jsx`: start page at `/` (project sheet, two tools, the real pipeline graphs, chatbot comparison table). "Open the app" goes to `#/app` (or `#/app/code`); clicking the name in the app header goes back. Keep its facts true when the pipeline changes.
 - `App.jsx`: header (pillar switch, engine status, theme toggle), `StartupPage`, `CodePage`, "Why not just ask a chatbot?" cards. Both pages stay mounted so a run survives switching. `useRun.js`: SSE run state (`useRun(url)`, also used for prototype builds).
 - `api.js`: `streamRun()` (fetch + SSE parser), `getJSON`, `postJSON`.
 - `pipelines.js`: graph definitions matched to trace `agent_name`s; `nodeStates()` derives done / working / fallback from real events and the dependency graph.
@@ -188,6 +189,10 @@ Grounded prompts, deterministic critic with quote-vs-disk and compile checks, ho
 - Sandbox env passes site-packages and Windows user folders (no secrets); runtime pre-check.
 - `tests/conftest.py` now forces `LLM_DISK_CACHE=0`/`PAPER_CACHE=0` (a shell exporting them made 3-10 LLM tests fail on stale cache).
 - Live check (real key, cloud): grocery-split idea → AI wrote 209 lines, 5/5 tests, 3/3 endpoints, app running with preview, 1 AI call, 3.5k tokens, 6.8 s build.
+
+### Phase 6: landing page + plain fonts (same branch)
+- New landing page (`Landing.jsx`): flat, no pills/gradients/dots; a bordered "project sheet" table, two tools side by side, the real idle pipeline graphs, a dark comparison band ("Can't a chatbot do this?"). Checked at 1280px, 390px and dark mode (no sideways scroll).
+- Inter / JetBrains Mono / Instrument Serif removed (packages and imports); system font stack everywhere, including Mermaid. Favicon is the plain blue "AC" mark.
 
 ### Measured numbers (real runs, keep updated)
 - Retrieval benchmark, 18 questions, MiniLM available: BM25 MRR 0.640 (Top-1 50%, Top-3 72%); vector 0.672 (56%, 78%); hybrid RRF 0.647 (44%, **83% Top-3**). Hybrid is best at Top-3, not at Top-1/MRR; say so if asked.

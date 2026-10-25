@@ -70,7 +70,7 @@ function loadMermaid(dark) {
     mermaidPromise = import('mermaid').then((m) => m.default)
   }
   return mermaidPromise.then((mermaid) => {
-    mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', theme: dark ? 'dark' : 'neutral', fontFamily: 'Inter Variable, sans-serif' })
+    mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', theme: dark ? 'dark' : 'neutral', fontFamily: "-apple-system, 'Segoe UI', Roboto, Arial, sans-serif" })
     return mermaid
   })
 }

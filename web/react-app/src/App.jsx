@@ -7,6 +7,7 @@ import RunPanel from './components/RunPanel.jsx'
 import StartupResult from './startup/StartupResult.jsx'
 import CodeResult from './code/CodeResult.jsx'
 import { Tag } from './components/ui.jsx'
+import Landing from './Landing.jsx'
 
 const IDEA_EXAMPLES = [
   ['Smart water meter', 'A smart ultrasonic water meter for residential buildings using LoRaWAN to detect pipe leakages in real time and estimate daily household consumption.'],
@@ -53,7 +54,7 @@ function readTheme() {
   try { return localStorage.getItem('copilot-theme') || 'light' } catch { return 'light' }
 }
 
-function Header({ pillar, setPillar, theme, setTheme }) {
+function Header({ pillar, setPillar, theme, setTheme, onHome }) {
   const [health, setHealth] = useState(null)
   useEffect(() => {
     let alive = true
@@ -76,7 +77,7 @@ function Header({ pillar, setPillar, theme, setTheme }) {
         <div className="brand">
           <div className="brand-mark" aria-hidden="true">AC</div>
           <div>
-            <div className="brand-name">Agentic Co-Pilot</div>
+            <button className="brand-name link" onClick={onHome} title="Back to the start page">Agentic Co-Pilot</button>
             <div className="brand-sub">Multi-agent AI · GGSIPU USAR minor project</div>
           </div>
         </div>
@@ -210,9 +211,23 @@ function CodePage() {
   )
 }
 
+// "#/app" (or "#/app/code") shows the tools; anything else shows the landing page.
+function readRoute() {
+  const hash = window.location.hash
+  return { inApp: hash.startsWith('#/app'), pillar: hash === '#/app/code' ? 'code' : 'startup' }
+}
+
 export default function App() {
-  const [pillar, setPillar] = useState('startup')
+  const [route, setRoute] = useState(readRoute)
+  const [pillar, setPillar] = useState(route.pillar)
   const [theme, setTheme] = useState(readTheme)
+  useEffect(() => {
+    const onHash = () => { const r = readRoute(); setRoute(r); if (r.inApp) setPillar(r.pillar) }
+    window.addEventListener('hashchange', onHash)
+    return () => window.removeEventListener('hashchange', onHash)
+  }, [])
+  const enter = (p) => { window.location.hash = p === 'code' ? '#/app/code' : '#/app'; window.scrollTo({ top: 0 }) }
+  const home = () => { window.location.hash = ''; window.scrollTo({ top: 0 }) }
   useEffect(() => {
     const toCode = () => { setPillar('code'); window.scrollTo({ top: 0 }) }
     window.addEventListener('copilot:review', toCode)
@@ -222,9 +237,10 @@ export default function App() {
     document.documentElement.dataset.theme = theme
     try { localStorage.setItem('copilot-theme', theme) } catch { /* private mode */ }
   }, [theme])
+  if (!route.inApp) return <Landing onEnter={enter} theme={theme} setTheme={setTheme} />
   return (
     <>
-      <Header pillar={pillar} setPillar={setPillar} theme={theme} setTheme={setTheme} />
+      <Header pillar={pillar} setPillar={setPillar} theme={theme} setTheme={setTheme} onHome={home} />
       <main className="shell">
         {/* Both pages stay mounted so a running review keeps going when you switch. */}
         <div hidden={pillar !== 'startup'}><StartupPage /></div>
