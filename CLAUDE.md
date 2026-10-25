@@ -26,7 +26,7 @@ The user's goal: **impress teachers in a viva**. That only works if everything s
 **The research-paper check is the headline feature.** Keep it prominent in every UI: closest paper with links (page / PDF / DOI), every matched paper with links, novelty index, similarity map, "where the paper is stronger" vs "what your idea adds", Related Work + BibTeX.
 
 **UI style (the user rejects "AI-looking" design)**
-- No pill shapes, no status dots, no pulsing or animated effects, no gradients, no uppercase letter-spaced labels, no fancy or serif display fonts, no arrows in buttons, no glow/shadows. Flat, square-ish corners (4-6px), one plain sans-serif (Inter) plus a mono font for code only.
+- No pill shapes, no status dots, no pulsing or animated effects, no gradients, no uppercase letter-spaced labels, no fancy or serif display fonts, no arrows in buttons, no glow/shadows. Flat, square-ish corners (4-6px). Fonts: the computer's own system font (Segoe UI / San Francisco / Roboto) and system mono (Consolas / Menlo) for code only. The user rejected Inter and the bundled web fonts as "Claude-style"; do not add web fonts back.
 - **Less text.** The teacher did not read long pages last time. Numbers and short labels first; details behind "Show more" / "How is this computed?".
 - **Language:** easy to read but not childish. Keep a few real terms (AST, embeddings, call graph, novelty index) with a short explanation; no heavy jargon or buzzwords; no em dashes in user-facing text.
 - **Do not show that the app uses an external API.** No "Groq", "free tier", "free tokens", "API key" or rate-limit wording in the new UI. Use neutral wording ("Engine ready", "AI model", "Engine busy"). Model ids are shown without the provider prefix (`modelName()` in `ui.jsx`); backend step text goes through `plainText()`.
@@ -42,7 +42,7 @@ The user's goal: **impress teachers in a viva**. That only works if everything s
 ```bash
 pip install -r requirements.txt
 python app.py                                   # http://127.0.0.1:8000  (new UI at /, old UI at /legacy)
-GROQ_API_KEY= pytest -q                         # 112 pass, 3 live smoke tests skip without a key
+GROQ_API_KEY= pytest -q                         # 122 pass, 3 live smoke tests skip without a key
 python evaluation/compare_baseline.py           # naive vs AST chunking (computed)
 python evaluation/retrieval_benchmark.py        # BM25 / vector / hybrid Top-1, Top-3, MRR
 python evaluation/free_tier_budget.py           # token plan vs the model limits (no quota used)
@@ -78,14 +78,15 @@ Idea brief ─┬─ Market search (web) ── Devil's advocate ── Judge �
 ### Prototype Builder (`agents/prototype_agent.py` + `tools/prototype_sandbox.py`)
 ```
 PRD (session) → Spec Planner (top 3 requirements, code) → Code Writer (1 AI call: features.py, static/index.html, test_features.py)
-  → Safety Check (AST import allowlist, no eval/exec/open/dunders, no outside scripts) → Compiler → Test Runner (pytest subprocess)
+  → Safety Check (AST import allowlist, no eval/exec/open/dunders, no outside scripts) → Compiler → Page Check (page /api paths vs routes) → Test Runner (pytest subprocess)
   → Code Fixer (0-1 AI call with the real error output) → App Runner (uvicorn on 127.0.0.1) → Endpoint Checker (every GET from /openapi.json)
 ```
 - `main.py` (server + request log for the monitor) and `static/base.css` are fixed templates (`agents/prototype_templates.py`); the AI only writes the three idea-specific files.
 - Unsafe or non-compiling code after one fix → labelled built-in "MVP planner" prototype (`generation_source: "fallback"`). Failing tests after the fix are shown as they are (the app still runs).
-- Sandbox: `.prototypes/<id>/` (gitignored, `PROTOTYPE_DIR`), minimal env (no API key, no proxy), CSP on the page, one prototype running at a time, auto-stop after `PROTOTYPE_TTL_SECONDS` (20 min), stopped on server shutdown (FastAPI lifespan; `atexit` does not run on SIGTERM).
+- Sandbox: `~/.agentic-copilot/prototypes/<id>/` (`PROTOTYPE_DIR`; outside the project because `python app.py` auto-reloads on .py changes in the project, which used to kill every prototype right after it started), minimal env (no API key, no proxy), CSP on the page, one prototype running at a time, auto-stop after `PROTOTYPE_TTL_SECONDS` (20 min), stopped on server shutdown (FastAPI lifespan; `atexit` does not run on SIGTERM).
 - Monitor = the prototype's own `requests.log`; requests from the builder's checks carry `X-Prototype-Check` and are counted apart from people.
-- Budget: 1 call reserves ~4.6k tokens (`prototype` 3800 max), the fix ~5k (`prototype_fix` 3000); both fit one model's 8k/minute. The call uses `timeout=90` and may wait up to 65 s for a window (`generate(timeout=, max_wait=)`).
+- Budget: `prototype` 4800 max tokens (reasoning tokens count too), `prototype_fix` 4000; both fit one model's 8k/minute. Calls use `min_answer_tokens` (never shrunk below 4000/3000: a shrunk code answer is cut off; it waits up to 65 s for a window instead), `use_cache=False` (Build again = new code) and `timeout=90`. Cut-off answers (`finish_reason == "length"`) are never cached anywhere.
+- A file missing or cut off in the answer goes to the Code Fixer (asked for just that file), not straight to the fallback. `runtime_check()` fails the build with a clear pip message if fastapi/uvicorn/pytest/httpx cannot be imported in the sandbox env (site-packages dirs are passed via PYTHONPATH so `pip install --user` setups work).
 
 ### API (FastAPI, `app.py`)
 | Endpoint | Purpose |
@@ -125,7 +126,8 @@ PRD (session) → Spec Planner (top 3 requirements, code) → Code Writer (1 AI 
 - `indexer/`: `ast_parser.py`, `bm25_search.py`, `vector_search.py` (MiniLM once per process), `hybrid_retriever.py`, `index_cache.py`, `github_ingest.py`.
 - `tools/search_tool.py`: Tavily → `ddgs` → DDG Instant Answer → labelled offline references.
 
-**New UI (`web/react-app/src`, React 18 + Vite, no Tailwind, fonts bundled via @fontsource)**
+**New UI (`web/react-app/src`, React 18 + Vite, no Tailwind, system fonts, no web fonts)**
+- `Landing.jsx`: start page at `/` (project sheet, two tools, the real pipeline graphs, chatbot comparison table). "Open the app" goes to `#/app` (or `#/app/code`); clicking the name in the app header goes back. Keep its facts true when the pipeline changes.
 - `App.jsx`: header (pillar switch, engine status, theme toggle), `StartupPage`, `CodePage`, "Why not just ask a chatbot?" cards. Both pages stay mounted so a run survives switching. `useRun.js`: SSE run state (`useRun(url)`, also used for prototype builds).
 - `api.js`: `streamRun()` (fetch + SSE parser), `getJSON`, `postJSON`.
 - `pipelines.js`: graph definitions matched to trace `agent_name`s; `nodeStates()` derives done / working / fallback from real events and the dependency graph.
@@ -181,7 +183,30 @@ Grounded prompts, deterministic critic with quote-vs-disk and compile checks, ho
 - **Not yet verified with a real AI model** (no key in the cloud sandbox). First thing to check on the user's laptop: build a prototype for the three demo ideas and look at the generated page.
 - Tests: 112 pass (`tests/test_prototype.py`: safety gate, spec, parsing, AI path, one repair with the real error, unsafe code falls back, API stream/monitor/stop/zip).
 
+### Phase 5: Prototype Builder made to really run (branch `claude/wonderful-bell-xg4i7k`)
+- **Root cause of "builds but does not run":** prototypes were written to `.prototypes/` inside the project; `python app.py` runs uvicorn with auto-reload, so writing `main.py` restarted the server, and the shutdown stopped the prototype (log: `StatReload detected changes in '.prototypes/<id>/main.py'`). Moved to `~/.agentic-copilot/prototypes`.
+- AI path: full answer budget or wait (no shrunk, cut-off code), no caching of code answers, tolerant file parser, missing/cut file goes to the fixer, new deterministic Page Check, page skeleton in the prompt, realistic sample data.
+- Sandbox env passes site-packages and Windows user folders (no secrets); runtime pre-check.
+- `tests/conftest.py` now forces `LLM_DISK_CACHE=0`/`PAPER_CACHE=0` (a shell exporting them made 3-10 LLM tests fail on stale cache).
+- Live check (real key, cloud): grocery-split idea → AI wrote 209 lines, 5/5 tests, 3/3 endpoints, app running with preview, 1 AI call, 3.5k tokens, 6.8 s build.
+
+### Phase 6: landing page + plain fonts (same branch)
+- New landing page (`Landing.jsx`): flat, no pills/gradients/dots; a bordered "project sheet" table, two tools side by side, the real idle pipeline graphs, a dark comparison band ("Can't a chatbot do this?"). Checked at 1280px, 390px and dark mode (no sideways scroll).
+- Inter / JetBrains Mono / Instrument Serif removed (packages and imports); system font stack everywhere, including Mermaid. Favicon is the plain blue "AC" mark.
+
+### Phase 7: Groq client tuning + must-fix items (same branch)
+- `Groq(max_retries=0)`: the SDK's 2 hidden retries waited on a rate-limited model instead of rotating, and tripled timeouts.
+- Per-call timeout = max(configured, 8 s + 1 s per 200 answer tokens): the user's `REQUEST_TIMEOUT_SECONDS=10` cut off normal 11-12 s answers (measured 11.5 s on gpt-oss-120b) and parked the model. `SLOW_MODEL_COOLDOWN_SECONDS` 180 → 60.
+- `_ledger_wait(model, needed)` waits until enough bookings leave the minute window (it used to wait only for the oldest one, so big calls gave up after ~20 s).
+- Prototype safety gap closed (FileResponse, StaticFiles, starlette, fastapi.staticfiles, getattr/setattr/delattr blocked in AI files).
+- Unreadable prototype answer: one rewrite call with a format reminder (still max 2 AI calls), raw answer saved to `ai_answer.log`; parser accepts `~~~` and an outer ```` wrapper.
+- Fallback idea title from the idea text ("Split Shared Grocery Bills", not "A Mobile App That"); Research papers tab says "Not checked" when the comparison fell back.
+- Landing page uses the mid-term report: course ARP-455, student, guide, session, research gap (report 3.1), "Built on this research" with arXiv links (ids checked against arxiv.org).
+
 ### Measured numbers (real runs, keep updated)
+- Live idea run (Oct 2026, cloud, real key): 7 calls, ~16k tokens, 13 s, no fallbacks; every answer `finish_reason=stop` and used about half its max_tokens. Devil's advocate, Judge and PRD went to gpt-oss-20b because gpt-oss-120b's 8k/minute was used by the parallel steps (by design).
+- Code runs on `sample_repo`: 1 call, ~2.5k tokens, 3-13 s.
+- Prototype, 3 builds back to back after an idea run: 3/3 AI-written; 2/3 all tests passed, 1 had 3/5 after its fix (shown as is); 8 s when budget is free, ~55 s when it waits for the token window.
 - Retrieval benchmark, 18 questions, MiniLM available: BM25 MRR 0.640 (Top-1 50%, Top-3 72%); vector 0.672 (56%, 78%); hybrid RRF 0.647 (44%, **83% Top-3**). Hybrid is best at Top-3, not at Top-1/MRR; say so if asked.
 - AST vs naive chunking: 91% of 500-char chunks cut through a function; 100% of AST chunks parse.
 - Water-meter idea (live): 8 arXiv papers, novelty 39/100 "Closely related work exists", 5/5 comparisons kept, 85% abstract support; full idea run ~60-70s uncached.
@@ -192,14 +217,12 @@ Grounded prompts, deterministic critic with quote-vs-disk and compile checks, ho
 ## 8. What is left and what needs improvement (start here next session)
 
 **Must fix / verify next (in this order)**
-- **Prototype safety gap (small, fix first):** `safety_check` allows anything under `fastapi`, so AI code could `from fastapi.responses import FileResponse` (or use `StaticFiles`, `getattr(fastapi, ...)`) and serve any file on the laptop over localhost. Verified: both return no issues today. Fix in `tools/prototype_sandbox.py`: block the names `FileResponse`, `StaticFiles`, `getattr`, `setattr`, `delattr` and imports of `fastapi.staticfiles`, `fastapi.responses.FileResponse`, `starlette` in AI files (main.py is ours and may keep them); add a test next to `test_safety_check_blocks_unsafe_code`.
-- **First live check with the real key** (never done; the cloud session had no key): run the three demo ideas, then build a prototype for each. Check the generated page looks right, tests pass, the Code Fixer works when needed, and the monitor counts clicks in the preview. Record pass rate, tokens and build time under "Measured numbers" (real numbers only).
-- Market search sometimes falls back (seen once with the user's 10s timeout). Find the exact cause in the log (`logging.basicConfig(level=logging.INFO)`), then either raise the default timeout or shrink the market prompt.
+- **Live check of all three demo ideas** (one prototype checked live in Phase 5): run the three demo ideas, then build a prototype for each. Check the generated page looks right, tests pass, the Code Fixer works when needed, and the monitor counts clicks in the preview. Record pass rate, tokens and build time under "Measured numbers" (real numbers only).
+- Market search sometimes fell back with the user's 10 s timeout. Likely fixed by the timeout floor (Phase 7); confirm on the laptop.
 - Follow-up chat in the new UI was not tested against a live answer yet; check Markdown rendering, `@agent` routing and the error state.
-- Honesty gap seen offline: when the paper comparison falls back ("Not assessed"), the header still says "5/5 refer to a paper we found, 100% backed by abstracts". Show "not checked" when `prior_art.generation_source == "fallback"`.
-- Fallback idea brief title is the first words of the prompt ("A Mobile App That"); build a better title in code (for example the noun phrase after "app that").
 - Mermaid "dark" theme not yet checked with a live (non-fallback) PRD.
 - Code comments and module docstrings in `app.py` still name the provider (not user-facing).
+- The mid-term report (section 10) lists ChromaDB, tree-sitter and Anthropic/OpenAI/Gemini; the code uses an in-memory BM25 + MiniLM index, Python `ast` and Groq-hosted models. The user should align the final report.
 
 **Prototype Builder gaps (known, not fixed)**
 - No Stop for a build: the prototype stream ignores `cancel_event` and the tab has no Stop button. A build is short (about 30-60 s), but wire `cancel_event` checks between its steps if the user asks.

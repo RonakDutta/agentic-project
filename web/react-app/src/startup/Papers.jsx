@@ -152,10 +152,14 @@ function Comparisons({ pa }) {
     <div className="stack">
       <div className="row between">
         <h3>Your idea vs each paper</h3>
-        <span className="tiny muted">
-          Checked: {v.comparisons_kept || 0}/{v.comparisons_returned || v.comparisons_kept || 0} refer to a paper we found
-          · {v.citations_removed || 0} wrong citations removed · {Math.round((v.avg_abstract_support || 0) * 100)}% backed by abstracts
-        </span>
+        {pa.generation_source === 'fallback' ? (
+          <span className="tiny muted">Not checked: the AI comparison did not run, so these rows are built from the abstracts only.</span>
+        ) : (
+          <span className="tiny muted">
+            Checked: {v.comparisons_kept || 0}/{v.comparisons_returned || v.comparisons_kept || 0} refer to a paper we found
+            · {v.citations_removed || 0} wrong citations removed · {Math.round((v.avg_abstract_support || 0) * 100)}% backed by abstracts
+          </span>
+        )}
       </div>
       <div className="grid g2">
         {(pa.comparisons || []).map((c) => (

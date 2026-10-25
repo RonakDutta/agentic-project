@@ -62,9 +62,14 @@ AGENT_MAX_TOKENS = {
     "prior_art": 1300,
     "followup": 900,
     # Prototype builder: three small files in one answer, then at most one fix.
-    "prototype": 3800,
-    "prototype_fix": 3000,
+    # Reasoning tokens count against these too; with ~1.8k of prompt the code call
+    # still fits one model's 8k-per-minute window.
+    "prototype": 4800,
+    "prototype_fix": 4000,
 }
+
+# Floor for one request's timeout; generate() adds ~1s per 200 answer tokens.
+MIN_TIMEOUT_SECONDS = 8
 
 # Rate-limit headers come back like "5m45.6s" or "622ms".
 _RESET_RE = re.compile(r"(\d+(?:\.\d+)?)(ms|h|m|s)")
@@ -397,7 +402,10 @@ class LLMClient:
                 )
             return
         if self.client is None:
-            self.client = Groq(api_key=api_key)
+            # max_retries=0: generate() does its own retries and model rotation. The SDK's
+            # default (2 hidden retries) waited on a rate-limited model instead of switching
+            # to one with budget, and turned one timeout into three before we saw it.
+            self.client = Groq(api_key=api_key, max_retries=0)
             logger.info("[LLMClient] Groq client initialized.")
 
     @property
@@ -534,6 +542,7 @@ class LLMClient:
         prompt_tokens: int,
         base_max_tokens: int,
         attempted: set,
+        min_answer: int = 0,
     ) -> Optional[Tuple[str, int]]:
         """
         Picks a model and the answer size it can afford right now.
@@ -541,20 +550,21 @@ class LLMClient:
         caller should wait for a window to refill instead of firing a doomed request.
         """
         with self._lock:
-            for needed in (prompt_tokens + base_max_tokens, prompt_tokens + settings.min_tokens_floor):
+            for needed in (prompt_tokens + base_max_tokens, prompt_tokens + (min_answer or settings.min_tokens_floor)):
                 for candidate in self._rank_models(preferred_model, prompt_tokens, needed, exclude=attempted):
-                    max_tokens = self._clamp_max_tokens(candidate, base_max_tokens, prompt_tokens)
+                    max_tokens = self._clamp_max_tokens(candidate, base_max_tokens, prompt_tokens, min_answer)
                     if max_tokens is not None:
                         return candidate, max_tokens
         return None
 
-    def _clamp_max_tokens(self, model: str, requested: int, prompt_tokens: int = 0) -> Optional[int]:
+    def _clamp_max_tokens(self, model: str, requested: int, prompt_tokens: int = 0, min_answer: int = 0) -> Optional[int]:
         """
         Shrinks the answer budget so this call stays inside the model's token window,
         as reported by Groq's headers and by our own per-minute ledger.
-        Returns None when the model cannot fit even the smallest useful answer.
+        Returns None when the model cannot fit even the smallest useful answer
+        (`min_answer` when given: a shrunk code answer would only be cut off).
         """
-        base = min(requested, settings.max_tokens_cap)
+        base = min(requested, settings.max_tokens_cap) if not min_answer else requested
         remaining = self._budget_remaining(model, "remaining_tokens", "reset_tokens_at")
         if settings.free_tier_tpm:
             _, minute_tokens = self._ledger.minute_usage(model)
@@ -566,6 +576,8 @@ class LLMClient:
         room = int(remaining) - settings.budget_safety_margin
         if room < 1:
             return None
+        if min_answer:
+            return min(base, room) if room >= min_answer else None
         if base <= settings.min_tokens_floor:
             return min(base, room)
         if room < settings.min_tokens_floor:
@@ -587,7 +599,7 @@ class LLMClient:
                 continue
             minute_requests, minute_tokens = self._ledger.minute_usage(candidate)
             if minute_requests or minute_tokens:
-                waits.append(self._ledger_wait(candidate))
+                waits.append(self._ledger_wait(candidate, needed_tokens))
             budget = self._model_budget.get(candidate) or {}
             for key in ("reset_requests_at", "reset_tokens_at"):
                 reset_at = budget.get(key) or 0.0
@@ -597,13 +609,25 @@ class LLMClient:
             return None
         return max(0.5, min(waits))
 
-    def _ledger_wait(self, model: str) -> float:
-        """Seconds until the oldest booking in this model's 60s window expires."""
+    def _ledger_wait(self, model: str, needed_tokens: int = 0) -> float:
+        """
+        Seconds until enough bookings leave this model's 60s window for `needed_tokens`
+        to fit. (Waiting only for the oldest booking made a big code call give up
+        after ~20s although the budget was back well inside its allowed wait.)
+        """
         with self._ledger._lock:
-            window = self._ledger._window.get(model)
-            if not window:
-                return 0.5
-            return max(0.5, 60.0 - (time.time() - window[0][0]))
+            window = list(self._ledger._window.get(model) or [])
+        if not window:
+            return 0.5
+        now = time.time()
+        used = sum(entry[1] for entry in window)
+        wait_until = window[0][0] + 60.0
+        for started, tokens in sorted(window):
+            if used + needed_tokens <= settings.free_tier_tpm:
+                break
+            used -= tokens
+            wait_until = started + 60.0
+        return max(0.5, wait_until - now + 0.2)
 
     def _record_budget(self, model: str, headers: Any) -> None:
         """Stores the x-ratelimit-* headers reported with a successful call."""
@@ -793,11 +817,16 @@ class LLMClient:
         max_tokens: Optional[int] = None,
         timeout: Optional[float] = None,
         max_wait: Optional[float] = None,
+        min_answer_tokens: int = 0,
+        use_cache: bool = True,
     ) -> str:
         """
         Executes a completion call with caching, fallback and retry logic.
         `timeout` and `max_wait` override REQUEST_TIMEOUT_SECONDS and MAX_WAIT_SECONDS
         for one long call (the prototype builder writes code and can wait for a window).
+        `min_answer_tokens`: never shrink the answer budget below this (wait for a
+        window instead); it may also lift max_tokens above MAX_TOKENS_CAP.
+        `use_cache=False`: always ask the model (a new build should be a new answer).
         """
         request_timeout = timeout or settings.request_timeout_seconds
         wait_limit = settings.max_wait_seconds if max_wait is None else max_wait
@@ -814,7 +843,7 @@ class LLMClient:
         messages = self._with_style_rules(messages)
 
         cache_key = self._cache_key(messages, model, temperature, json_mode, max_tokens)
-        cached = self._cache_get(cache_key)
+        cached = self._cache_get(cache_key) if use_cache else None
         if cached is not None:
             with self._lock:
                 self.cache_hits += 1
@@ -823,6 +852,11 @@ class LLMClient:
 
         temp = temperature if temperature is not None else settings.temperature
         base_max_tokens = min(max_tokens or settings.max_tokens_per_req, settings.max_tokens_cap)
+        if min_answer_tokens and max_tokens:
+            base_max_tokens = max_tokens  # sized by the caller to fit one model's window
+        # Longer answers need longer: a fixed 10s timeout cut off normal 11-12s answers
+        # from the big model and then parked it as "too slow" for the rest of the run.
+        request_timeout = max(request_timeout, MIN_TIMEOUT_SECONDS + base_max_tokens / 200)
         prompt_tokens = _estimate_messages_tokens(messages)
         response_format = {"type": "json_object"} if json_mode else None
 
@@ -836,13 +870,13 @@ class LLMClient:
         max_attempts = max(settings.retry_attempts + 2 * len(candidates), 6)
 
         while attempts < max_attempts:
-            reservation = self._reserve(model, prompt_tokens, base_max_tokens, attempted_models)
+            reservation = self._reserve(model, prompt_tokens, base_max_tokens, attempted_models, min_answer_tokens)
             if reservation is None:
                 # Everything is cooling down or over budget. Wait only when a window
                 # refills soon (MAX_WAIT_SECONDS in total per call); long cooldowns
                 # such as a daily limit go straight to the agent's fallback.
-                wait_s = self._seconds_until_replenish(model, prompt_tokens + settings.min_tokens_floor)
-                if wait_s is not None and wait_cycles < 3 and waited + wait_s <= wait_limit:
+                wait_s = self._seconds_until_replenish(model, prompt_tokens + (min_answer_tokens or settings.min_tokens_floor))
+                if wait_s is not None and wait_cycles < 6 and waited + wait_s <= wait_limit:
                     wait_cycles += 1
                     logger.info(
                         f"[LLMClient] Every model is out of budget. Waiting {wait_s:.1f}s for a window to refill."
@@ -910,7 +944,10 @@ class LLMClient:
                 if settings.pace_seconds > 0:
                     time.sleep(settings.pace_seconds * random.uniform(0.75, 1.25))
 
-                self._cache_put(cache_key, content)
+                # A cut-off answer (finish_reason "length") is never cached, so a
+                # retry or "Build again" asks the model again instead of replaying it.
+                if use_cache and getattr(response.choices[0], "finish_reason", None) != "length":
+                    self._cache_put(cache_key, content)
                 return content
 
             except RateLimitError as e:

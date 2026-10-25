@@ -1,7 +1,10 @@
 """Prototype Builder: safety gate, AI path, one repair, labelled fallback, API (hermetic: AI stubbed)."""
 
+import collections
 import io
 import json
+import os
+import time
 import zipfile
 
 import pytest
@@ -134,6 +137,15 @@ def test_safety_check_blocks_unsafe_code():
     assert prototype_sandbox.safety_check({"features.py": "x = 1\n"}) == ["features.py: must define 'router = APIRouter(...)'."]
 
 
+def test_safety_check_blocks_file_serving_and_reflection():
+    for line in ("from fastapi.responses import FileResponse", "from fastapi.staticfiles import StaticFiles",
+                 "import starlette.responses", "import fastapi\nx = fastapi.responses.FileResponse",
+                 "import fastapi\nx = getattr(fastapi, 'staticfiles')"):
+        issues = prototype_sandbox.safety_check({"features.py": f"{line}\nrouter = 1\n"})
+        assert issues, line
+    assert prototype_sandbox.safety_check({"features.py": "from fastapi.responses import JSONResponse\nrouter = 1\n"}) == []
+
+
 def test_fallback_files_are_safe_and_compile():
     files = fallback_files(build_spec(IDEA))
     assert prototype_sandbox.safety_check(files) == []
@@ -201,3 +213,84 @@ def test_api_build_stream_monitor_stop_and_download(monkeypatch):
     assert client.get("/api/prototype/../../etc/status").status_code == 404
     assert client.get("/api/prototype/zzzz/status").status_code == 404
     json.dumps(build)  # the build must be plain JSON
+
+
+def test_parse_answer_tolerates_headings_and_drops_cut_off_files():
+    loose = (f"**features.py**\n```python\n{GOOD_FEATURES}\n```\n"
+             f"`static/index.html`:\n```html\n{GOOD_PAGE}\n```\n"
+             f"### FILE: test_features.py\n```python\n{GOOD_TESTS[:80]}")  # answer hit its token limit
+    files, cut = prototype_agent.parse_answer(loose)
+    assert set(files) == {"features.py", "static/index.html"} and cut == ["test_features.py"]
+    unnamed, _ = prototype_agent.parse_answer(f"```python\n{GOOD_TESTS}\n```")
+    assert list(unnamed) == ["test_features.py"]  # named by its content
+
+
+def test_page_check_finds_calls_to_missing_routes():
+    page = 'fetch("/api/tractors"); api(`/api/bookings/${id}`); api("/api/bookings/" + id); fetch("/api/rentals")'
+    features = GOOD_FEATURES + '\n\n@router.delete("/bookings/{booking_id}")\ndef cancel(booking_id: int):\n    return {}\n'
+    issues = prototype_sandbox.page_api_check({"features.py": features, "static/index.html": page})
+    assert len(issues) == 1 and "/api/rentals" in issues[0]
+    assert prototype_sandbox.api_routes(GOOD_FEATURES) == ["/api/tractors", "/api/bookings", "/api/bookings"]
+
+
+def test_missing_file_goes_to_the_fixer_not_the_fallback(monkeypatch):
+    partial = answer().split("### FILE: test_features.py")[0]
+    tests_only = f"### FILE: test_features.py\n```python\n{GOOD_TESTS}\n```\n"
+    build, steps, calls = build_with(monkeypatch, [partial, tests_only])
+    assert len(calls) == 2 and "Missing files: test_features.py" in calls[1][-1]["content"]
+    assert build["generation_source"] == "llm" and build["repaired"] and build["checks"]["tests"]["ok"]
+
+
+def test_page_calling_a_missing_route_is_sent_to_the_fixer(monkeypatch):
+    bad_page = GOOD_PAGE.replace("</body>", '<script>fetch("/api/rentals")</script></body>')
+    build, steps, calls = build_with(monkeypatch, [answer(page=bad_page), answer()])
+    assert len(calls) == 2 and "/api/rentals" in calls[1][-1]["content"]
+    assert build["checks"]["page_ok"] and build["checks"]["tests"]["ok"]
+    assert any(s["agent_name"] == "Page Check" and s["status"] == "warning" for s in steps)
+
+
+def test_sandbox_env_finds_installed_packages_without_secrets(tmp_path, monkeypatch):
+    monkeypatch.setenv("GROQ_API_KEY", "secret")
+    env = prototype_sandbox._sandbox_env(tmp_path)
+    assert "GROQ_API_KEY" not in env and "HTTPS_PROXY" not in env
+    assert any("site-packages" in p or "dist-packages" in p for p in env["PYTHONPATH"].split(os.pathsep))
+    assert prototype_sandbox.runtime_check() == ""
+
+
+def test_code_call_waits_for_a_full_budget_instead_of_shrinking():
+    from core.llm import LLMClient
+    client = LLMClient()
+    model = client._get_candidate_models(None)[0]
+    client._model_budget[model] = {"remaining_tokens": 2500, "reset_tokens_at": time.time() + 30}
+    assert client._clamp_max_tokens(model, 4800, 1500) is not None  # normal calls shrink
+    assert client._clamp_max_tokens(model, 4800, 1500, min_answer=4000) is None  # code calls wait
+    client._model_budget.clear()
+    assert client._clamp_max_tokens(model, 4800, 1500, min_answer=4000) == 4800  # not cut to MAX_TOKENS_CAP
+
+
+def test_fallback_idea_title_is_readable():
+    from agents.idea_agent import fallback_title
+    assert fallback_title("A mobile app that helps college students split shared grocery bills") == "Split Shared Grocery Bills"
+    assert fallback_title("A low-cost IoT energy auditing system for societies") == "Low-cost IoT Energy Auditing System"
+    assert fallback_title("") == "Engineering Project"
+
+
+def test_unreadable_answer_is_written_once_more_and_saved(monkeypatch):
+    build, steps, calls = build_with(monkeypatch, ["Sorry, here is the plan without code.", answer()])
+    assert len(calls) == 2 and "could not be read" in calls[1][-1]["content"]
+    assert build["generation_source"] == "llm" and build["checks"]["tests"]["ok"]
+    assert (prototype_sandbox.proto_path(build["id"]) / "ai_answer.log").read_text().startswith("Sorry")
+    wrapped = "````markdown\n" + answer().replace("```", "~~~") + "````"
+    assert set(prototype_agent.parse_answer(wrapped)[0]) == set(prototype_agent.AI_FILES)
+
+
+def test_wait_covers_enough_bookings_for_a_big_call():
+    from core.llm import LLMClient
+    client = LLMClient()
+    model = client._get_candidate_models(None)[0]
+    now = time.time()
+    # Three bookings 50s, 30s and 10s old (2k tokens each) on an 8k-per-minute model.
+    with client._ledger._lock:
+        client._ledger._window[model] = collections.deque([[now - 50, 2000.0], [now - 30, 2000.0], [now - 10, 2000.0]])
+    wait = client._ledger_wait(model, 5400)  # needs two bookings to leave: the 30s-old one leaves in ~30s
+    assert 29 < wait < 32

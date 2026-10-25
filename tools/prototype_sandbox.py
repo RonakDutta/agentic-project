@@ -33,7 +33,10 @@ from typing import Any, Dict, List, Optional
 
 from core.config import settings
 
-PROTOTYPE_DIR = Path(os.getenv("PROTOTYPE_DIR", str(settings.root_dir / ".prototypes")))
+# Outside the project on purpose: `python app.py` runs uvicorn with auto-reload,
+# which watches the project folder. Writing a prototype's .py files inside it
+# made the server restart and stop the prototype right after it started.
+PROTOTYPE_DIR = Path(os.getenv("PROTOTYPE_DIR", str(Path.home() / ".agentic-copilot" / "prototypes")))
 PROTOTYPE_TTL_SECONDS = int(os.getenv("PROTOTYPE_TTL_SECONDS", "1200"))
 TEST_TIMEOUT_SECONDS = int(os.getenv("PROTOTYPE_TEST_TIMEOUT", "90"))
 START_TIMEOUT_SECONDS = 20
@@ -51,7 +54,12 @@ TEST_IMPORTS = ALLOWED_IMPORTS | {"pytest", "main", "features"}
 BANNED_NAMES = {
     "eval", "exec", "open", "compile", "__import__", "globals", "locals", "vars", "input",
     "breakpoint", "exit", "quit", "help", "memoryview", "__builtins__",
+    # Reflection could reach the blocked names below; FileResponse and StaticFiles
+    # could serve any file on the computer. main.py (our template) is not checked.
+    "getattr", "setattr", "delattr", "FileResponse", "StaticFiles",
 }
+# Allowed packages whose sub-modules can read files from disk.
+BANNED_MODULES = ("fastapi.staticfiles", "fastapi.responses.FileResponse", "starlette")
 _EXTERNAL_HTML_RE = re.compile(
     r"<script[^>]+src\s*=\s*[\"']?(?:https?:)?//|<link[^>]+href\s*=\s*[\"']?(?:https?:)?//|"
     r"@import\s+url\(\s*[\"']?(?:https?:)?//|<iframe|<object|<embed",
@@ -94,16 +102,22 @@ def safety_check(files: Dict[str, str]) -> List[str]:
                 if isinstance(node, ast.Import):
                     for alias in node.names:
                         root = alias.name.split(".")[0]
-                        if root not in allowed:
+                        if root not in allowed or alias.name.startswith(BANNED_MODULES):
                             issues.append(f"{name}:{node.lineno}: import of '{alias.name}' is not allowed.")
                 elif isinstance(node, ast.ImportFrom):
-                    root = (node.module or "").split(".")[0]
-                    if node.level or root not in allowed:
-                        issues.append(f"{name}:{node.lineno}: import from '{node.module or '.'}' is not allowed.")
+                    module = node.module or ""
+                    root = module.split(".")[0]
+                    if node.level or root not in allowed or module.startswith(BANNED_MODULES):
+                        issues.append(f"{name}:{node.lineno}: import from '{module or '.'}' is not allowed.")
+                    for alias in node.names:
+                        if alias.name in BANNED_NAMES:
+                            issues.append(f"{name}:{node.lineno}: import of '{alias.name}' is not allowed.")
                 elif isinstance(node, ast.Name) and node.id in BANNED_NAMES:
                     issues.append(f"{name}:{node.lineno}: use of '{node.id}' is not allowed.")
                 elif isinstance(node, ast.Attribute) and node.attr.startswith("__") and node.attr.endswith("__"):
                     issues.append(f"{name}:{node.lineno}: access to '{node.attr}' is not allowed.")
+                elif isinstance(node, ast.Attribute) and (node.attr in BANNED_NAMES or node.attr in ("staticfiles", "FileResponse")):
+                    issues.append(f"{name}:{node.lineno}: use of '{node.attr}' is not allowed.")
         elif name.endswith(".html"):
             if len(source.encode("utf-8")) > MAX_HTML_BYTES:
                 issues.append(f"{name}: page is too large ({len(source)} characters).")
@@ -127,6 +141,81 @@ def compile_check(files: Dict[str, str]) -> List[str]:
         except SyntaxError as err:
             errors.append(f"{name}:{err.lineno}: {err.msg}")
     return errors
+
+
+_ROUTE_METHODS = {"get", "post", "put", "patch", "delete"}
+_PAGE_API_RE = re.compile(r"""["'`](/api/[^"'`\s?#]*)""")
+
+
+def api_routes(source: str) -> List[str]:
+    """Routes declared in features.py, read from the code (prefix + @router.<method>("...")), not run."""
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return []
+    prefix, routes = "", []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Call) and getattr(node.func, "id", "") == "APIRouter":
+            for kw in node.keywords:
+                if kw.arg == "prefix" and isinstance(kw.value, ast.Constant):
+                    prefix = str(kw.value.value)
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            for deco in node.decorator_list:
+                if (isinstance(deco, ast.Call) and isinstance(deco.func, ast.Attribute)
+                        and deco.func.attr in _ROUTE_METHODS and deco.args
+                        and isinstance(deco.args[0], ast.Constant)):
+                    routes.append(str(deco.args[0].value))
+    return [(prefix.rstrip("/") + r) or "/" for r in routes]
+
+
+def _route_matches(called: str, route: str) -> bool:
+    """`called` comes from the page: "${...}" stands for one value, a trailing "/" means a value follows."""
+    want = called.rstrip("/").split("/")
+    have = route.rstrip("/").split("/")
+    if called.endswith("/") and called != "/":
+        want.append("${}")  # "/api/items/" + id
+    if len(want) != len(have):
+        return False
+    return all(w == h or "${" in w or (h.startswith("{") and h.endswith("}")) for w, h in zip(want, have))
+
+
+def page_api_check(files: Dict[str, str]) -> List[str]:
+    """Every /api/... path the page calls must exist in features.py. Read from the code, nothing runs."""
+    page, features = files.get("static/index.html", ""), files.get("features.py", "")
+    routes = api_routes(features)
+    if not page or not routes:
+        return []
+    issues = []
+    for called in sorted(set(_PAGE_API_RE.findall(page))):
+        if not any(_route_matches(called, route) for route in routes):
+            issues.append(f"static/index.html calls {called} but features.py has no such route "
+                          f"(routes: {', '.join(sorted(set(routes)))}).")
+    return issues
+
+
+_runtime_ok = False
+
+
+def runtime_check() -> str:
+    """Checks the packages a prototype needs can be imported in the sandbox. Returns "" when fine."""
+    global _runtime_ok
+    if _runtime_ok:
+        return ""
+    PROTOTYPE_DIR.mkdir(parents=True, exist_ok=True)
+    try:
+        done = subprocess.run(
+            [sys.executable, "-c", "import fastapi, uvicorn, pytest, httpx"],
+            cwd=PROTOTYPE_DIR, env=_sandbox_env(PROTOTYPE_DIR), capture_output=True, text=True, timeout=60,
+        )
+    except (OSError, subprocess.TimeoutExpired) as err:
+        return f"Could not start Python for the prototype: {err}"
+    if done.returncode != 0:
+        missing = re.search(r"No module named '([\w.]+)'", done.stderr or "")
+        name = missing.group(1) if missing else "a package"
+        return (f"Python cannot import {name} for the prototype. "
+                f"Run: pip install fastapi uvicorn pytest httpx")
+    _runtime_ok = True
+    return ""
 
 
 # ---------------------------------------------------------------- files
@@ -168,16 +257,25 @@ def zip_bytes(proto_id: str) -> bytes:
 
 # ---------------------------------------------------------------- subprocesses
 
+def _site_dirs() -> List[str]:
+    """Where this Python finds its installed packages (also user installs and venvs)."""
+    return [p for p in sys.path if p and ("site-packages" in p or "dist-packages" in p) and os.path.isdir(p)]
+
+
 def _sandbox_env(root: Path) -> Dict[str, str]:
     """A minimal environment: no API keys, no proxy settings, no project paths."""
     env = {
         "PATH": os.environ.get("PATH", ""),
-        "PYTHONPATH": str(root),
+        # The site folders are passed on explicitly: with a minimal environment a
+        # `pip install --user` (the default on many Windows setups) is not found.
+        "PYTHONPATH": os.pathsep.join([str(root)] + _site_dirs()),
         "PYTHONDONTWRITEBYTECODE": "1",
         "PYTHONIOENCODING": "utf-8",
         "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1",
     }
-    for key in ("SYSTEMROOT", "TEMP", "TMP", "TMPDIR", "LANG"):  # needed on Windows / for locale
+    # Needed on Windows (sockets, temp files, user folders) and for the locale. No secrets.
+    for key in ("SYSTEMROOT", "WINDIR", "TEMP", "TMP", "TMPDIR", "LANG", "HOME", "USERPROFILE",
+                "APPDATA", "LOCALAPPDATA", "USERNAME", "USER"):
         if os.environ.get(key):
             env[key] = os.environ[key]
     return env
