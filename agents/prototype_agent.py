@@ -9,10 +9,11 @@ Steps (each one is a trace step, so the UI shows real progress):
                              to the idea.
 3. Safety Check (code)     : import allowlist, no eval/exec/open, no outside scripts.
 4. Compiler (code)         : compiles every Python file without running it.
-5. Test Runner             : pytest in a subprocess with a time limit.
-6. Code Fixer (0-1 AI call): only when 3-5 failed; gets the real error output.
-7. App Runner              : starts the app on 127.0.0.1 and waits for /health.
-8. Endpoint Checker        : calls every GET endpoint from the app's own OpenAPI list.
+5. Page Check (code)       : every /api/... path the page calls exists in features.py.
+6. Test Runner             : pytest in a subprocess with a time limit.
+7. Code Fixer (0-1 AI call): only when a file was missing or 3-6 failed; gets the real error output.
+8. App Runner              : starts the app on 127.0.0.1 and waits for /health.
+9. Endpoint Checker        : calls every GET endpoint from the app's own OpenAPI list.
 
 If the AI is unavailable or its code still fails after one fix, the built-in
 fallback prototype is used and labelled (generation_source="fallback").
@@ -38,48 +39,50 @@ AI_FILES = ("features.py", "static/index.html", "test_features.py")
 # for a per-minute token window to refill instead of falling back at once.
 CODE_CALL_TIMEOUT = 90
 CODE_CALL_MAX_WAIT = 65
+# Smallest answer worth asking for: a shrunk budget only gives a cut-off file.
+CODE_MIN_TOKENS = 4000
+FIX_MIN_TOKENS = 3000
 
-_FILE_RE = re.compile(r"#{2,4}\s*FILE:\s*([\w./-]+)\s*\n+```[a-zA-Z]*\n(.*?)\n```", re.DOTALL)
+_BLOCK_RE = re.compile(r"```[\w+-]*[ \t]*\n(.*?)(?:\n[ \t]*```|\Z)", re.DOTALL)
+_NAME_RE = re.compile(r"(test_features\.py|features\.py|index\.html)")
 
 SYSTEM_PROMPT = f"""You write very small, working FastAPI prototypes for student projects.
-Return exactly these three files and nothing else, each as a heading line and one fenced code block:
+The prototype must show the idea's main job working end to end in a browser: a person fills a form, the server applies the idea's rule or calculation, and the result appears in a table and in the stats.
+
+Return exactly three files in this order, each as a heading line `### FILE: <name>` followed by one fenced code block. No other text.
 
 ### FILE: features.py
-```python
-...
-```
-### FILE: static/index.html
-```html
-...
-```
-### FILE: test_features.py
-```python
-...
-```
-
-Rules for features.py:
-- Define `router = APIRouter(prefix="/api")`. A fixed main.py already creates the app, includes this router, serves the page at "/" and has GET /health. Do not create another app.
-- 3 to 5 endpoints that implement the given requirements. Keep data in module-level lists or dicts, seeded with 3 to 5 realistic sample records for this idea.
-- Use pydantic models for request bodies and raise HTTPException(404) for missing items and HTTPException(422) for invalid values.
+- `router = APIRouter(prefix="/api")`. A fixed main.py already creates the app, includes this router, serves static/index.html at "/" and has GET /health. Do not create an app.
+- 3 or 4 endpoints for the given requirements: GET that lists records, POST that creates one (and applies the idea's main rule, for example a total, a split, a match or a status), GET /api/summary with 3 numbers for the stats row. Optionally one PATCH or DELETE.
+- Data in module-level lists, seeded with 3 to 5 realistic sample records for this idea's users (real-sounding names and places that fit them, recent dates; no Alice/Bob, foo or test).
+- pydantic models for request bodies, with Field limits (min_length, gt). HTTPException(404) for a missing item.
 - Only import from: fastapi, pydantic, typing, datetime, uuid, random, math, statistics, collections, dataclasses, enum, re, json, itertools, functools, time, string, decimal.
-- No files, no network, no os, no subprocess, no eval or exec. Under 110 lines.
+- No files, network, os, subprocess, eval or exec. Under 90 lines.
 
-Rules for static/index.html:
-- One complete page. Link the existing stylesheet with <link rel="stylesheet" href="/static/base.css">. Use only these classes: {CSS_CLASSES}. Add no other CSS except small inline styles.
-- Header: <header class="top"><div class="wrap">...</div></header>, then <main class="wrap">. Show the app name, one line saying what it does, a small stats row, a form for the main action and a list or table of records.
-- Plain JavaScript with fetch() to the relative /api/... paths. Put text on the page with textContent, never innerHTML with data. Show a short error message when a request fails.
-- No outside scripts, fonts, images or CDNs. Under 150 lines.
+### FILE: static/index.html
+Follow this skeleton and fill in the parts in <>:
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title><app name></title><link rel="stylesheet" href="/static/base.css"></head><body>
+<header class="top"><div class="wrap"><span class="brand"><app name></span><span class="muted"><what it does, one line></span></div></header>
+<main class="wrap">
+<div class="grid"><3 cards like: <div class="card"><div class="muted"><label></div><div class="stat" id="<id>">0</div></div>></div>
+<div class="card"><h2><main action></h2><form id="form"><fields like: <label class="field"><Label><input name="<field>" required></label>><button class="btn primary" type="submit"><verb></button></form><p class="error" id="error"></p></div>
+<div class="card"><h2><records></h2><table><thead><tr><th>...</th></tr></thead><tbody id="rows"></tbody></table></div>
+</main><script>...</script></body></html>
+- Use only these classes: {CSS_CLASSES}. Small inline styles are fine; no <style> block.
+- Script: an `async function api(path, options)` helper (fetch with JSON headers; on an error status throw the server's `detail`), a `load()` that fills the stats and the table, and a form submit handler that sends the form as JSON (convert number fields with Number()), clears the form, shows errors in #error and calls load(). Make table cells with document.createElement and textContent, never innerHTML with data. Call only the /api/... paths defined in features.py.
+- No outside scripts, fonts, images or CDNs. Under 120 lines.
 
-Rules for test_features.py:
+### FILE: test_features.py
 - `from fastapi.testclient import TestClient`, `from main import app`, `client = TestClient(app)`.
-- 4 to 6 short tests: each endpoint once, plus one error case (404 or 422). Tests must pass against your features.py.
+- 4 or 5 short tests: each endpoint once, plus one error case (404 or 422). A test creates what it needs itself; do not depend on test order or exact record counts.
 """
 
 FIX_PROMPT = """You fix a small FastAPI prototype. The checks below failed.
-Return only the files you change, each as a heading line `### FILE: <name>` followed by one fenced code block with the full corrected file.
+Return only the files you change or that are missing, each as a heading line `### FILE: <name>` followed by one fenced code block with the full file.
 Keep the same rules: router = APIRouter(prefix="/api") in features.py, only safe imports
 (fastapi, pydantic, typing, datetime, uuid, random, math, statistics, collections, dataclasses, enum, re, json, itertools, functools, time, string, decimal),
-no files, network, os, subprocess, eval or exec; tests use TestClient(app) from main."""
+no files, network, os, subprocess, eval or exec; the page calls only routes defined in features.py; tests use TestClient(app) from main."""
 
 
 def build_spec(final_output: Dict[str, Any]) -> Dict[str, Any]:
@@ -114,13 +117,43 @@ def build_spec(final_output: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def _guess_name(body: str) -> str:
+    if "TestClient" in body:
+        return "test_features.py"
+    if "APIRouter" in body:
+        return "features.py"
+    if "<html" in body.lower() or "<!doctype" in body.lower():
+        return "static/index.html"
+    return ""
+
+
+def parse_answer(text: str) -> Tuple[Dict[str, str], List[str]]:
+    """
+    Reads the files out of a model answer. Tolerates the usual heading styles
+    ("### FILE: x", "**x**", "`x`:") and names a block by its content when the
+    heading is missing. Returns (files, names of files that were cut off).
+    A cut-off file (no closing fence: the answer hit its token limit) is dropped.
+    """
+    files: Dict[str, str] = {}
+    cut: List[str] = []
+    text = text or ""
+    last_end = 0
+    for match in _BLOCK_RE.finditer(text):
+        before = text[last_end:match.start()].strip().splitlines()
+        last_end = match.end()
+        names = _NAME_RE.findall(before[-1]) if before else []
+        name = {"index.html": "static/index.html"}.get(names[-1], names[-1]) if names else _guess_name(match.group(1))
+        if name not in AI_FILES:
+            continue
+        if not match.group(0).rstrip().endswith("```"):
+            cut.append(name)
+            continue
+        files[name] = match.group(1).rstrip() + "\n"
+    return files, cut
+
+
 def parse_files(text: str) -> Dict[str, str]:
-    files = {}
-    for name, body in _FILE_RE.findall(text or ""):
-        name = name.strip().lstrip("./")
-        if name in AI_FILES:
-            files[name] = body.rstrip() + "\n"
-    return files
+    return parse_answer(text)[0]
 
 
 class PrototypeBuilderAgent:
@@ -129,21 +162,32 @@ class PrototypeBuilderAgent:
 
     # ------------------------------------------------------------ AI calls
 
-    def _write_code(self, spec: Dict[str, Any]) -> Tuple[Dict[str, str], str]:
-        """One AI call. Returns (files, error)."""
-        user = "Build the prototype for this idea:\n" + json.dumps(spec, indent=1)
+    def _write_code(self, spec: Dict[str, Any]) -> Tuple[Dict[str, str], str, str]:
+        """
+        One AI call. Returns (files, error, missing): `error` means nothing usable
+        came back; `missing` names files the answer lacked or cut off, which the
+        Code Fixer is then asked for.
+        """
+        user = (f"Today is {time.strftime('%Y-%m-%d')}. Build the prototype for this idea:\n"
+                + json.dumps(spec, indent=1))
         try:
             text = self.llm.generate(
                 [{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": user}],
                 max_tokens=AGENT_MAX_TOKENS["prototype"], timeout=CODE_CALL_TIMEOUT, max_wait=CODE_CALL_MAX_WAIT,
+                min_answer_tokens=CODE_MIN_TOKENS, use_cache=False,
             )
         except Exception as err:
-            return {}, str(err)
-        files = parse_files(text)
+            return {}, str(err), ""
+        files, cut = parse_answer(text)
+        if not files:
+            return {}, "The answer held no code files" + (" (it was cut off)." if cut else "."), ""
         missing = [f for f in AI_FILES if f not in files]
-        if missing:
-            return files, f"The answer was missing {', '.join(missing)}."
-        return files, ""
+        if not missing:
+            return files, "", ""
+        note = f"Missing files: {', '.join(missing)}."
+        if cut:
+            note += f" The answer was cut off in {', '.join(cut)}; keep that file shorter."
+        return files, "", note + " Return the missing files in full."
 
     def _fix_code(self, files: Dict[str, str], problems: str) -> Tuple[Dict[str, str], str]:
         """At most one repair call, with the real error output. The page is only sent when it is the problem."""
@@ -154,6 +198,7 @@ class PrototypeBuilderAgent:
             text = self.llm.generate(
                 [{"role": "system", "content": FIX_PROMPT}, {"role": "user", "content": user}],
                 max_tokens=AGENT_MAX_TOKENS["prototype_fix"], timeout=CODE_CALL_TIMEOUT, max_wait=CODE_CALL_MAX_WAIT,
+                min_answer_tokens=FIX_MIN_TOKENS, use_cache=False,
             )
         except Exception as err:
             return files, str(err)
@@ -187,6 +232,14 @@ class PrototypeBuilderAgent:
         )
         if errors:
             return False, "Syntax errors:\n" + "\n".join(errors), {"safety": [], "compile": errors}
+        page = sandbox.page_api_check(files)
+        state.add_trace(
+            "Page Check",
+            f"The page calls only routes that exist ({len(sandbox.api_routes(files.get('features.py', '')))} routes)" if not page
+            else f"The page calls {len(page)} route(s) the API does not have",
+            status="completed" if not page else "warning",
+            details={"issues": page, "tool": "page fetch() paths vs features.py routes (no AI)"},
+        )
         sandbox.write_files(proto_id, files)
         tests = sandbox.run_tests(proto_id)
         state.add_trace(
@@ -197,12 +250,18 @@ class PrototypeBuilderAgent:
             output_summary=f"{tests['passed']}/{tests['total']} tests passed",
             details={"tool": "pytest in a subprocess, time limit", "exit_code": tests["exit_code"]},
         )
-        checks = {"safety": [], "compile": [], "tests": tests}
-        return tests["ok"], "" if tests["ok"] else "pytest output:\n" + tests["output"], checks
+        checks = {"safety": [], "compile": [], "page": page, "tests": tests}
+        problems = ("Page check failed:\n" + "\n".join(page) + "\n\n" if page else "") + (
+            "" if tests["ok"] else "pytest output:\n" + tests["output"])
+        return tests["ok"] and not page, problems.strip(), checks
 
     # ------------------------------------------------------------ pipeline
 
     def build(self, final_output: Dict[str, Any], state: AgentWorkflowState) -> Dict[str, Any]:
+        # Checked before any AI call: without these packages nothing can be tested or run.
+        missing_runtime = sandbox.runtime_check()
+        if missing_runtime:
+            raise RuntimeError(missing_runtime)
         proto_id = uuid.uuid4().hex[:10]
         spec = build_spec(final_output)
         state.add_trace(
@@ -216,20 +275,22 @@ class PrototypeBuilderAgent:
         sandbox.write_files(proto_id, self._template_files(spec, "written by AI"))
 
         started = time.time()
-        files, write_error = self._write_code(spec)
+        files, write_error, missing = self._write_code(spec)
         source, fallback_reason, repaired = "llm", "", False
         state.add_trace(
             "Code Writer",
-            f"AI wrote {len(files)} files ({sum(f.count(chr(10)) for f in files.values())} lines)" if not write_error
+            (f"AI wrote {len(files)} files ({sum(f.count(chr(10)) for f in files.values())} lines)"
+             + (f"; {missing.split('.')[0].lower()}" if missing else "")) if not write_error
             else f"AI could not write the code ({write_error[:120]})",
-            status="completed" if not write_error else "warning",
+            status="completed" if not write_error and not missing else "warning",
             duration_ms=int((time.time() - started) * 1000),
             details={"tool": "AI model, 1 call", "files": list(files)},
         )
 
         ok, checks = False, {}
         if not write_error:
-            ok, problems, checks = self._check(proto_id, files, state)
+            # A missing file goes to the Code Fixer like any failed check.
+            ok, problems, checks = (False, missing, {}) if missing else self._check(proto_id, files, state)
             if not ok:
                 started = time.time()
                 files, fix_error = self._fix_code(files, problems)
@@ -246,7 +307,8 @@ class PrototypeBuilderAgent:
                 # Failing tests after the fix are reported as they are; unsafe or
                 # broken code is never run, so that case falls back.
                 if not ok and checks.get("tests") is None:
-                    fallback_reason = f"The AI code still failed after one fix: {problems.splitlines()[0]}"
+                    first = (problems or fix_error or "unknown problem").splitlines()[0]
+                    fallback_reason = f"The AI code still failed after one fix: {first}"
             else:
                 state.add_trace("Code Fixer", "Not needed: every check passed", details={"skipped": True})
         else:
@@ -301,6 +363,8 @@ class PrototypeBuilderAgent:
             "checks": {
                 "safety_ok": not checks.get("safety"),
                 "compile_ok": not checks.get("compile"),
+                "page_ok": not checks.get("page"),
+                "page_issues": checks.get("page") or [],
                 "tests": tests,
                 "server": {k: v for k, v in server.items() if k != "log"},
                 "endpoints": endpoints,

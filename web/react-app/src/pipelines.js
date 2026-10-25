@@ -37,6 +37,7 @@ export const PROTOTYPE_PIPELINE = {
     { id: 'safety', label: 'Safety check', sub: 'Code, no AI', agents: ['Safety Check'], col: 2, row: 0, deps: ['write'], star: true, warn: 'problem found' },
     { id: 'compile', label: 'Compile', sub: 'Code, no AI', agents: ['Compiler'], col: 3, row: 0, deps: ['safety'], warn: 'problem found' },
     { id: 'tests', label: 'Run tests', sub: 'pytest', agents: ['Test Runner'], col: 4, row: 0, deps: ['compile'], warn: 'problem found' },
+    { id: 'page', label: 'Page vs API', sub: 'Code, no AI', agents: ['Page Check'], col: 3, row: 1, deps: ['compile'], warn: 'problem found' },
     { id: 'fix', label: 'Fix once', sub: 'AI, only if needed', agents: ['Code Fixer'], col: 4, row: 1, deps: ['tests'] },
     { id: 'run', label: 'Start app', sub: 'Local only', agents: ['App Runner'], col: 5, row: 0, deps: ['tests'], warn: 'problem found' },
     { id: 'probe', label: 'Check endpoints', sub: 'HTTP calls', agents: ['Endpoint Checker'], col: 6, row: 0, deps: ['run'], warn: 'problem found' },

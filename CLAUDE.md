@@ -42,7 +42,7 @@ The user's goal: **impress teachers in a viva**. That only works if everything s
 ```bash
 pip install -r requirements.txt
 python app.py                                   # http://127.0.0.1:8000  (new UI at /, old UI at /legacy)
-GROQ_API_KEY= pytest -q                         # 112 pass, 3 live smoke tests skip without a key
+GROQ_API_KEY= pytest -q                         # 118 pass, 3 live smoke tests skip without a key
 python evaluation/compare_baseline.py           # naive vs AST chunking (computed)
 python evaluation/retrieval_benchmark.py        # BM25 / vector / hybrid Top-1, Top-3, MRR
 python evaluation/free_tier_budget.py           # token plan vs the model limits (no quota used)
@@ -78,14 +78,15 @@ Idea brief ─┬─ Market search (web) ── Devil's advocate ── Judge �
 ### Prototype Builder (`agents/prototype_agent.py` + `tools/prototype_sandbox.py`)
 ```
 PRD (session) → Spec Planner (top 3 requirements, code) → Code Writer (1 AI call: features.py, static/index.html, test_features.py)
-  → Safety Check (AST import allowlist, no eval/exec/open/dunders, no outside scripts) → Compiler → Test Runner (pytest subprocess)
+  → Safety Check (AST import allowlist, no eval/exec/open/dunders, no outside scripts) → Compiler → Page Check (page /api paths vs routes) → Test Runner (pytest subprocess)
   → Code Fixer (0-1 AI call with the real error output) → App Runner (uvicorn on 127.0.0.1) → Endpoint Checker (every GET from /openapi.json)
 ```
 - `main.py` (server + request log for the monitor) and `static/base.css` are fixed templates (`agents/prototype_templates.py`); the AI only writes the three idea-specific files.
 - Unsafe or non-compiling code after one fix → labelled built-in "MVP planner" prototype (`generation_source: "fallback"`). Failing tests after the fix are shown as they are (the app still runs).
-- Sandbox: `.prototypes/<id>/` (gitignored, `PROTOTYPE_DIR`), minimal env (no API key, no proxy), CSP on the page, one prototype running at a time, auto-stop after `PROTOTYPE_TTL_SECONDS` (20 min), stopped on server shutdown (FastAPI lifespan; `atexit` does not run on SIGTERM).
+- Sandbox: `~/.agentic-copilot/prototypes/<id>/` (`PROTOTYPE_DIR`; outside the project because `python app.py` auto-reloads on .py changes in the project, which used to kill every prototype right after it started), minimal env (no API key, no proxy), CSP on the page, one prototype running at a time, auto-stop after `PROTOTYPE_TTL_SECONDS` (20 min), stopped on server shutdown (FastAPI lifespan; `atexit` does not run on SIGTERM).
 - Monitor = the prototype's own `requests.log`; requests from the builder's checks carry `X-Prototype-Check` and are counted apart from people.
-- Budget: 1 call reserves ~4.6k tokens (`prototype` 3800 max), the fix ~5k (`prototype_fix` 3000); both fit one model's 8k/minute. The call uses `timeout=90` and may wait up to 65 s for a window (`generate(timeout=, max_wait=)`).
+- Budget: `prototype` 4800 max tokens (reasoning tokens count too), `prototype_fix` 4000; both fit one model's 8k/minute. Calls use `min_answer_tokens` (never shrunk below 4000/3000: a shrunk code answer is cut off; it waits up to 65 s for a window instead), `use_cache=False` (Build again = new code) and `timeout=90`. Cut-off answers (`finish_reason == "length"`) are never cached anywhere.
+- A file missing or cut off in the answer goes to the Code Fixer (asked for just that file), not straight to the fallback. `runtime_check()` fails the build with a clear pip message if fastapi/uvicorn/pytest/httpx cannot be imported in the sandbox env (site-packages dirs are passed via PYTHONPATH so `pip install --user` setups work).
 
 ### API (FastAPI, `app.py`)
 | Endpoint | Purpose |
@@ -181,6 +182,13 @@ Grounded prompts, deterministic critic with quote-vs-disk and compile checks, ho
 - **Not yet verified with a real AI model** (no key in the cloud sandbox). First thing to check on the user's laptop: build a prototype for the three demo ideas and look at the generated page.
 - Tests: 112 pass (`tests/test_prototype.py`: safety gate, spec, parsing, AI path, one repair with the real error, unsafe code falls back, API stream/monitor/stop/zip).
 
+### Phase 5: Prototype Builder made to really run (branch `claude/wonderful-bell-xg4i7k`)
+- **Root cause of "builds but does not run":** prototypes were written to `.prototypes/` inside the project; `python app.py` runs uvicorn with auto-reload, so writing `main.py` restarted the server, and the shutdown stopped the prototype (log: `StatReload detected changes in '.prototypes/<id>/main.py'`). Moved to `~/.agentic-copilot/prototypes`.
+- AI path: full answer budget or wait (no shrunk, cut-off code), no caching of code answers, tolerant file parser, missing/cut file goes to the fixer, new deterministic Page Check, page skeleton in the prompt, realistic sample data.
+- Sandbox env passes site-packages and Windows user folders (no secrets); runtime pre-check.
+- `tests/conftest.py` now forces `LLM_DISK_CACHE=0`/`PAPER_CACHE=0` (a shell exporting them made 3-10 LLM tests fail on stale cache).
+- Live check (real key, cloud): grocery-split idea → AI wrote 209 lines, 5/5 tests, 3/3 endpoints, app running with preview, 1 AI call, 3.5k tokens, 6.8 s build.
+
 ### Measured numbers (real runs, keep updated)
 - Retrieval benchmark, 18 questions, MiniLM available: BM25 MRR 0.640 (Top-1 50%, Top-3 72%); vector 0.672 (56%, 78%); hybrid RRF 0.647 (44%, **83% Top-3**). Hybrid is best at Top-3, not at Top-1/MRR; say so if asked.
 - AST vs naive chunking: 91% of 500-char chunks cut through a function; 100% of AST chunks parse.
@@ -193,7 +201,7 @@ Grounded prompts, deterministic critic with quote-vs-disk and compile checks, ho
 
 **Must fix / verify next (in this order)**
 - **Prototype safety gap (small, fix first):** `safety_check` allows anything under `fastapi`, so AI code could `from fastapi.responses import FileResponse` (or use `StaticFiles`, `getattr(fastapi, ...)`) and serve any file on the laptop over localhost. Verified: both return no issues today. Fix in `tools/prototype_sandbox.py`: block the names `FileResponse`, `StaticFiles`, `getattr`, `setattr`, `delattr` and imports of `fastapi.staticfiles`, `fastapi.responses.FileResponse`, `starlette` in AI files (main.py is ours and may keep them); add a test next to `test_safety_check_blocks_unsafe_code`.
-- **First live check with the real key** (never done; the cloud session had no key): run the three demo ideas, then build a prototype for each. Check the generated page looks right, tests pass, the Code Fixer works when needed, and the monitor counts clicks in the preview. Record pass rate, tokens and build time under "Measured numbers" (real numbers only).
+- **Live check of all three demo ideas** (one prototype checked live in Phase 5): run the three demo ideas, then build a prototype for each. Check the generated page looks right, tests pass, the Code Fixer works when needed, and the monitor counts clicks in the preview. Record pass rate, tokens and build time under "Measured numbers" (real numbers only).
 - Market search sometimes falls back (seen once with the user's 10s timeout). Find the exact cause in the log (`logging.basicConfig(level=logging.INFO)`), then either raise the default timeout or shrink the market prompt.
 - Follow-up chat in the new UI was not tested against a live answer yet; check Markdown rendering, `@agent` routing and the error state.
 - Honesty gap seen offline: when the paper comparison falls back ("Not assessed"), the header still says "5/5 refer to a paper we found, 100% backed by abstracts". Show "not checked" when `prior_art.generation_source == "fallback"`.

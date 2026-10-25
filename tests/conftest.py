@@ -6,7 +6,8 @@ import tempfile
 from pathlib import Path
 
 # Must run before core.config is imported anywhere: Settings reads env at import.
-os.environ.setdefault("LLM_DISK_CACHE", "0")
+# Forced, not setdefault: a shell that exports LLM_DISK_CACHE=1 made tests read stale answers.
+os.environ["LLM_DISK_CACHE"] = "0"
 # Test sessions go to a throwaway database, never the real sessions.db.
 os.environ.setdefault("SESSIONS_DB_PATH", os.path.join(tempfile.mkdtemp(prefix="copilot_tests_"), "sessions.db"))
 
@@ -17,4 +18,4 @@ os.environ.setdefault("RUNS_PER_MINUTE", "0")
 os.environ.setdefault("LLM_USAGE_LEDGER", "0")
 # The idea pipeline would otherwise search arXiv / Semantic Scholar / OpenAlex.
 os.environ.setdefault("PRIOR_ART_ENABLED", "0")
-os.environ.setdefault("PAPER_CACHE", "0")
+os.environ["PAPER_CACHE"] = "0"

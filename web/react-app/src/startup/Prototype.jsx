@@ -167,6 +167,7 @@ function Result({ build, onReview }) {
         <h3>Checks (all run by code, not AI)</h3>
         <Check ok={c.safety_ok} label="Safety check" detail="only safe imports, no eval/exec/open, no outside scripts" />
         <Check ok={c.compile_ok} label="Compiles" detail="every Python file" />
+        {c.page_ok !== undefined && <Check ok={c.page_ok} label="Page matches the API" detail={c.page_ok ? 'every /api path the page calls exists' : (c.page_issues || []).join(' ')} />}
         <Check ok={tests.ok} label="Tests" detail={`${tests.passed || 0} passed, ${tests.failed || 0} failed (${seconds(tests.duration_ms)})`} />
         <Check ok={!!c.server?.ok} label="App starts" detail={c.server?.ok ? `answered /health in ${seconds(c.server.ms)}` : c.server?.error} />
         <More label="Test output">
