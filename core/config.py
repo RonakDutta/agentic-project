@@ -84,7 +84,9 @@ class Settings:
     max_wait_seconds: float = float(os.getenv("MAX_WAIT_SECONDS", "12"))
     # How long a model that timed out (too slow, quota untouched) is skipped
     # so later agent steps rotate immediately instead of hanging again.
-    slow_model_cooldown_seconds: float = float(os.getenv("SLOW_MODEL_COOLDOWN_SECONDS", "180"))
+    # 60s, not longer: one latency spike should not push the rest of the next run
+    # onto the smaller models.
+    slow_model_cooldown_seconds: float = float(os.getenv("SLOW_MODEL_COOLDOWN_SECONDS", "60"))
 
     # Reasoning models (gpt-oss, qwen3) spend hidden "thinking" tokens out of
     # max_tokens. "low" keeps answers fast and inside the free token window.

@@ -68,6 +68,9 @@ AGENT_MAX_TOKENS = {
     "prototype_fix": 4000,
 }
 
+# Floor for one request's timeout; generate() adds ~1s per 200 answer tokens.
+MIN_TIMEOUT_SECONDS = 8
+
 # Rate-limit headers come back like "5m45.6s" or "622ms".
 _RESET_RE = re.compile(r"(\d+(?:\.\d+)?)(ms|h|m|s)")
 
@@ -399,7 +402,10 @@ class LLMClient:
                 )
             return
         if self.client is None:
-            self.client = Groq(api_key=api_key)
+            # max_retries=0: generate() does its own retries and model rotation. The SDK's
+            # default (2 hidden retries) waited on a rate-limited model instead of switching
+            # to one with budget, and turned one timeout into three before we saw it.
+            self.client = Groq(api_key=api_key, max_retries=0)
             logger.info("[LLMClient] Groq client initialized.")
 
     @property
@@ -593,7 +599,7 @@ class LLMClient:
                 continue
             minute_requests, minute_tokens = self._ledger.minute_usage(candidate)
             if minute_requests or minute_tokens:
-                waits.append(self._ledger_wait(candidate))
+                waits.append(self._ledger_wait(candidate, needed_tokens))
             budget = self._model_budget.get(candidate) or {}
             for key in ("reset_requests_at", "reset_tokens_at"):
                 reset_at = budget.get(key) or 0.0
@@ -603,13 +609,25 @@ class LLMClient:
             return None
         return max(0.5, min(waits))
 
-    def _ledger_wait(self, model: str) -> float:
-        """Seconds until the oldest booking in this model's 60s window expires."""
+    def _ledger_wait(self, model: str, needed_tokens: int = 0) -> float:
+        """
+        Seconds until enough bookings leave this model's 60s window for `needed_tokens`
+        to fit. (Waiting only for the oldest booking made a big code call give up
+        after ~20s although the budget was back well inside its allowed wait.)
+        """
         with self._ledger._lock:
-            window = self._ledger._window.get(model)
-            if not window:
-                return 0.5
-            return max(0.5, 60.0 - (time.time() - window[0][0]))
+            window = list(self._ledger._window.get(model) or [])
+        if not window:
+            return 0.5
+        now = time.time()
+        used = sum(entry[1] for entry in window)
+        wait_until = window[0][0] + 60.0
+        for started, tokens in sorted(window):
+            if used + needed_tokens <= settings.free_tier_tpm:
+                break
+            used -= tokens
+            wait_until = started + 60.0
+        return max(0.5, wait_until - now + 0.2)
 
     def _record_budget(self, model: str, headers: Any) -> None:
         """Stores the x-ratelimit-* headers reported with a successful call."""
@@ -836,6 +854,9 @@ class LLMClient:
         base_max_tokens = min(max_tokens or settings.max_tokens_per_req, settings.max_tokens_cap)
         if min_answer_tokens and max_tokens:
             base_max_tokens = max_tokens  # sized by the caller to fit one model's window
+        # Longer answers need longer: a fixed 10s timeout cut off normal 11-12s answers
+        # from the big model and then parked it as "too slow" for the rest of the run.
+        request_timeout = max(request_timeout, MIN_TIMEOUT_SECONDS + base_max_tokens / 200)
         prompt_tokens = _estimate_messages_tokens(messages)
         response_format = {"type": "json_object"} if json_mode else None
 
@@ -855,7 +876,7 @@ class LLMClient:
                 # refills soon (MAX_WAIT_SECONDS in total per call); long cooldowns
                 # such as a daily limit go straight to the agent's fallback.
                 wait_s = self._seconds_until_replenish(model, prompt_tokens + (min_answer_tokens or settings.min_tokens_floor))
-                if wait_s is not None and wait_cycles < 3 and waited + wait_s <= wait_limit:
+                if wait_s is not None and wait_cycles < 6 and waited + wait_s <= wait_limit:
                     wait_cycles += 1
                     logger.info(
                         f"[LLMClient] Every model is out of budget. Waiting {wait_s:.1f}s for a window to refill."

@@ -1,15 +1,33 @@
 import PipelineGraph from './components/PipelineGraph.jsx'
 import { CODE_PIPELINE, STARTUP_PIPELINE } from './pipelines.js'
 
+// From the project report (cover page).
+const PROJECT = [
+  ['Project', 'Agentic AI Co-Pilot: a multi-agent RAG system for startup assistance and codebase analysis'],
+  ['Course', 'Minor Project (ARP-455)'],
+  ['Student', 'Ronak Dutta, B.Tech IIoT, batch IIoT B-1'],
+  ['Guide', 'Dr. Sanjay Kumar Singh, Assistant Professor'],
+  ['Institute', 'USAR, GGSIPU East Delhi Campus'],
+  ['Session', '2026-2027'],
+]
+
 // Facts about how the system is built. Keep them true: if the code changes, change these.
 const SHEET = [
-  ['Tools', 'Startup Assistance, Codebase Evaluation'],
   ['AI calls per idea run', '7, plus 1 or 2 for a prototype'],
   ['Paper sources', 'arXiv, Semantic Scholar, OpenAlex (live)'],
   ['Idea score', '7-category rubric, computed in code'],
   ['Code search', 'BM25 keywords + MiniLM embeddings'],
   ['Prototype', 'FastAPI + one page, tested with pytest'],
   ['Runs on', 'One Python server on this computer'],
+]
+
+// Literature survey of the report; arXiv ids checked against arxiv.org.
+const PAPERS = [
+  ['Lewis et al., 2020', 'Retrieval-Augmented Generation', '2005.11401', 'Answers are built from retrieved code and papers, not from memory'],
+  ['Zhang et al., 2024', 'AutoCodeRover', '2404.05427', 'Code is split at function and class boundaries (AST), not into text blocks'],
+  ['Jimenez et al., 2024', 'SWE-bench', '2310.06770', 'The task: point to the file and lines behind a real issue'],
+  ['Shinn et al., 2023', 'Reflexion', '2303.11366', 'A critic checks the answer and allows one revision'],
+  ['Wu et al., 2023', 'AutoGen', '2308.08155', 'Separate agents with one job each, such as devil\'s advocate and judge'],
 ]
 
 const TOOLS = [
@@ -70,7 +88,7 @@ export default function Landing({ onEnter, theme, setTheme }) {
 
       <header className="l-wrap l-hero">
         <div className="l-hero-text">
-          <p className="l-kicker">B.Tech minor project, GGSIPU USAR</p>
+          <p className="l-kicker">Minor Project (ARP-455), B.Tech IIoT, USAR, GGSIPU</p>
           <h1>A second pair of eyes for your startup idea and your code.</h1>
           <p className="l-lead">
             It checks an idea against real research papers and builds a small working prototype.
@@ -82,13 +100,29 @@ export default function Landing({ onEnter, theme, setTheme }) {
             <a className="btn l-big" href="#how">How it works</a>
           </div>
         </div>
-        <table className="l-sheet" aria-label="Project facts">
+        <table className="l-sheet" aria-label="Project details">
           <caption>Project sheet</caption>
           <tbody>
-            {SHEET.map(([k, v]) => <tr key={k}><th scope="row">{k}</th><td>{v}</td></tr>)}
+            {PROJECT.map(([k, v]) => <tr key={k}><th scope="row">{k}</th><td>{v}</td></tr>)}
           </tbody>
         </table>
       </header>
+
+      <section className="l-section">
+        <div className="l-wrap l-gap">
+          <h2 className="l-h2">The gap it fills</h2>
+          <div>
+            <p className="l-gap-text">
+              Tools today check an idea or debug code, not both. Most code assistants cut files into
+              fixed-size text blocks that break functions apart, or rewrite code without showing why.
+            </p>
+            <p className="l-gap-text strong">
+              This project grounds every answer in the real structure of the code and in live sources,
+              explains it, checks it in code, and never edits your files.
+            </p>
+          </div>
+        </div>
+      </section>
 
       <section id="tools" className="l-section">
         <div className="l-wrap">
@@ -124,6 +158,35 @@ export default function Landing({ onEnter, theme, setTheme }) {
         </div>
       </section>
 
+      <section className="l-section">
+        <div className="l-wrap l-under">
+          <div>
+            <h2 className="l-h2">Under the hood</h2>
+            <table className="l-sheet plain" aria-label="System facts">
+              <tbody>
+                {SHEET.map(([k, v]) => <tr key={k}><th scope="row">{k}</th><td>{v}</td></tr>)}
+              </tbody>
+            </table>
+          </div>
+          <div>
+            <h2 className="l-h2">Built on this research</h2>
+            <table className="l-papers">
+              <tbody>
+                {PAPERS.map(([who, title, id, use]) => (
+                  <tr key={id}>
+                    <td>
+                      <a href={`https://arxiv.org/abs/${id}`} target="_blank" rel="noopener noreferrer">{title}</a>
+                      <div className="tiny muted">{who}</div>
+                    </td>
+                    <td>{use}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
       <section id="compare" className="l-band">
         <div className="l-wrap">
           <h2 className="l-h2">"Can't a chatbot do this?"</h2>
@@ -150,8 +213,8 @@ export default function Landing({ onEnter, theme, setTheme }) {
       </section>
 
       <footer className="l-wrap l-foot">
-        <span>Agentic Co-Pilot</span>
-        <span>B.Tech minor project, GGSIPU USAR</span>
+        <span>Agentic AI Co-Pilot, by Ronak Dutta</span>
+        <span>Guide: Dr. Sanjay Kumar Singh, USAR, GGSIPU</span>
       </footer>
     </div>
   )

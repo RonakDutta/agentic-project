@@ -54,7 +54,12 @@ TEST_IMPORTS = ALLOWED_IMPORTS | {"pytest", "main", "features"}
 BANNED_NAMES = {
     "eval", "exec", "open", "compile", "__import__", "globals", "locals", "vars", "input",
     "breakpoint", "exit", "quit", "help", "memoryview", "__builtins__",
+    # Reflection could reach the blocked names below; FileResponse and StaticFiles
+    # could serve any file on the computer. main.py (our template) is not checked.
+    "getattr", "setattr", "delattr", "FileResponse", "StaticFiles",
 }
+# Allowed packages whose sub-modules can read files from disk.
+BANNED_MODULES = ("fastapi.staticfiles", "fastapi.responses.FileResponse", "starlette")
 _EXTERNAL_HTML_RE = re.compile(
     r"<script[^>]+src\s*=\s*[\"']?(?:https?:)?//|<link[^>]+href\s*=\s*[\"']?(?:https?:)?//|"
     r"@import\s+url\(\s*[\"']?(?:https?:)?//|<iframe|<object|<embed",
@@ -97,16 +102,22 @@ def safety_check(files: Dict[str, str]) -> List[str]:
                 if isinstance(node, ast.Import):
                     for alias in node.names:
                         root = alias.name.split(".")[0]
-                        if root not in allowed:
+                        if root not in allowed or alias.name.startswith(BANNED_MODULES):
                             issues.append(f"{name}:{node.lineno}: import of '{alias.name}' is not allowed.")
                 elif isinstance(node, ast.ImportFrom):
-                    root = (node.module or "").split(".")[0]
-                    if node.level or root not in allowed:
-                        issues.append(f"{name}:{node.lineno}: import from '{node.module or '.'}' is not allowed.")
+                    module = node.module or ""
+                    root = module.split(".")[0]
+                    if node.level or root not in allowed or module.startswith(BANNED_MODULES):
+                        issues.append(f"{name}:{node.lineno}: import from '{module or '.'}' is not allowed.")
+                    for alias in node.names:
+                        if alias.name in BANNED_NAMES:
+                            issues.append(f"{name}:{node.lineno}: import of '{alias.name}' is not allowed.")
                 elif isinstance(node, ast.Name) and node.id in BANNED_NAMES:
                     issues.append(f"{name}:{node.lineno}: use of '{node.id}' is not allowed.")
                 elif isinstance(node, ast.Attribute) and node.attr.startswith("__") and node.attr.endswith("__"):
                     issues.append(f"{name}:{node.lineno}: access to '{node.attr}' is not allowed.")
+                elif isinstance(node, ast.Attribute) and (node.attr in BANNED_NAMES or node.attr in ("staticfiles", "FileResponse")):
+                    issues.append(f"{name}:{node.lineno}: use of '{node.attr}' is not allowed.")
         elif name.endswith(".html"):
             if len(source.encode("utf-8")) > MAX_HTML_BYTES:
                 issues.append(f"{name}: page is too large ({len(source)} characters).")

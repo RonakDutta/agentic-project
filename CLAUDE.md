@@ -42,7 +42,7 @@ The user's goal: **impress teachers in a viva**. That only works if everything s
 ```bash
 pip install -r requirements.txt
 python app.py                                   # http://127.0.0.1:8000  (new UI at /, old UI at /legacy)
-GROQ_API_KEY= pytest -q                         # 118 pass, 3 live smoke tests skip without a key
+GROQ_API_KEY= pytest -q                         # 122 pass, 3 live smoke tests skip without a key
 python evaluation/compare_baseline.py           # naive vs AST chunking (computed)
 python evaluation/retrieval_benchmark.py        # BM25 / vector / hybrid Top-1, Top-3, MRR
 python evaluation/free_tier_budget.py           # token plan vs the model limits (no quota used)
@@ -194,7 +194,19 @@ Grounded prompts, deterministic critic with quote-vs-disk and compile checks, ho
 - New landing page (`Landing.jsx`): flat, no pills/gradients/dots; a bordered "project sheet" table, two tools side by side, the real idle pipeline graphs, a dark comparison band ("Can't a chatbot do this?"). Checked at 1280px, 390px and dark mode (no sideways scroll).
 - Inter / JetBrains Mono / Instrument Serif removed (packages and imports); system font stack everywhere, including Mermaid. Favicon is the plain blue "AC" mark.
 
+### Phase 7: Groq client tuning + must-fix items (same branch)
+- `Groq(max_retries=0)`: the SDK's 2 hidden retries waited on a rate-limited model instead of rotating, and tripled timeouts.
+- Per-call timeout = max(configured, 8 s + 1 s per 200 answer tokens): the user's `REQUEST_TIMEOUT_SECONDS=10` cut off normal 11-12 s answers (measured 11.5 s on gpt-oss-120b) and parked the model. `SLOW_MODEL_COOLDOWN_SECONDS` 180 → 60.
+- `_ledger_wait(model, needed)` waits until enough bookings leave the minute window (it used to wait only for the oldest one, so big calls gave up after ~20 s).
+- Prototype safety gap closed (FileResponse, StaticFiles, starlette, fastapi.staticfiles, getattr/setattr/delattr blocked in AI files).
+- Unreadable prototype answer: one rewrite call with a format reminder (still max 2 AI calls), raw answer saved to `ai_answer.log`; parser accepts `~~~` and an outer ```` wrapper.
+- Fallback idea title from the idea text ("Split Shared Grocery Bills", not "A Mobile App That"); Research papers tab says "Not checked" when the comparison fell back.
+- Landing page uses the mid-term report: course ARP-455, student, guide, session, research gap (report 3.1), "Built on this research" with arXiv links (ids checked against arxiv.org).
+
 ### Measured numbers (real runs, keep updated)
+- Live idea run (Oct 2026, cloud, real key): 7 calls, ~16k tokens, 13 s, no fallbacks; every answer `finish_reason=stop` and used about half its max_tokens. Devil's advocate, Judge and PRD went to gpt-oss-20b because gpt-oss-120b's 8k/minute was used by the parallel steps (by design).
+- Code runs on `sample_repo`: 1 call, ~2.5k tokens, 3-13 s.
+- Prototype, 3 builds back to back after an idea run: 3/3 AI-written; 2/3 all tests passed, 1 had 3/5 after its fix (shown as is); 8 s when budget is free, ~55 s when it waits for the token window.
 - Retrieval benchmark, 18 questions, MiniLM available: BM25 MRR 0.640 (Top-1 50%, Top-3 72%); vector 0.672 (56%, 78%); hybrid RRF 0.647 (44%, **83% Top-3**). Hybrid is best at Top-3, not at Top-1/MRR; say so if asked.
 - AST vs naive chunking: 91% of 500-char chunks cut through a function; 100% of AST chunks parse.
 - Water-meter idea (live): 8 arXiv papers, novelty 39/100 "Closely related work exists", 5/5 comparisons kept, 85% abstract support; full idea run ~60-70s uncached.
@@ -205,14 +217,12 @@ Grounded prompts, deterministic critic with quote-vs-disk and compile checks, ho
 ## 8. What is left and what needs improvement (start here next session)
 
 **Must fix / verify next (in this order)**
-- **Prototype safety gap (small, fix first):** `safety_check` allows anything under `fastapi`, so AI code could `from fastapi.responses import FileResponse` (or use `StaticFiles`, `getattr(fastapi, ...)`) and serve any file on the laptop over localhost. Verified: both return no issues today. Fix in `tools/prototype_sandbox.py`: block the names `FileResponse`, `StaticFiles`, `getattr`, `setattr`, `delattr` and imports of `fastapi.staticfiles`, `fastapi.responses.FileResponse`, `starlette` in AI files (main.py is ours and may keep them); add a test next to `test_safety_check_blocks_unsafe_code`.
 - **Live check of all three demo ideas** (one prototype checked live in Phase 5): run the three demo ideas, then build a prototype for each. Check the generated page looks right, tests pass, the Code Fixer works when needed, and the monitor counts clicks in the preview. Record pass rate, tokens and build time under "Measured numbers" (real numbers only).
-- Market search sometimes falls back (seen once with the user's 10s timeout). Find the exact cause in the log (`logging.basicConfig(level=logging.INFO)`), then either raise the default timeout or shrink the market prompt.
+- Market search sometimes fell back with the user's 10 s timeout. Likely fixed by the timeout floor (Phase 7); confirm on the laptop.
 - Follow-up chat in the new UI was not tested against a live answer yet; check Markdown rendering, `@agent` routing and the error state.
-- Honesty gap seen offline: when the paper comparison falls back ("Not assessed"), the header still says "5/5 refer to a paper we found, 100% backed by abstracts". Show "not checked" when `prior_art.generation_source == "fallback"`.
-- Fallback idea brief title is the first words of the prompt ("A Mobile App That"); build a better title in code (for example the noun phrase after "app that").
 - Mermaid "dark" theme not yet checked with a live (non-fallback) PRD.
 - Code comments and module docstrings in `app.py` still name the provider (not user-facing).
+- The mid-term report (section 10) lists ChromaDB, tree-sitter and Anthropic/OpenAI/Gemini; the code uses an in-memory BM25 + MiniLM index, Python `ast` and Groq-hosted models. The user should align the final report.
 
 **Prototype Builder gaps (known, not fixed)**
 - No Stop for a build: the prototype stream ignores `cancel_event` and the tab has no Stop button. A build is short (about 30-60 s), but wire `cancel_event` checks between its steps if the user asks.

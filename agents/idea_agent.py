@@ -4,9 +4,38 @@ Decomposes raw, unorganized project/startup ideas into structured problem statem
 target user personas, core value propositions, and essential MVP features.
 """
 
+import re
 from dataclasses import dataclass, asdict
 from typing import Any, Dict, List
 from core.llm import llm_client, AGENT_MAX_TOKENS
+
+
+_LEAD_RE = re.compile(
+    r"^(?:an?|the|my|our)?\s*(?:(?:mobile|web|smart|simple|low-cost|ai|iot|online|automated)[\s-]+)*"
+    r"(?:app|application|platform|system|tool|website|service|device|solution|marketplace|product)\s+"
+    r"(?:that|which|to|for|where)\s+(?:helps?\s+|lets?\s+|allows?\s+|enables?\s+)?",
+    re.IGNORECASE,
+)
+_SMALL_WORDS = {"a", "an", "the", "and", "or", "of", "for", "to", "in", "on", "with", "by", "their", "who", "what"}
+
+
+def fallback_title(raw_idea: str) -> str:
+    """
+    A readable title without AI: drops the "A mobile app that helps" lead-in and
+    keeps the first words of what the idea does ("Split Shared Grocery Bills").
+    """
+    text = re.split(r"[.,;:!?]", " ".join((raw_idea or "").split()))[0]
+    text = _LEAD_RE.sub("", text)
+    words = [w for w in re.findall(r"[A-Za-z0-9][\w'-]*", text)]
+    while words and words[0].lower() in _SMALL_WORDS | {"students", "users", "people", "college"}:
+        words.pop(0)
+    picked = words[:5]
+    while picked and picked[-1].lower() in _SMALL_WORDS:
+        picked.pop()
+    if not picked:
+        return "Engineering Project"
+    return " ".join(w if any(c.isupper() for c in w[1:]) else (w.lower() if i and w.lower() in _SMALL_WORDS else w.capitalize())
+                    for i, w in enumerate(picked))
 
 
 @dataclass
@@ -85,7 +114,7 @@ class IdeaDecompositionAgent:
         except Exception as err:
             trace.append(f"LLM decomposition note ({err}). Using structured fallback brief.")
             generation_source, fallback_reason = "fallback", f"LLM unavailable: {err}"
-            clean_title = " ".join(raw_idea.split()[:4]).title() or "Engineering Project"
+            clean_title = fallback_title(raw_idea)
             json_output = {
                 "project_title": clean_title,
                 "problem_statement": raw_idea,

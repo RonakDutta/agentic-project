@@ -43,7 +43,12 @@ CODE_CALL_MAX_WAIT = 65
 CODE_MIN_TOKENS = 4000
 FIX_MIN_TOKENS = 3000
 
-_BLOCK_RE = re.compile(r"```[\w+-]*[ \t]*\n(.*?)(?:\n[ \t]*```|\Z)", re.DOTALL)
+_BLOCK_RE = re.compile(r"(```|~~~)[\w+-]*[ \t]*\n(.*?)(?:\n[ \t]*\1|\Z)", re.DOTALL)
+# Some answers wrap everything in one outer ````markdown fence.
+_WRAPPER_RE = re.compile(r"^\s*````+[\w-]*[ \t]*\n(.*?)\n````+\s*$", re.DOTALL)
+NO_FILES = "The answer held no code files"
+FORMAT_REMINDER = ("Your last answer could not be read. Reply with exactly three blocks, each a line "
+                   "`### FILE: <name>` followed by one ``` fenced code block, and nothing else.")
 _NAME_RE = re.compile(r"(test_features\.py|features\.py|index\.html)")
 
 SYSTEM_PROMPT = f"""You write very small, working FastAPI prototypes for student projects.
@@ -137,18 +142,22 @@ def parse_answer(text: str) -> Tuple[Dict[str, str], List[str]]:
     files: Dict[str, str] = {}
     cut: List[str] = []
     text = text or ""
+    wrapped = _WRAPPER_RE.match(text)
+    if wrapped:
+        text = wrapped.group(1)
     last_end = 0
     for match in _BLOCK_RE.finditer(text):
         before = text[last_end:match.start()].strip().splitlines()
         last_end = match.end()
         names = _NAME_RE.findall(before[-1]) if before else []
-        name = {"index.html": "static/index.html"}.get(names[-1], names[-1]) if names else _guess_name(match.group(1))
+        body = match.group(2)
+        name = {"index.html": "static/index.html"}.get(names[-1], names[-1]) if names else _guess_name(body)
         if name not in AI_FILES:
             continue
-        if not match.group(0).rstrip().endswith("```"):
+        if not match.group(0).rstrip().endswith(match.group(1)) or len(match.group(0).rstrip()) < 7:
             cut.append(name)
             continue
-        files[name] = match.group(1).rstrip() + "\n"
+        files[name] = body.rstrip() + "\n"
     return files, cut
 
 
@@ -162,14 +171,14 @@ class PrototypeBuilderAgent:
 
     # ------------------------------------------------------------ AI calls
 
-    def _write_code(self, spec: Dict[str, Any]) -> Tuple[Dict[str, str], str, str]:
+    def _write_code(self, spec: Dict[str, Any], proto_id: str = "", reminder: str = "") -> Tuple[Dict[str, str], str, str]:
         """
         One AI call. Returns (files, error, missing): `error` means nothing usable
         came back; `missing` names files the answer lacked or cut off, which the
-        Code Fixer is then asked for.
+        Code Fixer is then asked for. An unreadable answer is kept in ai_answer.log.
         """
         user = (f"Today is {time.strftime('%Y-%m-%d')}. Build the prototype for this idea:\n"
-                + json.dumps(spec, indent=1))
+                + json.dumps(spec, indent=1) + (f"\n\n{reminder}" if reminder else ""))
         try:
             text = self.llm.generate(
                 [{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": user}],
@@ -180,7 +189,12 @@ class PrototypeBuilderAgent:
             return {}, str(err), ""
         files, cut = parse_answer(text)
         if not files:
-            return {}, "The answer held no code files" + (" (it was cut off)." if cut else "."), ""
+            if proto_id:
+                try:
+                    (sandbox.proto_path(proto_id) / "ai_answer.log").write_text(text or "", encoding="utf-8")
+                except OSError:
+                    pass
+            return {}, NO_FILES + (" (it was cut off)." if cut else "."), ""
         missing = [f for f in AI_FILES if f not in files]
         if not missing:
             return files, "", ""
@@ -275,8 +289,18 @@ class PrototypeBuilderAgent:
         sandbox.write_files(proto_id, self._template_files(spec, "written by AI"))
 
         started = time.time()
-        files, write_error, missing = self._write_code(spec)
+        files, write_error, missing = self._write_code(spec, proto_id)
         source, fallback_reason, repaired = "llm", "", False
+        # An unreadable answer gets one more write with a format reminder. That is the
+        # build's second (last) AI call, so the Code Fixer is not used afterwards.
+        rewritten = write_error.startswith(NO_FILES)
+        if rewritten:
+            state.add_trace("Code Writer", "The AI answer held no readable files; asking once more", status="warning",
+                            duration_ms=int((time.time() - started) * 1000),
+                            details={"tool": "AI model, 1 call", "saved_answer": "ai_answer.log"})
+            started = time.time()
+            files, write_error, missing = self._write_code(spec, proto_id, FORMAT_REMINDER)
+            repaired = not write_error
         state.add_trace(
             "Code Writer",
             (f"AI wrote {len(files)} files ({sum(f.count(chr(10)) for f in files.values())} lines)"
@@ -291,7 +315,12 @@ class PrototypeBuilderAgent:
         if not write_error:
             # A missing file goes to the Code Fixer like any failed check.
             ok, problems, checks = (False, missing, {}) if missing else self._check(proto_id, files, state)
-            if not ok:
+            if not ok and rewritten:
+                state.add_trace("Code Fixer", "Not run: the second AI call was used to rewrite the code",
+                                details={"skipped": True})
+                if checks.get("tests") is None:
+                    fallback_reason = f"The rewritten AI code failed its checks: {(problems or '').splitlines()[0] if problems else 'unknown'}"
+            elif not ok:
                 started = time.time()
                 files, fix_error = self._fix_code(files, problems)
                 repaired = not fix_error
